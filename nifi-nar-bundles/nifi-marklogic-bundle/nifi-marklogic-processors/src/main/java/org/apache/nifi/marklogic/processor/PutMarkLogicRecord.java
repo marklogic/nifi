@@ -99,6 +99,26 @@ public class PutMarkLogicRecord extends PutMarkLogic {
             .addValidator(Validator.VALID)
             .build();
 
+    public static final PropertyDescriptor RECORD_COERCE_TYPES = new PropertyDescriptor.Builder()
+        .name("Coerce Types in Records")
+        .displayName("Coerce Types in Records")
+        .required(true)
+        .description("Whether or not types should be coerced based on the Avro schema for each record")
+        .addValidator(Validator.VALID)
+        .allowableValues("true", "false")
+        .defaultValue("false")
+        .build();
+
+    public static final PropertyDescriptor RECORD_DROP_UNKNOWN_FIELDS = new PropertyDescriptor.Builder()
+        .name("Drop Unknown Fields in Records")
+        .displayName("Drop Unknown Fields in Records")
+        .required(true)
+        .description("Whether or not fields in a record that are not recognized by the Avro schema should be dropped")
+        .addValidator(Validator.VALID)
+        .allowableValues("true", "false")
+        .defaultValue("true")
+        .build();
+
     protected static final Relationship ORIGINAL = new Relationship.Builder()
             .name("original")
             .description("Original FlowFiles coming into PutMarkLogicRecord.")
@@ -112,6 +132,8 @@ public class PutMarkLogicRecord extends PutMarkLogic {
         list.add(THREAD_COUNT);
         list.add(RECORD_READER);
         list.add(RECORD_WRITER);
+        list.add(RECORD_COERCE_TYPES);
+        list.add(RECORD_DROP_UNKNOWN_FIELDS);
         list.add(COLLECTIONS);
         list.add(FORMAT);
         list.add(JOB_ID);
@@ -143,6 +165,9 @@ public class PutMarkLogicRecord extends PutMarkLogic {
         final RecordSetWriterFactory writerFactory = context.getProperty(RECORD_WRITER).asControllerService(RecordSetWriterFactory.class);
         final RecordReaderFactory readerFactory = context.getProperty(RECORD_READER).asControllerService(RecordReaderFactory.class);
         final String uriFieldName = context.getProperty(URI_FIELD_NAME).evaluateAttributeExpressions(flowFile).getValue();
+        final boolean coerceTypes = context.getProperty(RECORD_COERCE_TYPES).asBoolean();
+        final boolean dropUnknownFields = context.getProperty(RECORD_DROP_UNKNOWN_FIELDS).asBoolean();
+
         int added   = 0;
         boolean error = false;
 
@@ -152,7 +177,7 @@ public class PutMarkLogicRecord extends PutMarkLogic {
             final RecordSchema schema = writerFactory.getSchema(flowFile.getAttributes(), reader.getSchema());
             final ByteArrayOutputStream baos = new ByteArrayOutputStream(1024);
             Record record;
-            while ((record = reader.nextRecord()) != null) {
+            while ((record = reader.nextRecord(coerceTypes, dropUnknownFields)) != null) {
                 baos.reset();
                 Map<String, String> additionalAttributes = Collections.emptyMap();
                 try (final RecordSetWriter writer = writerFactory.createWriter(getLogger(), schema, baos)) {
