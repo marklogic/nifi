@@ -23,7 +23,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -50,7 +49,6 @@ import org.apache.nifi.serialization.RecordReader;
 import org.apache.nifi.serialization.RecordReaderFactory;
 import org.apache.nifi.serialization.RecordSetWriter;
 import org.apache.nifi.serialization.RecordSetWriterFactory;
-import org.apache.nifi.serialization.WriteResult;
 import org.apache.nifi.serialization.record.Record;
 import org.apache.nifi.serialization.record.RecordSchema;
 
@@ -59,7 +57,6 @@ import com.marklogic.client.datamovement.WriteEvent;
 import com.marklogic.client.datamovement.impl.WriteEventImpl;
 import com.marklogic.client.io.BytesHandle;
 import com.marklogic.client.io.DocumentMetadataHandle;
-import com.marklogic.client.io.Format;
 
 @EventDriven
 @Tags({"MarkLogic", "Put", "Bulk", "Insert"})
@@ -140,11 +137,17 @@ public class PutMarkLogicRecord extends PutMarkLogic {
             return;
         }
 
+        final String flowFileUuid = flowFile.getAttribute(CoreAttributes.UUID.key());
+        getLogger().info("Processing FlowFile with UUID {}", new Object[]{flowFileUuid});
+
         final RecordSetWriterFactory writerFactory = context.getProperty(RECORD_WRITER).asControllerService(RecordSetWriterFactory.class);
         final RecordReaderFactory readerFactory = context.getProperty(RECORD_READER).asControllerService(RecordReaderFactory.class);
         final String uriFieldName = context.getProperty(URI_FIELD_NAME).evaluateAttributeExpressions(flowFile).getValue();
-        int added   = 0;
+        int added  = 0;
         boolean error = false;
+
+        // The same metadata can be used for every document, so construct it once
+        final DocumentMetadataHandle metadata = buildMetadataHandle(context, flowFile, context.getProperty(COLLECTIONS), context.getProperty(PERMISSIONS));
 
         try (final InputStream inStream = session.read(flowFile);
             final RecordReader reader = readerFactory.createRecordReader(flowFile, inStream, getLogger())) {
@@ -154,15 +157,14 @@ public class PutMarkLogicRecord extends PutMarkLogic {
             Record record;
             while ((record = reader.nextRecord()) != null) {
                 baos.reset();
-                Map<String, String> additionalAttributes = Collections.emptyMap();
                 try (final RecordSetWriter writer = writerFactory.createWriter(getLogger(), schema, baos)) {
-                    final WriteResult writeResult = writer.write(record);
-                    additionalAttributes = writeResult.getAttributes();
+                    writer.write(record);
                     writer.flush();
                     BytesHandle bytesHandle = new BytesHandle().with(baos.toByteArray());
                     final String uriKey = uriFieldName == null ? UUID.randomUUID().toString() : record.getAsString(uriFieldName);
-                    WriteEvent writeEvent = buildWriteEvent(context, session, flowFile, uriKey, bytesHandle, additionalAttributes);
+                    WriteEvent writeEvent = buildWriteEvent(context, session, flowFile, uriKey, bytesHandle, metadata);
                     this.addWriteEvent(writeBatcher, writeEvent);
+                    added++;
                 }
             }
         } catch (SchemaNotFoundException | IOException | MalformedRecordException e) {
@@ -179,8 +181,7 @@ public class PutMarkLogicRecord extends PutMarkLogic {
                 writeBatcher.flushAndWait();
                 session.getProvenanceReporter().send(flowFile, url, String.format("Added %d documents to MarkLogic.", added));
                 session.transfer(flowFile, ORIGINAL);
-                uriFlowFileMap.remove(flowFile.getAttribute(CoreAttributes.UUID.key()));
-                getLogger().info("Inserted {} records into MarkLogic", new Object[]{ added });
+                uuidFlowFileMap.remove(flowFileUuid);
             }
         }
         session.commit();
@@ -207,35 +208,11 @@ public class PutMarkLogicRecord extends PutMarkLogic {
             final FlowFile flowFile,
             String uri,
             final BytesHandle contentHandle,
-            final Map<String, String> additionalAttributes
+            final DocumentMetadataHandle metadata
     ) {
-        final String prefix = context.getProperty(URI_PREFIX).evaluateAttributeExpressions(flowFile).getValue();
-        if (prefix != null) {
-            uri = prefix + uri;
-        }
-        final String suffix = context.getProperty(URI_SUFFIX).evaluateAttributeExpressions(flowFile).getValue();
-        if (suffix != null) {
-            uri += suffix;
-        }
-        uri.replaceAll("//", "/");
-
-        DocumentMetadataHandle metadata = buildMetadataHandle(context, flowFile, context.getProperty(COLLECTIONS), context.getProperty(PERMISSIONS));
-        // Add the flow file UUID for Provenance purposes and for sending them
-        // to the appropriate relationship
-        String flowFileUUID = flowFile.getAttribute(CoreAttributes.UUID.key());
-        final String format = context.getProperty(FORMAT).getValue();
-        if (format != null) {
-            contentHandle.withFormat(Format.valueOf(format));
-        } else {
-            addFormat(uri, contentHandle);
-        }
-
-        final String mimetype = context.getProperty(MIMETYPE).getValue();
-        if (mimetype != null) {
-            contentHandle.withMimetype(mimetype);
-        }
-
-        uriFlowFileMap.put(flowFileUUID, new FlowFileInfo(flowFile, session));
+        uri = applyPropertiesToUri(context, flowFile, uri);
+        applyPropertiesToContentHandle(context, uri, contentHandle);
+        registerFlowFileInMap(flowFile, session);
         return new WriteEventImpl()
             .withTargetUri(uri)
             .withMetadata(metadata)

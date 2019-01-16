@@ -26,6 +26,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import com.marklogic.client.datamovement.WriteBatch;
 import org.apache.nifi.annotation.behavior.DynamicProperty;
 import org.apache.nifi.annotation.behavior.SystemResource;
 import org.apache.nifi.annotation.behavior.SystemResourceConsideration;
@@ -85,7 +86,15 @@ public class PutMarkLogic extends AbstractMarkLogicProcessor {
             this.session = session;
         }
     }
-    protected static final Map<String, FlowFileInfo> uriFlowFileMap = new ConcurrentHashMap<>();
+
+    /**
+     * Keeps track of FlowFile objects, keyed off their UUID, so that they can be retrieved in batch success and
+     * failure listeners based on the given WriteBatch. The UUID of a FlowFile is expected to be retrievable from a
+     * WriteBatch, and thus this map can then be used to find the FlowFile associated with the WriteBatch. After a
+     * listener finishes, the FlowFile is then removed from the map.
+     */
+    protected static final Map<String, FlowFileInfo> uuidFlowFileMap = new ConcurrentHashMap<>();
+
     public static final PropertyDescriptor COLLECTIONS = new PropertyDescriptor.Builder()
         .name("Collections")
         .displayName("Collections")
@@ -226,53 +235,76 @@ public class PutMarkLogic extends AbstractMarkLogicProcessor {
     @OnScheduled
     public void onScheduled(ProcessContext context) {
         super.populatePropertiesByPrefix(context);
+
         dataMovementManager = getDatabaseClient(context).newDataMovementManager();
+
         writeBatcher = dataMovementManager.newWriteBatcher()
             .withJobId(context.getProperty(JOB_ID).getValue())
             .withJobName(context.getProperty(JOB_NAME).getValue())
             .withBatchSize(context.getProperty(BATCH_SIZE).asInteger())
-            .withTemporalCollection(context.getProperty(TEMPORAL_COLLECTION).getValue());
+            .withTemporalCollection(context.getProperty(TEMPORAL_COLLECTION).getValue())
+            .onBatchSuccess(this::onBatchSuccess)
+            .onBatchFailure(this::onBatchFailure);
 
         ServerTransform serverTransform = buildServerTransform(context);
         if (serverTransform != null) {
             writeBatcher.withTransform(serverTransform);
         }
+
         Integer threadCount = context.getProperty(THREAD_COUNT).asInteger();
-        if(threadCount != null) {
+        if (threadCount != null) {
             writeBatcher.withThreadCount(threadCount);
         }
-        this.writeBatcher.onBatchSuccess(writeBatch -> {
-            if (writeBatch.getItems().length > 0) {
-                ProcessSession session = getFlowFileInfoForWriteEvent(writeBatch.getItems()[0]).session;
-                String uriList = Stream.of(writeBatch.getItems()).map((item) -> {
-                    return item.getTargetUri();
-                }).collect(Collectors.joining(","));
-                FlowFile batchFlowFile = session.create();
-                session.putAttribute(batchFlowFile, "URIs", uriList);
-                synchronized(session) {
-                    session.transfer(batchFlowFile, BATCH_SUCCESS);
-                }
-                for(WriteEvent writeEvent : writeBatch.getItems()) {
-                    routeDocumentToRelationship(writeEvent, SUCCESS);
-                }
-            }
-        }).onBatchFailure((writeBatch, throwable) -> {
-            for(WriteEvent writeEvent : writeBatch.getItems()) {
-                routeDocumentToRelationship(writeEvent, FAILURE);
-            }
-        });
+
         dataMovementManager.startJob(writeBatcher);
+    }
+
+    protected void onBatchSuccess(WriteBatch writeBatch) {
+        if (writeBatch.getItems().length > 0) {
+            getLogger().info("Inserted {} documents from batch number {}",
+                new Object[]{writeBatch.getItems().length, writeBatch.getJobBatchNumber()});
+
+            transferToBatchSuccessRelationship(writeBatch);
+
+            for(WriteEvent writeEvent : writeBatch.getItems()) {
+                routeDocumentToRelationship(writeEvent, SUCCESS);
+            }
+        }
+    }
+
+    protected void onBatchFailure(WriteBatch writeBatch, Throwable throwable) {
+        for(WriteEvent writeEvent : writeBatch.getItems()) {
+            routeDocumentToRelationship(writeEvent, FAILURE);
+        }
+    }
+
+    /**
+     * Creates a new FlowFile with a list of all of the inserted URIs and sends it to the "batch success" relationship.
+     *
+     * @param writeBatch
+     */
+    protected void transferToBatchSuccessRelationship(WriteBatch writeBatch) {
+        ProcessSession session = getFlowFileInfoForWriteEvent(writeBatch.getItems()[0]).session;
+        String uriList = Stream.of(writeBatch.getItems()).map((item) -> {
+            return item.getTargetUri();
+        }).collect(Collectors.joining(","));
+
+        FlowFile batchFlowFile = session.create();
+        session.putAttribute(batchFlowFile, "URIs", uriList);
+        synchronized(session) {
+            session.transfer(batchFlowFile, BATCH_SUCCESS);
+        }
     }
 
     protected FlowFileInfo getFlowFileInfoForWriteEvent(WriteEvent writeEvent) {
         DocumentMetadataHandle metadata = (DocumentMetadataHandle) writeEvent.getMetadata();
         String flowFileUUID = metadata.getMetadataValues().get("flowFileUUID");
-        return uriFlowFileMap.get(flowFileUUID);
+        return uuidFlowFileMap.get(flowFileUUID);
     }
 
     protected void routeDocumentToRelationship(WriteEvent writeEvent, Relationship relationship) {
         FlowFileInfo flowFile = getFlowFileInfoForWriteEvent(writeEvent);
-        if(flowFile != null) {
+        if (flowFile != null) {
             synchronized(flowFile.session) {
                 flowFile.session.getProvenanceReporter().send(flowFile.flowFile, writeEvent.getTargetUri());
                 flowFile.session.transfer(flowFile.flowFile, relationship);
@@ -281,8 +313,8 @@ public class PutMarkLogic extends AbstractMarkLogicProcessor {
             if (getLogger().isDebugEnabled()) {
                 getLogger().debug("Routing " + writeEvent.getTargetUri() + " to " + relationship.getName());
             }
+            uuidFlowFileMap.remove(flowFile.flowFile.getAttribute(CoreAttributes.UUID.key()));
         }
-        uriFlowFileMap.remove(flowFile.flowFile.getAttribute(CoreAttributes.UUID.key()));
     }
 
     @Override
@@ -290,6 +322,7 @@ public class PutMarkLogic extends AbstractMarkLogicProcessor {
         final ProcessSession session = sessionFactory.createSession();
         onTrigger(context, session);
     }
+
     /**
      * When a FlowFile is received, hand it off to the WriteBatcher so it can be written to MarkLogic.
      * <p>
@@ -339,6 +372,24 @@ public class PutMarkLogic extends AbstractMarkLogicProcessor {
 
     protected WriteEvent buildWriteEvent(ProcessContext context, ProcessSession session, FlowFile flowFile) {
         String uri = flowFile.getAttribute(context.getProperty(URI_ATTRIBUTE_NAME).getValue());
+        uri = applyPropertiesToUri(context, flowFile, uri);
+
+        DocumentMetadataHandle metadata = buildMetadataHandle(context, flowFile, context.getProperty(COLLECTIONS), context.getProperty(PERMISSIONS));
+        final byte[] content = new byte[(int) flowFile.getSize()];
+        session.read(flowFile, inputStream -> StreamUtils.fillBuffer(inputStream, content));
+
+        BytesHandle handle = new BytesHandle(content);
+        applyPropertiesToContentHandle(context, uri, handle);
+
+        registerFlowFileInMap(flowFile, session);
+
+        return new WriteEventImpl()
+            .withTargetUri(uri)
+            .withMetadata(metadata)
+            .withContent(handle);
+    }
+
+    protected String applyPropertiesToUri(ProcessContext context, FlowFile flowFile, String uri) {
         final String prefix = context.getProperty(URI_PREFIX).evaluateAttributeExpressions(flowFile).getValue();
         if (prefix != null) {
             uri = prefix + uri;
@@ -347,31 +398,21 @@ public class PutMarkLogic extends AbstractMarkLogicProcessor {
         if (suffix != null) {
             uri += suffix;
         }
+        return uri.replaceAll("//", "/");
+    }
 
-        DocumentMetadataHandle metadata = buildMetadataHandle(context, flowFile, context.getProperty(COLLECTIONS), context.getProperty(PERMISSIONS));
-        final byte[] content = new byte[(int) flowFile.getSize()];
-        session.read(flowFile, inputStream -> StreamUtils.fillBuffer(inputStream, content));
-
-        BytesHandle handle = new BytesHandle(content);
-
+    protected void applyPropertiesToContentHandle(ProcessContext context, String uri, BytesHandle contentHandle) {
         final String format = context.getProperty(FORMAT).getValue();
         if (format != null) {
-            handle.withFormat(Format.valueOf(format));
+            contentHandle.withFormat(Format.valueOf(format));
         } else {
-            addFormat(uri, handle);
+            addFormat(uri, contentHandle);
         }
 
         final String mimetype = context.getProperty(MIMETYPE).getValue();
         if (mimetype != null) {
-            handle.withMimetype(mimetype);
+            contentHandle.withMimetype(mimetype);
         }
-        String flowFileUUID = flowFile.getAttribute(CoreAttributes.UUID.key());
-
-        uriFlowFileMap.put(flowFileUUID, new FlowFileInfo(flowFile, session));
-        return new WriteEventImpl()
-            .withTargetUri(uri)
-            .withMetadata(metadata)
-            .withContent(handle);
     }
 
     protected DocumentMetadataHandle buildMetadataHandle(
@@ -400,8 +441,7 @@ public class PutMarkLogic extends AbstractMarkLogicProcessor {
             }
         }
         String flowFileUUID = flowFile.getAttribute(CoreAttributes.UUID.key());
-        // Add the flow file UUID for Provenance purposes and for sending them
-        // to the appropriate relationship
+        // This allows for a batch success or failure listener to find the FlowFile associated with a WriteBatch
         metadata.withMetadataValue("flowFileUUID", flowFileUUID);
 
         // Set dynamic meta
@@ -443,6 +483,17 @@ public class PutMarkLogic extends AbstractMarkLogicProcessor {
                     break;
             }
         }
+    }
+
+    /**
+     * This allows for the FlowFile to be retrieved when a batch success or failure listener executes.
+     *
+     * @param flowFile
+     * @param session
+     */
+    protected void registerFlowFileInMap(FlowFile flowFile, ProcessSession session) {
+        String flowFileUUID = flowFile.getAttribute(CoreAttributes.UUID.key());
+        uuidFlowFileMap.put(flowFileUUID, new FlowFileInfo(flowFile, session));
     }
 
     @OnShutdown
