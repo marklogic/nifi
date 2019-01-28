@@ -20,3 +20,4 @@ org.apache.nifi.marklogic.processor.ExtensionCallMarkLogic
 org.apache.nifi.marklogic.processor.PutMarkLogic
 org.apache.nifi.marklogic.processor.PutMarkLogicRecord
 org.apache.nifi.marklogic.processor.QueryMarkLogic
+org.apache.nifi.marklogic.processor.QueryRowsMarkLogic

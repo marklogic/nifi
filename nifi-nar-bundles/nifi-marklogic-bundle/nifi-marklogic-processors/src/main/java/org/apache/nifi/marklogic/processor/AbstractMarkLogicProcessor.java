@@ -31,6 +31,7 @@ import org.apache.nifi.components.AllowableValue;
 import org.apache.nifi.components.PropertyDescriptor;
 import org.apache.nifi.components.Validator;
 import org.apache.nifi.expression.ExpressionLanguageScope;
+import org.apache.nifi.flowfile.FlowFile;
 import org.apache.nifi.marklogic.controller.MarkLogicDatabaseClientService;
 import org.apache.nifi.processor.AbstractSessionFactoryProcessor;
 import org.apache.nifi.processor.ProcessContext;
@@ -251,4 +252,18 @@ public abstract class AbstractMarkLogicProcessor extends AbstractSessionFactoryP
         throw new ProcessException(rootCause);
     }
 
+
+    /**
+     * Reusable method for safely transferring a FlowFile.
+     *
+     * @param session
+     * @param flowFile
+     * @param relationship
+     */
+    protected void transferAndCommit(ProcessSession session, FlowFile flowFile, Relationship relationship) {
+        synchronized (session) {
+            session.transfer(flowFile, relationship);
+            session.commit();
+        }
+    }
 }
