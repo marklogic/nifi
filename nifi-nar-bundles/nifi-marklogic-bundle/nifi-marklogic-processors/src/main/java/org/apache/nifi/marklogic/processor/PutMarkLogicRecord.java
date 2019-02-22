@@ -163,6 +163,7 @@ public class PutMarkLogicRecord extends PutMarkLogic {
                     final String uriKey = uriFieldName == null ? UUID.randomUUID().toString() : record.getAsString(uriFieldName);
                     WriteEvent writeEvent = buildWriteEvent(context, session, flowFile, uriKey, bytesHandle, additionalAttributes);
                     this.addWriteEvent(writeBatcher, writeEvent);
+                    added++;
                 }
             }
         } catch (SchemaNotFoundException | IOException | MalformedRecordException e) {
