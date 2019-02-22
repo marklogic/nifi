@@ -209,6 +209,7 @@ public class DefaultMarkLogicDatabaseClientService extends AbstractControllerSer
     public void shutdown() {
         if (databaseClient != null) {
             databaseClient.release();
+            databaseClient = null;
         }
     }
 

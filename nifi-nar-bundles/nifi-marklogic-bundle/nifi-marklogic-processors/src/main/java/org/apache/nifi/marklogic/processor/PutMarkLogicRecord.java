@@ -34,6 +34,7 @@ import org.apache.nifi.annotation.behavior.SystemResource;
 import org.apache.nifi.annotation.behavior.SystemResourceConsideration;
 import org.apache.nifi.annotation.documentation.CapabilityDescription;
 import org.apache.nifi.annotation.documentation.Tags;
+import org.apache.nifi.annotation.lifecycle.OnScheduled;
 import org.apache.nifi.components.PropertyDescriptor;
 import org.apache.nifi.components.Validator;
 import org.apache.nifi.expression.ExpressionLanguageScope;
@@ -103,17 +104,18 @@ public class PutMarkLogicRecord extends PutMarkLogic {
         .name("Coerce Types in Records")
         .displayName("Coerce Types in Records")
         .required(true)
-        .description("Whether or not types should be coerced based on the Avro schema for each record")
+        .description("Whether or not fields in the Record should be validated against the schema and coerced when necessary")
         .addValidator(Validator.VALID)
         .allowableValues("true", "false")
-        .defaultValue("false")
+        .defaultValue("true")
         .build();
 
     public static final PropertyDescriptor RECORD_DROP_UNKNOWN_FIELDS = new PropertyDescriptor.Builder()
         .name("Drop Unknown Fields in Records")
         .displayName("Drop Unknown Fields in Records")
         .required(true)
-        .description("Whether or not fields in a record that are not recognized by the Avro schema should be dropped")
+        .description("If true, any field that is found in the data that is not present in the schema will be dropped. " +
+	        "If false, those fields will still be part of the Record (though their type cannot be coerced, since the schema does not provide a type for it).")
         .addValidator(Validator.VALID)
         .allowableValues("true", "false")
         .defaultValue("true")
@@ -123,6 +125,9 @@ public class PutMarkLogicRecord extends PutMarkLogic {
             .name("original")
             .description("Original FlowFiles coming into PutMarkLogicRecord.")
             .build();
+
+    private RecordReaderFactory recordReaderFactory;
+    private RecordSetWriterFactory recordSetWriterFactory;
 
     @Override
     public void init(ProcessorInitializationContext context) {
@@ -154,7 +159,18 @@ public class PutMarkLogicRecord extends PutMarkLogic {
         relationships = Collections.unmodifiableSet(set);
     }
 
-    @Override
+    private boolean coerceTypes;
+    private boolean dropUnknownFields;
+
+    @OnScheduled
+    public void initializeFactories(ProcessContext context) {
+        recordReaderFactory = context.getProperty(RECORD_READER).asControllerService(RecordReaderFactory.class);
+        recordSetWriterFactory = context.getProperty(RECORD_WRITER).asControllerService(RecordSetWriterFactory.class);
+        coerceTypes = context.getProperty(RECORD_COERCE_TYPES).asBoolean();
+        dropUnknownFields = context.getProperty(RECORD_DROP_UNKNOWN_FIELDS).asBoolean();
+    }
+
+	@Override
     public final void onTrigger(ProcessContext context, ProcessSession session) throws ProcessException {
         final FlowFile flowFile = session.get();
         if (flowFile == null) {
@@ -162,25 +178,21 @@ public class PutMarkLogicRecord extends PutMarkLogic {
             return;
         }
 
-        final RecordSetWriterFactory writerFactory = context.getProperty(RECORD_WRITER).asControllerService(RecordSetWriterFactory.class);
-        final RecordReaderFactory readerFactory = context.getProperty(RECORD_READER).asControllerService(RecordReaderFactory.class);
         final String uriFieldName = context.getProperty(URI_FIELD_NAME).evaluateAttributeExpressions(flowFile).getValue();
-        final boolean coerceTypes = context.getProperty(RECORD_COERCE_TYPES).asBoolean();
-        final boolean dropUnknownFields = context.getProperty(RECORD_DROP_UNKNOWN_FIELDS).asBoolean();
 
         int added   = 0;
         boolean error = false;
 
         try (final InputStream inStream = session.read(flowFile);
-            final RecordReader reader = readerFactory.createRecordReader(flowFile, inStream, getLogger())) {
+            final RecordReader reader = recordReaderFactory.createRecordReader(flowFile, inStream, getLogger())) {
 
-            final RecordSchema schema = writerFactory.getSchema(flowFile.getAttributes(), reader.getSchema());
+            final RecordSchema schema = recordSetWriterFactory.getSchema(flowFile.getAttributes(), reader.getSchema());
             final ByteArrayOutputStream baos = new ByteArrayOutputStream(1024);
             Record record;
             while ((record = reader.nextRecord(coerceTypes, dropUnknownFields)) != null) {
                 baos.reset();
-                Map<String, String> additionalAttributes = Collections.emptyMap();
-                try (final RecordSetWriter writer = writerFactory.createWriter(getLogger(), schema, baos)) {
+                Map<String, String> additionalAttributes;
+                try (final RecordSetWriter writer = recordSetWriterFactory.createWriter(getLogger(), schema, baos)) {
                     final WriteResult writeResult = writer.write(record);
                     additionalAttributes = writeResult.getAttributes();
                     writer.flush();

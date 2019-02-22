@@ -23,9 +23,6 @@ import java.util.List;
 import org.apache.nifi.flowfile.attributes.CoreAttributes;
 import org.apache.nifi.reporting.InitializationException;
 import org.apache.nifi.util.TestRunner;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
 
 import com.marklogic.client.datamovement.WriteBatcher;
 import com.marklogic.client.document.DocumentPage;
@@ -34,19 +31,22 @@ import com.marklogic.client.io.Format;
 import com.marklogic.client.io.StringHandle;
 import com.marklogic.client.query.QueryManager;
 import com.marklogic.client.query.RawCombinedQueryDefinition;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class ApplyTransformMarkLogicIT extends AbstractMarkLogicIT {
     private String collection;
     private QueryManager queryMgr;
 
-    @Before
+    @BeforeEach
     public void setup() {
         super.setup();
         collection = "ApplyTransformMarkLogicTest";
         // Load documents to Query
         loadDocumentsIntoCollection(collection, documents);
-        queryMgr = client.newQueryManager();
-        client.newServerConfigManager()
+        queryMgr = getDatabaseClient().newQueryManager();
+        getDatabaseClient().newServerConfigManager()
             .newTransformExtensionsManager()
             .writeXSLTransform(
                 "AddAttribute",
@@ -100,14 +100,14 @@ public class ApplyTransformMarkLogicIT extends AbstractMarkLogicIT {
         runner.assertAllFlowFilesContainAttribute(QueryMarkLogic.SUCCESS,CoreAttributes.FILENAME.key());
         StringHandle queryHandle = new StringHandle().withFormat(Format.XML).with(queryStr);
         RawCombinedQueryDefinition qDef = queryMgr.newRawCombinedQueryDefinition(queryHandle);
-        DocumentPage page = client.newDocumentManager().search(qDef, 1);
+        DocumentPage page = getDatabaseClient().newDocumentManager().search(qDef, 1);
         page.forEach((docRecord) -> {
             String doc = docRecord.getContentAs(String.class);
             assertTrue(doc.contains("myAttr=\"myVal\""));
         });
     }
 
-    @After
+    @AfterEach
     public void teardown() {
         super.teardown();
         deleteDocumentsInCollection(collection);

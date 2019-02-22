@@ -36,9 +36,9 @@ import org.apache.nifi.processor.Processor;
 import org.apache.nifi.reporting.InitializationException;
 import org.apache.nifi.util.MockFlowFile;
 import org.apache.nifi.util.TestRunner;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.w3c.dom.Document;
 import org.xml.sax.SAXException;
 
@@ -50,7 +50,7 @@ import com.marklogic.client.io.StringHandle;
 public class QueryMarkLogicIT extends AbstractMarkLogicIT {
     private String collection;
 
-    @Before
+    @BeforeEach
     public void setup() {
         super.setup();
         collection = "QueryMarkLogicTest";
@@ -72,7 +72,7 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
         dataMovementManager.stopJob(writeBatcher);
     }
 
-    @After
+    @AfterEach
     public void teardown() {
         //super.teardown();
         //deleteDocumentsInCollection(collection);

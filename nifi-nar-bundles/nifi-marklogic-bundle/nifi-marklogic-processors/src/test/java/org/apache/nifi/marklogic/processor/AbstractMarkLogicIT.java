@@ -16,7 +16,19 @@
  */
 package org.apache.nifi.marklogic.processor;
 
-import static junit.framework.TestCase.assertTrue;
+import com.marklogic.client.datamovement.DataMovementManager;
+import com.marklogic.client.datamovement.DeleteListener;
+import com.marklogic.client.datamovement.QueryBatcher;
+import com.marklogic.client.query.StructuredQueryBuilder;
+import com.marklogic.client.query.StructuredQueryDefinition;
+import com.marklogic.junit5.spring.AbstractSpringMarkLogicTest;
+import org.apache.nifi.marklogic.controller.DefaultMarkLogicDatabaseClientService;
+import org.apache.nifi.marklogic.controller.MarkLogicDatabaseClientService;
+import org.apache.nifi.reporting.InitializationException;
+import org.apache.nifi.util.TestRunner;
+import org.apache.nifi.util.TestRunners;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.ContextConfiguration;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -24,27 +36,22 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.nifi.marklogic.controller.DefaultMarkLogicDatabaseClientService;
-import org.apache.nifi.marklogic.controller.MarkLogicDatabaseClientService;
-import org.apache.nifi.reporting.InitializationException;
-import org.apache.nifi.util.TestRunner;
-import org.apache.nifi.util.TestRunners;
+import static junit.framework.TestCase.assertTrue;
 
-import com.marklogic.client.DatabaseClient;
-import com.marklogic.client.DatabaseClientFactory;
-import com.marklogic.client.datamovement.DataMovementManager;
-import com.marklogic.client.datamovement.DeleteListener;
-import com.marklogic.client.datamovement.QueryBatcher;
-import com.marklogic.client.query.StructuredQueryBuilder;
-import com.marklogic.client.query.StructuredQueryDefinition;
+/**
+ * Utilizes the JUnit5 test support provided by marklogic-junit - https://github.com/rjrudin/marklogic-junit .
+ *
+ * A DatabaseClient is constructed based on the properties loaded by the TestConfig class, which conveniently reads
+ * from the Gradle properties files that are used to deploy the test application.
+ *
+ * The test database is cleared before every test is run so that no "residue" is left behind.
+ */
+@ContextConfiguration(classes = {TestConfig.class})
+public class AbstractMarkLogicIT extends AbstractSpringMarkLogicTest {
 
-public class AbstractMarkLogicIT {
-    protected String hostName = "localhost";
-    protected String port = "8000";
-    protected String database = "Documents";
-    protected String username = "admin";
-    protected String password = "admin";
-    protected String authentication= "DIGEST";
+    @Autowired
+    protected TestConfig testConfig;
+
     protected MarkLogicDatabaseClientService service;
     protected String batchSize = "3";
     protected String threadCount = "3";
@@ -59,12 +66,7 @@ public class AbstractMarkLogicIT {
     protected int expectedXmlCount = (int) (Math.ceil((numDocs - 1.0) / xmlMod));
     // mod jsonMod == 0 docs are JSON, but mod xmlMod == 0 docs are XML and take precedence in doc generation
     protected int expectedJsonCount = (int) (Math.ceil((numDocs - 1.0) / jsonMod) - Math.ceil((numDocs - 1.0) / (xmlMod * jsonMod)));
-    // mod txtMod == 0 docs are Text, but mod xmlMod == 0 docs are XML and mod jsonMod == 0 docs are JSON and both take precedence in doc generation
-    protected int expectedTxtCount = (int) (Math.ceil((numDocs - 1.0) / txtMod) - Math.ceil((numDocs - 1.0) / (txtMod * jsonMod)) - Math.ceil((numDocs - 1.0) / (txtMod * xmlMod)));
-    // binary documents make up the remainder
-    protected int expectedBinCount = numDocs - (expectedXmlCount + expectedJsonCount + expectedTxtCount);
 
-    protected DatabaseClient client;
     protected DataMovementManager dataMovementManager;
 
     class IngestDoc {
@@ -100,17 +102,16 @@ public class AbstractMarkLogicIT {
 
     protected void setup() {
         documents = new ArrayList<>(numDocs);
-        client = DatabaseClientFactory.newClient(hostName, Integer.parseInt(port), new DatabaseClientFactory.DigestAuthContext(username, password));
-        dataMovementManager = client.newDataMovementManager();
+        dataMovementManager = getDatabaseClient().newDataMovementManager();
         for(int i = 0; i < numDocs; i++) {
             String fileName = "/PutMarkLogicTest/";
             String content = "";
             if(i % xmlMod == 0) {
                 fileName += i + ".xml";
-                content = "<root><sample>xmlcontent</sample><dateTime xmlns=\"namespace-test\">2000-01-01T00:00:00.000000-08:00</dateTime></root>";
+                content = "<root><sample>xmlcontent</sample><dateTime xmlns=\"namespace-test\">2000-01-01T00:00:00.000000</dateTime></root>";
             } else if ( i % jsonMod == 0) {
                 fileName += i + ".json";
-                content = "{\"sample\":\"jsoncontent\", \"dateTime\":\"2000-01-01T00:00:00.000000-08:00\"}";
+                content = "{\"sample\":\"jsoncontent\", \"dateTime\":\"2000-01-01T00:00:00.000000\"}";
             } else if (i % txtMod == 0) {
                 fileName += i + ".txt";
                 content = "A sample text document";
@@ -125,12 +126,10 @@ public class AbstractMarkLogicIT {
     protected void addDatabaseClientService(TestRunner runner) throws InitializationException {
         service = new DefaultMarkLogicDatabaseClientService();
         runner.addControllerService(databaseClientServiceIdentifier, service);
-        runner.setProperty(service, DefaultMarkLogicDatabaseClientService.HOST, hostName);
-        runner.setProperty(service, DefaultMarkLogicDatabaseClientService.PORT, port);
-        runner.setProperty(service, DefaultMarkLogicDatabaseClientService.DATABASE, database);
-        runner.setProperty(service, DefaultMarkLogicDatabaseClientService.USERNAME, username);
-        runner.setProperty(service, DefaultMarkLogicDatabaseClientService.PASSWORD, password);
-        runner.setProperty(service, DefaultMarkLogicDatabaseClientService.SECURITY_CONTEXT_TYPE, authentication);
+        runner.setProperty(service, DefaultMarkLogicDatabaseClientService.HOST, testConfig.getHost());
+        runner.setProperty(service, DefaultMarkLogicDatabaseClientService.PORT, testConfig.getRestPort().toString());
+        runner.setProperty(service, DefaultMarkLogicDatabaseClientService.USERNAME, testConfig.getUsername());
+        runner.setProperty(service, DefaultMarkLogicDatabaseClientService.PASSWORD, testConfig.getPassword());
         runner.enableControllerService(service);
     }
 

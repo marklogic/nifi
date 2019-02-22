@@ -16,27 +16,26 @@
  */
 package org.apache.nifi.marklogic.processor;
 
-import static org.junit.Assert.assertEquals;
-
-import java.util.List;
-
-import org.apache.nifi.flowfile.attributes.CoreAttributes;
-import org.apache.nifi.reporting.InitializationException;
-import org.apache.nifi.util.TestRunner;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-
 import com.marklogic.client.datamovement.WriteBatcher;
 import com.marklogic.client.document.DocumentPage;
 import com.marklogic.client.io.DocumentMetadataHandle;
 import com.marklogic.client.io.StringHandle;
 import com.marklogic.client.query.StructuredQueryBuilder;
+import org.apache.nifi.flowfile.attributes.CoreAttributes;
+import org.apache.nifi.reporting.InitializationException;
+import org.apache.nifi.util.TestRunner;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import java.util.List;
+
+import static org.junit.Assert.assertEquals;
 
 public class DeleteMarkLogicIT extends AbstractMarkLogicIT {
     private String collection;
 
-    @Before
+    @BeforeEach
     public void setup() {
         super.setup();
         collection = "QueryMarkLogicTest";
@@ -67,11 +66,11 @@ public class DeleteMarkLogicIT extends AbstractMarkLogicIT {
         runner.run();
         runner.assertTransferCount(QueryMarkLogic.SUCCESS, numDocs);
         runner.assertAllFlowFilesContainAttribute(QueryMarkLogic.SUCCESS,CoreAttributes.FILENAME.key());
-        DocumentPage page = client.newDocumentManager().search(new StructuredQueryBuilder().collection(collection), 1);
+        DocumentPage page = getDatabaseClient().newDocumentManager().search(new StructuredQueryBuilder().collection(collection), 1);
         assertEquals(0, page.getTotalSize());
     }
 
-    @After
+    @AfterEach
     public void teardown() {
         super.teardown();
         deleteDocumentsInCollection(collection);

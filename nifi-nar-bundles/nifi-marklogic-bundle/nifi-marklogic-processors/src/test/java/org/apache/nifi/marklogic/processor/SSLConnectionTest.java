@@ -50,7 +50,6 @@ public class SSLConnectionTest extends AbstractMarkLogicProcessorTest {
 
         runner.enableControllerService(sslService);
         runner.assertValid(sslService);
-        runner.setProperty(service, DefaultMarkLogicDatabaseClientService.DATABASE, database);
         runner.setProperty(service, DefaultMarkLogicDatabaseClientService.SSL_CONTEXT_SERVICE, "ssl-context-ml");
         runner.setProperty(service, DefaultMarkLogicDatabaseClientService.CLIENT_AUTH, "WANT");
         runner.enableControllerService(service);

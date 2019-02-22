@@ -1,0 +1,8 @@
+/**
+ * This Gradle file is here only so ml-gradle can be used to deploy an application which the JUnit tests can be
+ * run against.
+ */
+plugins {
+	id 'net.saliman.properties' version '1.4.6'
+	id 'com.marklogic.ml-gradle' version '3.12.0'
+}

@@ -1,0 +1,40 @@
+{
+  "database-name": "%%DATABASE%%",
+  "range-element-index": [
+    {
+      "scalar-type": "dateTime",
+      "namespace-uri": "",
+      "localname": "dateTime",
+      "collation": "",
+      "range-value-positions": false,
+      "invalid-values": "reject"
+    },
+    {
+      "scalar-type": "dateTime",
+      "namespace-uri": "namespace-test",
+      "localname": "dateTime",
+      "collation": "",
+      "range-value-positions": false,
+      "invalid-values": "reject"
+    }
+  ],
+  "path-namespace": [
+    {
+      "prefix": "nst",
+      "namespace-uri": "namespace-test"
+    },
+    {
+      "prefix": "t",
+      "namespace-uri": "namespace-test"
+    }
+  ],
+  "range-path-index": [
+    {
+      "scalar-type": "dateTime",
+      "path-expression": "/root/nst:dateTime",
+      "collation": "",
+      "range-value-positions": false,
+      "invalid-values": "reject"
+    }
+  ]
+}
