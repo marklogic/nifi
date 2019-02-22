@@ -30,6 +30,7 @@ import org.apache.nifi.components.PropertyDescriptor;
 import org.apache.nifi.components.Validator;
 import org.apache.nifi.controller.AbstractControllerService;
 import org.apache.nifi.controller.ConfigurationContext;
+import org.apache.nifi.expression.ExpressionLanguageScope;
 import org.apache.nifi.processor.exception.ProcessException;
 import org.apache.nifi.processor.util.StandardValidators;
 import org.apache.nifi.security.util.KeyStoreUtils;
@@ -60,6 +61,7 @@ public class DefaultMarkLogicDatabaseClientService extends AbstractControllerSer
         .defaultValue("localhost")
         .description("The host with the REST server for which a DatabaseClient instance needs to be created")
         .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
+        .expressionLanguageSupported(ExpressionLanguageScope.VARIABLE_REGISTRY)
         .build();
 
     public static final PropertyDescriptor PORT = new PropertyDescriptor.Builder()
@@ -69,16 +71,18 @@ public class DefaultMarkLogicDatabaseClientService extends AbstractControllerSer
         .defaultValue("8000")
         .description("The port on which the REST server is hosted")
         .addValidator(StandardValidators.PORT_VALIDATOR)
+        .expressionLanguageSupported(ExpressionLanguageScope.VARIABLE_REGISTRY)
         .build();
 
     public static final PropertyDescriptor LOAD_BALANCER = new PropertyDescriptor.Builder()
-            .name("Load Balancer")
-            .displayName("Load Balancer")
-            .description("Is the host specified a load balancer?")
-            .allowableValues("true", "false")
-            .defaultValue("false")
-            .addValidator(Validator.VALID)
-            .build();
+        .name("Load Balancer")
+        .displayName("Load Balancer")
+        .description("Is the host specified a load balancer?")
+        .allowableValues("true", "false")
+        .defaultValue("false")
+        .addValidator(Validator.VALID)
+        .expressionLanguageSupported(ExpressionLanguageScope.VARIABLE_REGISTRY)
+        .build();
 
     public static final PropertyDescriptor SECURITY_CONTEXT_TYPE = new PropertyDescriptor.Builder()
         .name("Security Context Type")
@@ -89,6 +93,7 @@ public class DefaultMarkLogicDatabaseClientService extends AbstractControllerSer
         .allowableValues(SecurityContextType.BASIC.name(), SecurityContextType.DIGEST.name(), SecurityContextType.CERTIFICATE.name(), SecurityContextType.KERBEROS.name())
         .defaultValue(SecurityContextType.DIGEST.name())
         .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
+        .expressionLanguageSupported(ExpressionLanguageScope.VARIABLE_REGISTRY)
         .build();
 
     public static final PropertyDescriptor USERNAME = new PropertyDescriptor.Builder()
@@ -96,6 +101,7 @@ public class DefaultMarkLogicDatabaseClientService extends AbstractControllerSer
         .displayName("Username")
         .description("The user with read, write, or admin privileges - Required for Basic and Digest authentication")
         .addValidator(Validator.VALID)
+        .expressionLanguageSupported(ExpressionLanguageScope.VARIABLE_REGISTRY)
         .build();
 
     public static final PropertyDescriptor PASSWORD = new PropertyDescriptor.Builder()
@@ -111,6 +117,7 @@ public class DefaultMarkLogicDatabaseClientService extends AbstractControllerSer
         .displayName("Database")
         .description("The database to access. By default, the configured database for the REST server would be accessed")
         .addValidator(Validator.VALID)
+        .expressionLanguageSupported(ExpressionLanguageScope.VARIABLE_REGISTRY)
         .build();
 
     public static final PropertyDescriptor EXTERNAL_NAME = new PropertyDescriptor.Builder()
@@ -118,24 +125,26 @@ public class DefaultMarkLogicDatabaseClientService extends AbstractControllerSer
         .displayName("External name")
         .description("External name of the Kerberos Client - Required for Kerberos authentication")
         .addValidator(Validator.VALID)
+        .expressionLanguageSupported(ExpressionLanguageScope.VARIABLE_REGISTRY)
         .build();
 
     public static final PropertyDescriptor SSL_CONTEXT_SERVICE = new PropertyDescriptor.Builder()
-            .name("SSL Context Service")
-            .displayName("SSL Context Service")
-            .description("The SSL Context Service used to provide KeyStore and TrustManager information for secure connections")
-            .required(false)
-            .identifiesControllerService(SSLContextService.class)
-            .build();
+        .name("SSL Context Service")
+        .displayName("SSL Context Service")
+        .description("The SSL Context Service used to provide KeyStore and TrustManager information for secure connections")
+        .required(false)
+        .identifiesControllerService(SSLContextService.class)
+        .build();
 
     public static final PropertyDescriptor CLIENT_AUTH = new PropertyDescriptor.Builder()
-            .name("Client Authentication")
-            .displayName("Client Authentication")
-            .description("Client authentication policy when connecting via a secure connection. This property is only used when an SSL Context "
-                    + "has been defined and enabled")
-            .required(false)
-            .allowableValues(SSLContextService.ClientAuth.values())
-            .build();
+        .name("Client Authentication")
+        .displayName("Client Authentication")
+        .description("Client authentication policy when connecting via a secure connection. This property is only used when an SSL Context "
+            + "has been defined and enabled")
+        .required(false)
+        .allowableValues(SSLContextService.ClientAuth.values())
+        .expressionLanguageSupported(ExpressionLanguageScope.VARIABLE_REGISTRY)
+        .build();
 
     static {
         List<PropertyDescriptor> list = new ArrayList<>();
@@ -154,35 +163,41 @@ public class DefaultMarkLogicDatabaseClientService extends AbstractControllerSer
 
     @OnEnabled
     public void onEnabled(ConfigurationContext context) {
-        DatabaseClientConfig config = new DatabaseClientConfig();
-        config.setHost(context.getProperty(HOST).getValue());
-        config.setPort(context.getProperty(PORT).asInteger());
-        config.setSecurityContextType(SecurityContextType.valueOf(
-            context.getProperty(SECURITY_CONTEXT_TYPE).getValue())
-        );
-        config.setUsername(context.getProperty(USERNAME).getValue());
-        config.setPassword(context.getProperty(PASSWORD).getValue());
-        config.setDatabase(context.getProperty(DATABASE).getValue());
+        getLogger().info("Creating DatabaseClient");
+        DatabaseClientConfig config = buildDatabaseClientConfig(context);
+        databaseClient = new DefaultConfiguredDatabaseClientFactory().newDatabaseClient(config);
+    }
 
-        if (context.getProperty(LOAD_BALANCER) != null && context.getProperty(LOAD_BALANCER).asBoolean()) {
+    @OnDisabled
+    public void shutdown() {
+        if (databaseClient != null) {
+            databaseClient.release();
+            databaseClient = null;
+        }
+    }
+
+    protected DatabaseClientConfig buildDatabaseClientConfig(ConfigurationContext context) {
+        DatabaseClientConfig config = new DatabaseClientConfig();
+        config.setHost(context.getProperty(HOST).evaluateAttributeExpressions().getValue());
+        config.setPort(context.getProperty(PORT).evaluateAttributeExpressions().asInteger());
+        config.setSecurityContextType(SecurityContextType.valueOf(
+            context.getProperty(SECURITY_CONTEXT_TYPE).evaluateAttributeExpressions().getValue())
+        );
+        config.setUsername(context.getProperty(USERNAME).evaluateAttributeExpressions().getValue());
+        config.setPassword(context.getProperty(PASSWORD).getValue());
+        config.setDatabase(context.getProperty(DATABASE).evaluateAttributeExpressions().getValue());
+
+        if (context.getProperty(LOAD_BALANCER) != null && context.getProperty(LOAD_BALANCER).evaluateAttributeExpressions().asBoolean()) {
             config.setConnectionType(DatabaseClient.ConnectionType.GATEWAY);
         }
 
-        if (context.getProperty(EXTERNAL_NAME) != null && !"".equals(context.getProperty(EXTERNAL_NAME).getValue())) {
-            config.setExternalName(context.getProperty(EXTERNAL_NAME).getValue());
+        if (context.getProperty(EXTERNAL_NAME) != null && !"".equals(context.getProperty(EXTERNAL_NAME).evaluateAttributeExpressions().getValue())) {
+            config.setExternalName(context.getProperty(EXTERNAL_NAME).evaluateAttributeExpressions().getValue());
         }
 
         final SSLContextService sslService = context.getProperty(SSL_CONTEXT_SERVICE).asControllerService(SSLContextService.class);
         if(sslService != null) {
-            final SSLContextService.ClientAuth clientAuth;
-            try {
-                clientAuth =
-                        context.getProperty(CLIENT_AUTH).getValue() == null ? SSLContextService.ClientAuth.REQUIRED :
-                                SSLContextService.ClientAuth.valueOf(context.getProperty(CLIENT_AUTH).getValue());
-            } catch (IllegalArgumentException exception) {
-                throw new ProviderCreationException("Client Authentication should be one of the following values : "
-                        + Arrays.toString(SSLContextService.ClientAuth.values()));
-            }
+            final SSLContextService.ClientAuth clientAuth = determineClientAuth(context);
             try {
                 if (sslService.isTrustStoreConfigured()) {
                     final TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
@@ -201,14 +216,17 @@ public class DefaultMarkLogicDatabaseClientService extends AbstractControllerSer
                 throw new ProcessException(e);
             }
         }
-        getLogger().info("Creating DatabaseClient");
-        databaseClient = new DefaultConfiguredDatabaseClientFactory().newDatabaseClient(config);
+
+        return config;
     }
 
-    @OnDisabled
-    public void shutdown() {
-        if (databaseClient != null) {
-            databaseClient.release();
+    protected SSLContextService.ClientAuth determineClientAuth(ConfigurationContext context) {
+        try {
+            return context.getProperty(CLIENT_AUTH).getValue() == null ? SSLContextService.ClientAuth.REQUIRED :
+                    SSLContextService.ClientAuth.valueOf(context.getProperty(CLIENT_AUTH).evaluateAttributeExpressions().getValue());
+        } catch (IllegalArgumentException exception) {
+            throw new ProviderCreationException("Client Authentication should be one of the following values : "
+                + Arrays.toString(SSLContextService.ClientAuth.values()));
         }
     }
 
@@ -221,4 +239,5 @@ public class DefaultMarkLogicDatabaseClientService extends AbstractControllerSer
     protected List<PropertyDescriptor> getSupportedPropertyDescriptors() {
         return properties;
     }
+
 }
