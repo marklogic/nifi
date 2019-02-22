@@ -214,12 +214,14 @@ public class ExtensionCallMarkLogic extends AbstractMarkLogicProcessor {
             if (format != null) {
                 bytesHandle.withFormat(Format.valueOf(format));
             }
-            synchronized(resourceManager) {
-                ServiceResultIterator resultIterator = resourceManager.callService(method, bytesHandle, requestParameters);
-                while(resultIterator.hasNext()) {
-                    ServiceResult result = resultIterator.next();
-                    session.append(flowFile, out -> out.write(result.getContent(new BytesHandle()).get()));
-                }
+
+            ServiceResultIterator resultIterator = resourceManager.callService(method, bytesHandle, requestParameters);
+            while(resultIterator.hasNext()) {
+                ServiceResult result = resultIterator.next();
+                session.append(flowFile, out -> out.write(result.getContent(new BytesHandle()).get()));
+            }
+
+            synchronized(session) {
                 session.transfer(flowFile, SUCCESS);
                 session.commit();
             }
