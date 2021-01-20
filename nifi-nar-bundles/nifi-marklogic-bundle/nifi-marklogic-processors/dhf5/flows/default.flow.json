@@ -1,0 +1,35 @@
+{
+  "name" : "default",
+  "description" : "",
+  "batchSize" : 100,
+  "threadCount" : 4,
+  "stopOnError" : false,
+  "options" : { },
+  "version" : 0,
+  "steps" : {
+    "1" : {
+      "name" : "custom",
+      "description" : "",
+      "options" : {
+        "additionalCollections" : [ ],
+        "sourceQuery" : "cts.uris(null, null, cts.collectionQuery('EVALUATE-COLLECTOR-TEST'))",
+        "targetEntity" : "Person",
+        "collections" : [ "custom", "Person" ],
+        "sourceDatabase" : "test-marklogic-nifi-dhf5-STAGING",
+        "sourceCollection" : "",
+        "outputFormat" : "json",
+        "targetDatabase" : "test-marklogic-nifi-dhf5-FINAL"
+      },
+      "customHook" : null,
+      "retryLimit" : null,
+      "batchSize" : null,
+      "threadCount" : null,
+      "stepDefinitionName" : "custom",
+      "stepDefinitionType" : "CUSTOM",
+      "modulePath" : "/custom-modules/custom/custom/main.sjs",
+      "mappingName" : null,
+      "mappingStep" : false,
+      "customStep" : true
+    }
+  }
+}

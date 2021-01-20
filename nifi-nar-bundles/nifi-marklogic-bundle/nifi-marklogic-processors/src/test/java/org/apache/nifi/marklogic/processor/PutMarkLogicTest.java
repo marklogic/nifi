@@ -16,20 +16,20 @@
  */
 package org.apache.nifi.marklogic.processor;
 
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
-
-import org.apache.nifi.reporting.InitializationException;
-import org.apache.nifi.util.MockFlowFile;
-import org.junit.Before;
-import org.junit.Test;
-
 import com.marklogic.client.datamovement.WriteBatcher;
 import com.marklogic.client.datamovement.WriteEvent;
 import com.marklogic.client.io.BytesHandle;
 import com.marklogic.client.io.DocumentMetadataHandle;
 import com.marklogic.client.io.Format;
+import org.apache.nifi.reporting.InitializationException;
+import org.apache.nifi.util.MockFlowFile;
+import org.junit.Before;
+import org.junit.Test;
+
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Set;
 
 public class PutMarkLogicTest extends AbstractMarkLogicProcessorTest {
 
@@ -51,7 +51,7 @@ public class PutMarkLogicTest extends AbstractMarkLogicProcessorTest {
 
         processor.onTrigger(processContext, mockProcessSessionFactory);
 
-        assertEquals(3, processor.relationships.size());
+        assertEquals(4, processor.relationships.size());
         assertFalse("flushAsync should not have been called yet since a FlowFile existed in the session", processor.flushAsyncCalled);
 
         BytesHandle content = (BytesHandle) processor.writeEvent.getContent();
@@ -76,7 +76,7 @@ public class PutMarkLogicTest extends AbstractMarkLogicProcessorTest {
 
         processor.onTrigger(processContext, mockProcessSessionFactory);
 
-        assertEquals(3, processor.relationships.size());
+        assertEquals(4, processor.relationships.size());
         assertFalse("flushAsync should not have been called yet since a FlowFile existed in the session", processor.flushAsyncCalled);
 
         BytesHandle content = (BytesHandle) processor.writeEvent.getContent();
@@ -97,7 +97,7 @@ public class PutMarkLogicTest extends AbstractMarkLogicProcessorTest {
 
         processor.onTrigger(processContext, mockProcessSessionFactory);
 
-        assertEquals(3, processor.relationships.size());
+        assertEquals(4, processor.relationships.size());
         assertFalse("flushAsync should not have been called yet since a FlowFile existed in the session", processor.flushAsyncCalled);
 
         BytesHandle content = (BytesHandle) processor.writeEvent.getContent();
@@ -118,7 +118,7 @@ public class PutMarkLogicTest extends AbstractMarkLogicProcessorTest {
 
         processor.onTrigger(processContext, mockProcessSessionFactory);
 
-        assertEquals(3, processor.relationships.size());
+        assertEquals(4, processor.relationships.size());
         assertFalse("flushAsync should not have been called yet since a FlowFile existed in the session", processor.flushAsyncCalled);
 
         BytesHandle content = (BytesHandle) processor.writeEvent.getContent();
@@ -145,7 +145,7 @@ public class PutMarkLogicTest extends AbstractMarkLogicProcessorTest {
 
         processor.onTrigger(processContext, mockProcessSessionFactory);
 
-        assertEquals(3, processor.relationships.size());
+        assertEquals(4, processor.relationships.size());
         assertFalse("flushAsync should not have been called yet since a FlowFile existed in the session", processor.flushAsyncCalled);
 
         BytesHandle content = (BytesHandle) processor.writeEvent.getContent();
@@ -166,7 +166,7 @@ public class PutMarkLogicTest extends AbstractMarkLogicProcessorTest {
 
         processor.onTrigger(processContext, mockProcessSessionFactory);
 
-        assertEquals(3, processor.relationships.size());
+        assertEquals(4, processor.relationships.size());
         assertFalse("flushAsync should not have been called yet since a FlowFile existed in the session", processor.flushAsyncCalled);
 
         BytesHandle content = (BytesHandle) processor.writeEvent.getContent();
@@ -195,6 +195,57 @@ public class PutMarkLogicTest extends AbstractMarkLogicProcessorTest {
         assertEquals(2, perms.size());
         assertEquals(DocumentMetadataHandle.Capability.READ, perms.get("manage-user").iterator().next());
         assertEquals(DocumentMetadataHandle.Capability.UPDATE, perms.get("manage-admin").iterator().next());
+    }
+
+    @Test
+    public void twoPermissionsWithSameRole() {
+        processContext.setProperty(PutMarkLogic.PERMISSIONS, "manage-user,read,manage-user,update");
+        processor.initialize(initializationContext);
+
+        addFlowFile("<test/>");
+
+        processor.onTrigger(processContext, mockProcessSessionFactory);
+
+        DocumentMetadataHandle metadata = (DocumentMetadataHandle) processor.writeEvent.getMetadata();
+        DocumentMetadataHandle.DocumentPermissions perms = metadata.getPermissions();
+        assertEquals(1, perms.size());
+        Set<DocumentMetadataHandle.Capability> capabilities = perms.get("manage-user");
+        assertEquals(2, capabilities.size());
+        assertTrue(capabilities.contains(DocumentMetadataHandle.Capability.READ));
+        assertTrue(capabilities.contains(DocumentMetadataHandle.Capability.UPDATE));
+    }
+
+    @Test
+    public void customPermissionsWithAttributes() {
+        processContext.setProperty(PutMarkLogic.PERMISSIONS, "${readRole},read,${updateRole},update");
+        processor.initialize(initializationContext);
+
+        Map<String,String> attributes = new HashMap<>();
+        attributes.put("readRole", "manage-user");
+        attributes.put("updateRole", "manage-admin");
+        addFlowFile(attributes, "<test/>");
+
+        processor.onTrigger(processContext, mockProcessSessionFactory);
+
+        DocumentMetadataHandle metadata = (DocumentMetadataHandle) processor.writeEvent.getMetadata();
+        DocumentMetadataHandle.DocumentPermissions perms = metadata.getPermissions();
+        assertEquals(2, perms.size());
+        assertEquals(DocumentMetadataHandle.Capability.READ, perms.get("manage-user").iterator().next());
+        assertEquals(DocumentMetadataHandle.Capability.UPDATE, perms.get("manage-admin").iterator().next());
+    }
+
+    @Test
+    public void noPermissionsSet() {
+        processContext.setProperty(PutMarkLogic.PERMISSIONS, "");
+        processor.initialize(initializationContext);
+
+        addFlowFile("<test/>");
+
+        processor.onTrigger(processContext, mockProcessSessionFactory);
+
+        DocumentMetadataHandle metadata = (DocumentMetadataHandle) processor.writeEvent.getMetadata();
+        DocumentMetadataHandle.DocumentPermissions perms = metadata.getPermissions();
+        assertEquals(0, perms.size());
     }
 
     @Test

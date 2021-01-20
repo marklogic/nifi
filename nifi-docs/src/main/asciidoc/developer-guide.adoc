@@ -132,7 +132,7 @@ attribute within the `CoreAttributes` enum.
 
 - Filename ("filename"): The filename of the FlowFile. The filename should not contain any directory structure.
 
-- UUID ("uuid"): A unique universally unique identifier (UUID) assigned to this FlowFile.
+- UUID ("uuid"): A Universally Unique Identifier assigned to this FlowFile that distinguishes the FlowFile from other FlowFiles in the system.
 
 - Path ("path"): The FlowFile's path indicates the relative directory to which a FlowFile belongs and does not contain the filename.
 
@@ -2521,7 +2521,7 @@ logged to help avoid this bad practice.
 [[deprecation]]
 == Deprecating a Component
 Sometimes it may be desirable to deprecate a component. Whenever this occurs the developer may use the
- @DeprecationNotice annotation to indicate that a component has been deprecated, aloowing the developer
+ @DeprecationNotice annotation to indicate that a component has been deprecated, allowing the developer
  to describe a reason for the deprecation and suggest alternative components. An example of how to do this can
  be found below:
 

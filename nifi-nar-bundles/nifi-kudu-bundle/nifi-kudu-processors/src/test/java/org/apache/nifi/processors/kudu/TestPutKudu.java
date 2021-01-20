@@ -17,7 +17,6 @@
 
 package org.apache.nifi.processors.kudu;
 
-import java.util.stream.Collectors;
 import org.apache.kudu.ColumnSchema.ColumnSchemaBuilder;
 import org.apache.kudu.ColumnTypeAttributes;
 import org.apache.kudu.Schema;
@@ -29,8 +28,10 @@ import org.apache.kudu.client.OperationResponse;
 import org.apache.kudu.client.RowError;
 import org.apache.kudu.client.RowErrorsAndOverflowStatus;
 import org.apache.kudu.client.SessionConfiguration.FlushMode;
+import org.apache.nifi.controller.AbstractControllerService;
 import org.apache.nifi.flowfile.FlowFile;
 import org.apache.nifi.flowfile.attributes.CoreAttributes;
+import org.apache.nifi.kerberos.KerberosCredentialsService;
 import org.apache.nifi.logging.ComponentLog;
 import org.apache.nifi.provenance.ProvenanceEventRecord;
 import org.apache.nifi.provenance.ProvenanceEventType;
@@ -41,14 +42,13 @@ import org.apache.nifi.serialization.RecordReader;
 import org.apache.nifi.serialization.RecordReaderFactory;
 import org.apache.nifi.serialization.SimpleRecordSchema;
 import org.apache.nifi.serialization.record.MapRecord;
+import org.apache.nifi.serialization.record.MockRecordParser;
 import org.apache.nifi.serialization.record.RecordField;
 import org.apache.nifi.serialization.record.RecordFieldType;
-import org.apache.nifi.serialization.record.MockRecordParser;
 import org.apache.nifi.serialization.record.RecordSchema;
 import org.apache.nifi.util.MockFlowFile;
 import org.apache.nifi.util.TestRunner;
 import org.apache.nifi.util.TestRunners;
-
 import org.apache.nifi.util.Tuple;
 import org.junit.After;
 import org.junit.Assert;
@@ -59,22 +59,24 @@ import org.mockito.stubbing.OngoingStubbing;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Arrays;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import static org.apache.nifi.processors.kudu.TestPutKudu.ResultCode.EXCEPTION;
+import static org.apache.nifi.processors.kudu.TestPutKudu.ResultCode.FAIL;
+import static org.apache.nifi.processors.kudu.TestPutKudu.ResultCode.OK;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-
-import static org.apache.nifi.processors.kudu.TestPutKudu.ResultCode.OK;
-import static org.apache.nifi.processors.kudu.TestPutKudu.ResultCode.FAIL;
-import static org.apache.nifi.processors.kudu.TestPutKudu.ResultCode.EXCEPTION;
 
 public class TestPutKudu {
 
@@ -150,6 +152,42 @@ public class TestPutKudu {
         final ProvenanceEventRecord provEvent = provEvents.get(0);
         Assert.assertEquals(ProvenanceEventType.SEND, provEvent.getEventType());
     }
+
+    @Test
+    public void testKerberosEnabled() throws InitializationException {
+        createRecordReader(1);
+
+        final KerberosCredentialsService kerberosCredentialsService = new MockKerberosCredentialsService("unit-test-principal", "unit-test-keytab");
+        testRunner.addControllerService("kerb", kerberosCredentialsService);
+        testRunner.enableControllerService(kerberosCredentialsService);
+
+        testRunner.setProperty(PutKudu.KERBEROS_CREDENTIALS_SERVICE, "kerb");
+
+        testRunner.run(1, false);
+
+        final MockPutKudu proc = (MockPutKudu) testRunner.getProcessor();
+        assertTrue(proc.loggedIn());
+        assertFalse(proc.loggedOut());
+
+        testRunner.run(1, true, false);
+        assertTrue(proc.loggedOut());
+    }
+
+
+    @Test
+    public void testInsecureClient() throws InitializationException {
+        createRecordReader(1);
+
+        testRunner.run(1, false);
+
+        final MockPutKudu proc = (MockPutKudu) testRunner.getProcessor();
+        assertFalse(proc.loggedIn());
+        assertFalse(proc.loggedOut());
+
+        testRunner.run(1, true, false);
+        assertFalse(proc.loggedOut());
+    }
+
 
     @Test
     public void testInvalidReaderShouldRouteToFailure() throws InitializationException, SchemaNotFoundException, MalformedRecordException, IOException {
@@ -246,23 +284,6 @@ public class TestPutKudu {
         testRunner.assertAllFlowFilesTransferred(PutKudu.REL_FAILURE, 1);
     }
 
-    @Test
-    public void testSkipHeadLineTrue() throws InitializationException, IOException {
-        createRecordReader(100);
-        testRunner.setProperty(PutKudu.SKIP_HEAD_LINE, "true");
-
-        final String filename = "testSkipHeadLineTrue-" + System.currentTimeMillis();
-
-        final Map<String,String> flowFileAttributes = new HashMap<>();
-        flowFileAttributes.put(CoreAttributes.FILENAME.key(), filename);
-
-        testRunner.enqueue("trigger", flowFileAttributes);
-        testRunner.run();
-        testRunner.assertAllFlowFilesTransferred(PutKudu.REL_SUCCESS, 1);
-
-        MockFlowFile flowFiles = testRunner.getFlowFilesForRelationship(PutKudu.REL_SUCCESS).get(0);
-        flowFiles.assertAttributeEquals(PutKudu.RECORD_COUNT_ATTR, "99");
-    }
 
     @Test
     public void testInsertManyFlowFiles() throws Exception {
@@ -499,6 +520,7 @@ public class TestPutKudu {
         setUpTestRunner(testRunner);
         testRunner.setProperty(PutKudu.FLUSH_MODE, flushMode.name());
         testRunner.setProperty(PutKudu.BATCH_SIZE, String.valueOf(batchSize));
+        testRunner.setProperty(PutKudu.FLOWFILE_BATCH_SIZE, String.valueOf(batchSize));
 
         IntStream.range(0, numFlowFiles).forEach(i -> testRunner.enqueue(""));
         testRunner.run(numFlowFiles);
@@ -533,5 +555,26 @@ public class TestPutKudu {
     @Test
     public void testKuduPartialFailuresOnManualFlush() throws Exception {
         testKuduPartialFailure(FlushMode.MANUAL_FLUSH);
+    }
+
+
+    public static class MockKerberosCredentialsService extends AbstractControllerService implements KerberosCredentialsService {
+        private final String keytab;
+        private final String principal;
+
+        public MockKerberosCredentialsService(final String keytab, final String principal) {
+            this.keytab = keytab;
+            this.principal = principal;
+        }
+
+        @Override
+        public String getKeytab() {
+            return keytab;
+        }
+
+        @Override
+        public String getPrincipal() {
+            return principal;
+        }
     }
 }

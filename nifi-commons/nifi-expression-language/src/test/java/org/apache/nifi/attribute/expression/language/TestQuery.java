@@ -996,6 +996,42 @@ public class TestQuery {
     }
 
     @Test
+    public void testNestedAnyDelineatedValueOr() {
+        final Map<String, String> attributes = new HashMap<>();
+        attributes.put("abc", "a,b,c");
+        attributes.put("xyz", "x");
+
+        // Assert each part separately.
+        assertEquals("true", Query.evaluateExpressions("${anyDelineatedValue('${abc}', ','):equals('c')}",
+                attributes, null));
+        assertEquals("false", Query.evaluateExpressions("${anyDelineatedValue('${xyz}', ','):equals('z')}",
+                attributes, null));
+
+        // Combine them with 'or'.
+        assertEquals("true", Query.evaluateExpressions(
+                "${anyDelineatedValue('${abc}', ','):equals('c'):or(${anyDelineatedValue('${xyz}', ','):equals('z')})}",
+                attributes, null));
+    }
+
+    @Test
+    public void testNestedAnyDelineatedValueAnd() {
+        final Map<String, String> attributes = new HashMap<>();
+        attributes.put("abc", "2,0,1,3");
+        attributes.put("xyz", "x,y,z");
+
+        // Assert each part separately.
+        assertEquals("true", Query.evaluateExpressions("${anyDelineatedValue('${abc}', ','):gt('2')}",
+                attributes, null));
+        assertEquals("true", Query.evaluateExpressions("${anyDelineatedValue('${xyz}', ','):equals('z')}",
+                attributes, null));
+
+        // Combine them with 'and'.
+        assertEquals("true", Query.evaluateExpressions(
+                "${anyDelineatedValue('${abc}', ','):gt('2'):and(${anyDelineatedValue('${xyz}', ','):equals('z')})}",
+                attributes, null));
+    }
+
+    @Test
     public void testAllDelineatedValues() {
         final Map<String, String> attributes = new HashMap<>();
         attributes.put("abc", "a,b,c");
@@ -1774,6 +1810,11 @@ public class TestQuery {
         verifyEquals("${literal(true):ifElse(false, 'b')}", attributes, "false");
     }
 
+    @Test
+    public void testThread() {
+        final Map<String, String> attributes = new HashMap<>();
+        verifyEquals("${thread()}", attributes, "main");
+    }
 
     private void verifyEquals(final String expression, final Map<String, String> attributes, final Object expectedResult) {
         verifyEquals(expression,attributes, null, expectedResult);

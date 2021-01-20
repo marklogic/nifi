@@ -28,7 +28,6 @@ import org.apache.nifi.annotation.documentation.Tags;
 import org.apache.nifi.annotation.lifecycle.OnDisabled;
 import org.apache.nifi.annotation.lifecycle.OnEnabled;
 import org.apache.nifi.annotation.lifecycle.OnStopped;
-import org.apache.nifi.authentication.exception.ProviderCreationException;
 import org.apache.nifi.components.PropertyDescriptor;
 import org.apache.nifi.controller.AbstractControllerService;
 import org.apache.nifi.controller.ConfigurationContext;
@@ -41,8 +40,8 @@ import java.util.List;
 
 @Tags({"mongo", "mongodb", "service"})
 @CapabilityDescription(
-    "Provides a controller service that configures a connection to MongoDB and provides access to that connection to " +
-    "other Mongo-related components."
+        "Provides a controller service that configures a connection to MongoDB and provides access to that connection to " +
+                "other Mongo-related components."
 )
 public class MongoDBControllerService extends AbstractControllerService implements MongoDBClientService {
     private String uri;
@@ -83,7 +82,7 @@ public class MongoDBControllerService extends AbstractControllerService implemen
                 try {
                     clientAuth = SSLContextService.ClientAuth.valueOf(rawClientAuth);
                 } catch (final IllegalArgumentException iae) {
-                    throw new ProviderCreationException(String.format("Unrecognized client auth '%s'. Possible values are [%s]",
+                    throw new IllegalStateException(String.format("Unrecognized client auth '%s'. Possible values are [%s]",
                             rawClientAuth, StringUtils.join(SslContextFactory.ClientAuth.values(), ", ")));
                 }
             }

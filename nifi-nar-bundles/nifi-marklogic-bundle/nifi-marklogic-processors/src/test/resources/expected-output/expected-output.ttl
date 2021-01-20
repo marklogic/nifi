@@ -1,0 +1,185 @@
+@prefix prov: <http://marklogic.com/nifi/Provenance/> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+<http://marklogic.com/nifi/Provenance/23709>
+	a prov:AttributesModified ;
+	prov:flowFileUuid "f6769953-78c0-49cc-ac0f-b000d8e0842a" ;
+	prov:id "23709" ;
+	prov:millis 95827166 ;
+	prov:timestamp "2018-12-31T14:20:53.726 -0500"^^xsd:dateTime ;
+	prov:transitionedTo <http://marklogic.com/nifi/Provenance/23824> ;
+.
+<http://marklogic.com/nifi/Provenance/23674>
+	a prov:ContentModified ;
+	prov:flowFileUuid "f6769953-78c0-49cc-ac0f-b000d8e0842a" ;
+	prov:id "23674" ;
+	prov:millis 95827157 ;
+	prov:timestamp "2018-12-31T14:20:53.717 -0500"^^xsd:dateTime ;
+	prov:transitionedTo <http://marklogic.com/nifi/Provenance/23709> ;
+.
+<http://marklogic.com/nifi/Provenance/24051>
+	a prov:AttributesModified ;
+	prov:flowFileUuid "f6769953-78c0-49cc-ac0f-b000d8e0842a" ;
+	prov:id "24051" ;
+	prov:millis 95829249 ;
+	prov:timestamp "2018-12-31T14:20:55.809 -0500"^^xsd:dateTime ;
+	prov:transitionedTo <http://marklogic.com/nifi/Provenance/24058> ;
+.
+<http://marklogic.com/nifi/Provenance/23839>
+	a prov:AttributesModified ;
+	prov:flowFileUuid "f6769953-78c0-49cc-ac0f-b000d8e0842a" ;
+	prov:id "23839" ;
+	prov:millis 95827723 ;
+	prov:timestamp "2018-12-31T14:20:54.283 -0500"^^xsd:dateTime ;
+	prov:transitionedTo <http://marklogic.com/nifi/Provenance/23843> ;
+.
+<http://marklogic.com/nifi/Provenance/23179>
+	a prov:AttributesModified ;
+	prov:flowFileUuid "f6769953-78c0-49cc-ac0f-b000d8e0842a" ;
+	prov:id "23179" ;
+	prov:millis 95826986 ;
+	prov:timestamp "2018-12-31T14:20:53.546 -0500"^^xsd:dateTime ;
+	prov:transitionedTo <http://marklogic.com/nifi/Provenance/23674> ;
+.
+<http://marklogic.com/nifi/Provenance/24068>
+	a prov:AttributesModified ;
+	prov:flowFileUuid "f6769953-78c0-49cc-ac0f-b000d8e0842a" ;
+	prov:id "24068" ;
+	prov:millis 95829276 ;
+	prov:timestamp "2018-12-31T14:20:55.836 -0500"^^xsd:dateTime ;
+	prov:transitionedTo <http://marklogic.com/nifi/Provenance/24077> ;
+.
+<http://marklogic.com/nifi/Provenance/23824>
+	a prov:AttributesModified ;
+	prov:flowFileUuid "f6769953-78c0-49cc-ac0f-b000d8e0842a" ;
+	prov:id "23824" ;
+	prov:millis 95827664 ;
+	prov:timestamp "2018-12-31T14:20:54.224 -0500"^^xsd:dateTime ;
+	prov:transitionedTo <http://marklogic.com/nifi/Provenance/23826> ;
+.
+<http://marklogic.com/nifi/Provenance/24077>
+	a prov:AttributesModified ;
+	prov:flowFileUuid "f6769953-78c0-49cc-ac0f-b000d8e0842a" ;
+	prov:id "24077" ;
+	prov:millis 95829287 ;
+	prov:timestamp "2018-12-31T14:20:55.847 -0500"^^xsd:dateTime ;
+	prov:transitionedTo <http://marklogic.com/nifi/Provenance/28860> ;
+.
+<http://marklogic.com/nifi/Provenance/28866>
+	a prov:Fork ;
+	prov:flowFileUuid "f6769953-78c0-49cc-ac0f-b000d8e0842a" ;
+	prov:childUuids "5275a5ea-bf24-4f1c-a0d9-d4a0c8a891ed" ;
+	prov:childUuids "46015260-68fb-4c59-a187-356d43e8bc19" ;
+	prov:id "28866" ;
+	prov:millis 95959259 ;
+	prov:parentUuids "f6769953-78c0-49cc-ac0f-b000d8e0842a" ;
+	prov:parentUuids "5560f2ad-cb1e-4ee4-8633-2c7cec4e037a" ;
+	prov:timestamp "2018-12-31T14:23:05.819 -0500"^^xsd:dateTime ;
+	prov:transitionedTo <http://marklogic.com/nifi/Provenance/28868> ;
+.
+<http://marklogic.com/nifi/Provenance/23826>
+	a prov:AttributesModified ;
+	prov:flowFileUuid "f6769953-78c0-49cc-ac0f-b000d8e0842a" ;
+	prov:id "23826" ;
+	prov:millis 95827669 ;
+	prov:timestamp "2018-12-31T14:20:54.229 -0500"^^xsd:dateTime ;
+	prov:transitionedTo <http://marklogic.com/nifi/Provenance/23839> ;
+.
+<http://marklogic.com/nifi/Provenance/22952>
+	a prov:Create ;
+	prov:flowFileUuid "f6769953-78c0-49cc-ac0f-b000d8e0842a" ;
+	prov:id "22952" ;
+	prov:millis 95826620 ;
+	prov:timestamp "2018-12-31T14:20:53.180 -0500"^^xsd:dateTime ;
+	prov:transitionedTo <http://marklogic.com/nifi/Provenance/f6769953-78c0-49cc-ac0f-b000d8e0842a> ;
+.
+<http://marklogic.com/nifi/Provenance/28860>
+	a prov:Send ;
+	prov:flowFileUuid "f6769953-78c0-49cc-ac0f-b000d8e0842a" ;
+	prov:id "28860" ;
+	prov:millis 95959171 ;
+	prov:timestamp "2018-12-31T14:23:05.731 -0500"^^xsd:dateTime ;
+	prov:transitionedTo <http://marklogic.com/nifi/Provenance/28866> ;
+.
+<http://marklogic.com/nifi/Provenance/23870>
+	a prov:AttributesModified ;
+	prov:flowFileUuid "f6769953-78c0-49cc-ac0f-b000d8e0842a" ;
+	prov:id "23870" ;
+	prov:millis 95827822 ;
+	prov:timestamp "2018-12-31T14:20:54.382 -0500"^^xsd:dateTime ;
+	prov:transitionedTo <http://marklogic.com/nifi/Provenance/23877> ;
+.
+<http://marklogic.com/nifi/Provenance/23849>
+	a prov:AttributesModified ;
+	prov:flowFileUuid "f6769953-78c0-49cc-ac0f-b000d8e0842a" ;
+	prov:id "23849" ;
+	prov:millis 95827750 ;
+	prov:timestamp "2018-12-31T14:20:54.310 -0500"^^xsd:dateTime ;
+	prov:transitionedTo <http://marklogic.com/nifi/Provenance/23870> ;
+.
+<http://marklogic.com/nifi/Provenance/24058>
+	a prov:AttributesModified ;
+	prov:flowFileUuid "f6769953-78c0-49cc-ac0f-b000d8e0842a" ;
+	prov:id "24058" ;
+	prov:millis 95829265 ;
+	prov:timestamp "2018-12-31T14:20:55.825 -0500"^^xsd:dateTime ;
+	prov:transitionedTo <http://marklogic.com/nifi/Provenance/24063> ;
+.
+<http://marklogic.com/nifi/Provenance/23877>
+	a prov:Route ;
+	prov:flowFileUuid "f6769953-78c0-49cc-ac0f-b000d8e0842a" ;
+	prov:id "23877" ;
+	prov:millis 95827827 ;
+	prov:timestamp "2018-12-31T14:20:54.387 -0500"^^xsd:dateTime ;
+	prov:transitionedTo <http://marklogic.com/nifi/Provenance/24046> ;
+.
+<http://marklogic.com/nifi/Provenance/f6769953-78c0-49cc-ac0f-b000d8e0842a>
+	a prov:Flowfile ;
+	prov:flowFileUuid "f6769953-78c0-49cc-ac0f-b000d8e0842a" ;
+	prov:id "f6769953-78c0-49cc-ac0f-b000d8e0842a" ;
+	prov:millis 95826620 ;
+	prov:timestamp "2018-12-31T14:20:53.180 -0500"^^xsd:dateTime ;
+	prov:transitionedTo <http://marklogic.com/nifi/Provenance/23179> ;
+.
+<http://marklogic.com/nifi/Provenance/24046>
+	a prov:ContentModified ;
+	prov:flowFileUuid "f6769953-78c0-49cc-ac0f-b000d8e0842a" ;
+	prov:id "24046" ;
+	prov:millis 95829240 ;
+	prov:timestamp "2018-12-31T14:20:55.800 -0500"^^xsd:dateTime ;
+	prov:transitionedTo <http://marklogic.com/nifi/Provenance/24051> ;
+.
+<http://marklogic.com/nifi/Provenance/24065>
+	a prov:AttributesModified ;
+	prov:flowFileUuid "f6769953-78c0-49cc-ac0f-b000d8e0842a" ;
+	prov:id "24065" ;
+	prov:millis 95829272 ;
+	prov:timestamp "2018-12-31T14:20:55.832 -0500"^^xsd:dateTime ;
+	prov:transitionedTo <http://marklogic.com/nifi/Provenance/24068> ;
+.
+<http://marklogic.com/nifi/Provenance/24063>
+	a prov:AttributesModified ;
+	prov:flowFileUuid "f6769953-78c0-49cc-ac0f-b000d8e0842a" ;
+	prov:id "24063" ;
+	prov:millis 95829270 ;
+	prov:timestamp "2018-12-31T14:20:55.830 -0500"^^xsd:dateTime ;
+	prov:transitionedTo <http://marklogic.com/nifi/Provenance/24065> ;
+.
+<http://marklogic.com/nifi/Provenance/23843>
+	a prov:AttributesModified ;
+	prov:flowFileUuid "f6769953-78c0-49cc-ac0f-b000d8e0842a" ;
+	prov:id "23843" ;
+	prov:millis 95827730 ;
+	prov:timestamp "2018-12-31T14:20:54.290 -0500"^^xsd:dateTime ;
+	prov:transitionedTo <http://marklogic.com/nifi/Provenance/23849> ;
+.
+<http://marklogic.com/nifi/Provenance/28868>
+	a prov:Drop ;
+	prov:flowFileUuid "f6769953-78c0-49cc-ac0f-b000d8e0842a" ;
+	prov:id "28868" ;
+	prov:millis 95959261 ;
+	prov:timestamp "2018-12-31T14:23:05.821 -0500"^^xsd:dateTime ;
+.

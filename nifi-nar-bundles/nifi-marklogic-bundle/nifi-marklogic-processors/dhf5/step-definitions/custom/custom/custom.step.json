@@ -1,0 +1,22 @@
+{
+  "lang" : "zxx",
+  "name" : "custom",
+  "description" : "",
+  "type" : "CUSTOM",
+  "version" : 1,
+  "options" : {
+    "additionalCollections" : [ ],
+    "sourceQuery" : "cts.uris(null, null, cts.trueQuery())",
+    "targetEntity" : "Person",
+    "collections" : [ "custom", "Person" ],
+    "sourceDatabase" : "test-marklogic-nifi-dhf5-STAGING",
+    "sourceCollection" : "",
+    "outputFormat" : "json",
+    "targetDatabase" : "test-marklogic-nifi-dhf5-FINAL"
+  },
+  "customHook" : { },
+  "modulePath" : "/custom-modules/custom/custom/main.sjs",
+  "retryLimit" : 0,
+  "batchSize" : 100,
+  "threadCount" : 4
+}

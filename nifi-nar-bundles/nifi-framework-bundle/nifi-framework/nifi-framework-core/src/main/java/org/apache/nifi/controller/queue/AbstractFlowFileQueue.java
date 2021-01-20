@@ -190,7 +190,6 @@ public abstract class AbstractFlowFileQueue implements FlowFileQueue {
             @Override
             public void run() {
                 int position = 0;
-                int resultCount = 0;
                 final List<FlowFileSummary> summaries = new ArrayList<>();
 
                 // Create an ArrayList that contains all of the contents of the active queue.
@@ -216,7 +215,7 @@ public abstract class AbstractFlowFileQueue implements FlowFileQueue {
                     }
                 }
 
-                logger.debug("{} Finished listing FlowFiles for active queue with a total of {} results", this, resultCount);
+                logger.debug("{} Finished listing FlowFiles for active queue with a total of {} results out of {} FlowFiles", this, summaries.size(), allFlowFiles.size());
                 listRequest.setFlowFileSummaries(summaries);
                 listRequest.setState(ListFlowFileState.COMPLETE);
             }
@@ -326,7 +325,7 @@ public abstract class AbstractFlowFileQueue implements FlowFileQueue {
     }
 
 
-    protected FlowFileSummary summarize(final FlowFile flowFile, final int position) {
+    protected FlowFileSummary summarize(final FlowFileRecord flowFile, final int position) {
         // extract all of the information that we care about into new variables rather than just
         // wrapping the FlowFile object with a FlowFileSummary object. We do this because we want to
         // be able to hold many FlowFileSummary objects in memory and if we just wrap the FlowFile object,
@@ -338,6 +337,7 @@ public abstract class AbstractFlowFileQueue implements FlowFileQueue {
         final Long lastQueuedTime = flowFile.getLastQueueDate();
         final long lineageStart = flowFile.getLineageStartDate();
         final boolean penalized = flowFile.isPenalized();
+        final long penaltyExpires = flowFile.getPenaltyExpirationMillis();
 
         return new FlowFileSummary() {
             @Override
@@ -373,6 +373,11 @@ public abstract class AbstractFlowFileQueue implements FlowFileQueue {
             @Override
             public boolean isPenalized() {
                 return penalized;
+            }
+
+            @Override
+            public long getPenaltyExpirationMillis() {
+                return penaltyExpires;
             }
         };
     }

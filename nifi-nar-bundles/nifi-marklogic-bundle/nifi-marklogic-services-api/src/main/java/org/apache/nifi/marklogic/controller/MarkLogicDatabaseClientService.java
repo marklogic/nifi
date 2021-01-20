@@ -17,10 +17,13 @@
 package org.apache.nifi.marklogic.controller;
 
 import com.marklogic.client.DatabaseClient;
+import com.marklogic.client.ext.DatabaseClientConfig;
 import org.apache.nifi.controller.ControllerService;
 
 public interface MarkLogicDatabaseClientService extends ControllerService {
 
     DatabaseClient getDatabaseClient();
+
+    DatabaseClientConfig getDatabaseClientConfig();
 
 }

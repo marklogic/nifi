@@ -28,6 +28,7 @@ import com.marklogic.client.datamovement.QueryBatcher;
 import com.marklogic.client.datamovement.WriteBatcher;
 import com.marklogic.client.query.QueryDefinition;
 import com.marklogic.client.query.RawCombinedQueryDefinition;
+import com.marklogic.client.query.RawCtsQueryDefinition;
 import com.marklogic.client.query.RawStructuredQueryDefinition;
 import com.marklogic.client.query.StringQueryDefinition;
 import com.marklogic.client.query.StructuredQueryDefinition;
@@ -96,7 +97,13 @@ class TestDataMovementManager implements DataMovementManager {
         return new TestQueryBatcher(query);
     }
 
-    @Override
+	@Override
+	public QueryBatcher newQueryBatcher(RawCtsQueryDefinition query) {
+        queryDef = query;
+        return new TestQueryBatcher(query);
+	}
+
+	@Override
     public QueryBatcher newQueryBatcher(Iterator<String> iterator) {
         return null;
     }

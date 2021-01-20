@@ -1,0 +1,390 @@
+{
+    "lineage": {
+        "id": "5da03587-5ae7-400d-91cf-ab9d105e1c23",
+        "uri": "http://localhost:8090/nifi-api/provenance/lineage/5da03587-5ae7-400d-91cf-ab9d105e1c23",
+        "submissionTime": "12/31/2018 14:25:13.310 EST",
+        "expiration": "12/31/2018 14:55:13.324 EST",
+        "percentCompleted": 100,
+        "finished": true,
+        "request": {
+            "lineageRequestType": "FLOWFILE",
+            "uuid": "f6769953-78c0-49cc-ac0f-b000d8e0842a"
+        },
+        "results": {
+            "nodes": [
+                {
+                    "id": "23709",
+                    "flowFileUuid": "f6769953-78c0-49cc-ac0f-b000d8e0842a",
+                    "parentUuids": [],
+                    "childUuids": [],
+                    "type": "EVENT",
+                    "eventType": "ATTRIBUTES_MODIFIED",
+                    "millis": 1546284053726,
+                    "timestamp": "12/31/2018 14:20:53.726 EST"
+                },
+                {
+                    "id": "23674",
+                    "flowFileUuid": "f6769953-78c0-49cc-ac0f-b000d8e0842a",
+                    "parentUuids": [],
+                    "childUuids": [],
+                    "type": "EVENT",
+                    "eventType": "CONTENT_MODIFIED",
+                    "millis": 1546284053717,
+                    "timestamp": "12/31/2018 14:20:53.717 EST"
+                },
+                {
+                    "id": "24051",
+                    "flowFileUuid": "f6769953-78c0-49cc-ac0f-b000d8e0842a",
+                    "parentUuids": [],
+                    "childUuids": [],
+                    "type": "EVENT",
+                    "eventType": "ATTRIBUTES_MODIFIED",
+                    "millis": 1546284055809,
+                    "timestamp": "12/31/2018 14:20:55.809 EST"
+                },
+                {
+                    "id": "23839",
+                    "flowFileUuid": "f6769953-78c0-49cc-ac0f-b000d8e0842a",
+                    "parentUuids": [],
+                    "childUuids": [],
+                    "type": "EVENT",
+                    "eventType": "ATTRIBUTES_MODIFIED",
+                    "millis": 1546284054283,
+                    "timestamp": "12/31/2018 14:20:54.283 EST"
+                },
+                {
+                    "id": "23179",
+                    "flowFileUuid": "f6769953-78c0-49cc-ac0f-b000d8e0842a",
+                    "parentUuids": [],
+                    "childUuids": [],
+                    "type": "EVENT",
+                    "eventType": "ATTRIBUTES_MODIFIED",
+                    "millis": 1546284053546,
+                    "timestamp": "12/31/2018 14:20:53.546 EST"
+                },
+                {
+                    "id": "24068",
+                    "flowFileUuid": "f6769953-78c0-49cc-ac0f-b000d8e0842a",
+                    "parentUuids": [],
+                    "childUuids": [],
+                    "type": "EVENT",
+                    "eventType": "ATTRIBUTES_MODIFIED",
+                    "millis": 1546284055836,
+                    "timestamp": "12/31/2018 14:20:55.836 EST"
+                },
+                {
+                    "id": "23824",
+                    "flowFileUuid": "f6769953-78c0-49cc-ac0f-b000d8e0842a",
+                    "parentUuids": [],
+                    "childUuids": [],
+                    "type": "EVENT",
+                    "eventType": "ATTRIBUTES_MODIFIED",
+                    "millis": 1546284054224,
+                    "timestamp": "12/31/2018 14:20:54.224 EST"
+                },
+                {
+                    "id": "24077",
+                    "flowFileUuid": "f6769953-78c0-49cc-ac0f-b000d8e0842a",
+                    "parentUuids": [],
+                    "childUuids": [],
+                    "type": "EVENT",
+                    "eventType": "ATTRIBUTES_MODIFIED",
+                    "millis": 1546284055847,
+                    "timestamp": "12/31/2018 14:20:55.847 EST"
+                },
+                {
+                    "id": "28866",
+                    "flowFileUuid": "f6769953-78c0-49cc-ac0f-b000d8e0842a",
+                    "parentUuids": [
+                        "f6769953-78c0-49cc-ac0f-b000d8e0842a",
+                        "5560f2ad-cb1e-4ee4-8633-2c7cec4e037a"
+                    ],
+                    "childUuids": [
+                        "5275a5ea-bf24-4f1c-a0d9-d4a0c8a891ed",
+                        "46015260-68fb-4c59-a187-356d43e8bc19"
+                    ],
+                    "type": "EVENT",
+                    "eventType": "FORK",
+                    "millis": 1546284185819,
+                    "timestamp": "12/31/2018 14:23:05.819 EST"
+                },
+                {
+                    "id": "23826",
+                    "flowFileUuid": "f6769953-78c0-49cc-ac0f-b000d8e0842a",
+                    "parentUuids": [],
+                    "childUuids": [],
+                    "type": "EVENT",
+                    "eventType": "ATTRIBUTES_MODIFIED",
+                    "millis": 1546284054229,
+                    "timestamp": "12/31/2018 14:20:54.229 EST"
+                },
+                {
+                    "id": "22952",
+                    "flowFileUuid": "f6769953-78c0-49cc-ac0f-b000d8e0842a",
+                    "parentUuids": [],
+                    "childUuids": [],
+                    "type": "EVENT",
+                    "eventType": "CREATE",
+                    "millis": 1546284053180,
+                    "timestamp": "12/31/2018 14:20:53.180 EST"
+                },
+                {
+                    "id": "28860",
+                    "flowFileUuid": "f6769953-78c0-49cc-ac0f-b000d8e0842a",
+                    "parentUuids": [],
+                    "childUuids": [],
+                    "type": "EVENT",
+                    "eventType": "SEND",
+                    "millis": 1546284185731,
+                    "timestamp": "12/31/2018 14:23:05.731 EST"
+                },
+                {
+                    "id": "23870",
+                    "flowFileUuid": "f6769953-78c0-49cc-ac0f-b000d8e0842a",
+                    "parentUuids": [],
+                    "childUuids": [],
+                    "type": "EVENT",
+                    "eventType": "ATTRIBUTES_MODIFIED",
+                    "millis": 1546284054382,
+                    "timestamp": "12/31/2018 14:20:54.382 EST"
+                },
+                {
+                    "id": "23849",
+                    "flowFileUuid": "f6769953-78c0-49cc-ac0f-b000d8e0842a",
+                    "parentUuids": [],
+                    "childUuids": [],
+                    "type": "EVENT",
+                    "eventType": "ATTRIBUTES_MODIFIED",
+                    "millis": 1546284054310,
+                    "timestamp": "12/31/2018 14:20:54.310 EST"
+                },
+                {
+                    "id": "24058",
+                    "flowFileUuid": "f6769953-78c0-49cc-ac0f-b000d8e0842a",
+                    "parentUuids": [],
+                    "childUuids": [],
+                    "type": "EVENT",
+                    "eventType": "ATTRIBUTES_MODIFIED",
+                    "millis": 1546284055825,
+                    "timestamp": "12/31/2018 14:20:55.825 EST"
+                },
+                {
+                    "id": "23877",
+                    "flowFileUuid": "f6769953-78c0-49cc-ac0f-b000d8e0842a",
+                    "parentUuids": [],
+                    "childUuids": [],
+                    "type": "EVENT",
+                    "eventType": "ROUTE",
+                    "millis": 1546284054387,
+                    "timestamp": "12/31/2018 14:20:54.387 EST"
+                },
+                {
+                    "id": "f6769953-78c0-49cc-ac0f-b000d8e0842a",
+                    "flowFileUuid": "f6769953-78c0-49cc-ac0f-b000d8e0842a",
+                    "type": "FLOWFILE",
+                    "millis": 1546284053180,
+                    "timestamp": "12/31/2018 14:20:53.180 EST"
+                },
+                {
+                    "id": "24046",
+                    "flowFileUuid": "f6769953-78c0-49cc-ac0f-b000d8e0842a",
+                    "parentUuids": [],
+                    "childUuids": [],
+                    "type": "EVENT",
+                    "eventType": "CONTENT_MODIFIED",
+                    "millis": 1546284055800,
+                    "timestamp": "12/31/2018 14:20:55.800 EST"
+                },
+                {
+                    "id": "24065",
+                    "flowFileUuid": "f6769953-78c0-49cc-ac0f-b000d8e0842a",
+                    "parentUuids": [],
+                    "childUuids": [],
+                    "type": "EVENT",
+                    "eventType": "ATTRIBUTES_MODIFIED",
+                    "millis": 1546284055832,
+                    "timestamp": "12/31/2018 14:20:55.832 EST"
+                },
+                {
+                    "id": "24063",
+                    "flowFileUuid": "f6769953-78c0-49cc-ac0f-b000d8e0842a",
+                    "parentUuids": [],
+                    "childUuids": [],
+                    "type": "EVENT",
+                    "eventType": "ATTRIBUTES_MODIFIED",
+                    "millis": 1546284055830,
+                    "timestamp": "12/31/2018 14:20:55.830 EST"
+                },
+                {
+                    "id": "23843",
+                    "flowFileUuid": "f6769953-78c0-49cc-ac0f-b000d8e0842a",
+                    "parentUuids": [],
+                    "childUuids": [],
+                    "type": "EVENT",
+                    "eventType": "ATTRIBUTES_MODIFIED",
+                    "millis": 1546284054290,
+                    "timestamp": "12/31/2018 14:20:54.290 EST"
+                },
+                {
+                    "id": "28868",
+                    "flowFileUuid": "f6769953-78c0-49cc-ac0f-b000d8e0842a",
+                    "parentUuids": [],
+                    "childUuids": [],
+                    "type": "EVENT",
+                    "eventType": "DROP",
+                    "millis": 1546284185821,
+                    "timestamp": "12/31/2018 14:23:05.821 EST"
+                }
+            ],
+            "links": [
+                {
+                    "sourceId": "23877",
+                    "targetId": "24046",
+                    "flowFileUuid": "f6769953-78c0-49cc-ac0f-b000d8e0842a",
+                    "timestamp": "12/31/2018 14:20:55.800 EST",
+                    "millis": 1546284055800
+                },
+                {
+                    "sourceId": "23674",
+                    "targetId": "23709",
+                    "flowFileUuid": "f6769953-78c0-49cc-ac0f-b000d8e0842a",
+                    "timestamp": "12/31/2018 14:20:53.726 EST",
+                    "millis": 1546284053726
+                },
+                {
+                    "sourceId": "23826",
+                    "targetId": "23839",
+                    "flowFileUuid": "f6769953-78c0-49cc-ac0f-b000d8e0842a",
+                    "timestamp": "12/31/2018 14:20:54.283 EST",
+                    "millis": 1546284054283
+                },
+                {
+                    "sourceId": "23870",
+                    "targetId": "23877",
+                    "flowFileUuid": "f6769953-78c0-49cc-ac0f-b000d8e0842a",
+                    "timestamp": "12/31/2018 14:20:54.387 EST",
+                    "millis": 1546284054387
+                },
+                {
+                    "sourceId": "23709",
+                    "targetId": "23824",
+                    "flowFileUuid": "f6769953-78c0-49cc-ac0f-b000d8e0842a",
+                    "timestamp": "12/31/2018 14:20:54.224 EST",
+                    "millis": 1546284054224
+                },
+                {
+                    "sourceId": "28866",
+                    "targetId": "28868",
+                    "flowFileUuid": "f6769953-78c0-49cc-ac0f-b000d8e0842a",
+                    "timestamp": "12/31/2018 14:23:05.821 EST",
+                    "millis": 1546284185821
+                },
+                {
+                    "sourceId": "23179",
+                    "targetId": "23674",
+                    "flowFileUuid": "f6769953-78c0-49cc-ac0f-b000d8e0842a",
+                    "timestamp": "12/31/2018 14:20:53.717 EST",
+                    "millis": 1546284053717
+                },
+                {
+                    "sourceId": "23843",
+                    "targetId": "23849",
+                    "flowFileUuid": "f6769953-78c0-49cc-ac0f-b000d8e0842a",
+                    "timestamp": "12/31/2018 14:20:54.310 EST",
+                    "millis": 1546284054310
+                },
+                {
+                    "sourceId": "f6769953-78c0-49cc-ac0f-b000d8e0842a",
+                    "targetId": "23179",
+                    "flowFileUuid": "f6769953-78c0-49cc-ac0f-b000d8e0842a",
+                    "timestamp": "12/31/2018 14:20:53.546 EST",
+                    "millis": 1546284053546
+                },
+                {
+                    "sourceId": "23839",
+                    "targetId": "23843",
+                    "flowFileUuid": "f6769953-78c0-49cc-ac0f-b000d8e0842a",
+                    "timestamp": "12/31/2018 14:20:54.290 EST",
+                    "millis": 1546284054290
+                },
+                {
+                    "sourceId": "24051",
+                    "targetId": "24058",
+                    "flowFileUuid": "f6769953-78c0-49cc-ac0f-b000d8e0842a",
+                    "timestamp": "12/31/2018 14:20:55.825 EST",
+                    "millis": 1546284055825
+                },
+                {
+                    "sourceId": "23824",
+                    "targetId": "23826",
+                    "flowFileUuid": "f6769953-78c0-49cc-ac0f-b000d8e0842a",
+                    "timestamp": "12/31/2018 14:20:54.229 EST",
+                    "millis": 1546284054229
+                },
+                {
+                    "sourceId": "24046",
+                    "targetId": "24051",
+                    "flowFileUuid": "f6769953-78c0-49cc-ac0f-b000d8e0842a",
+                    "timestamp": "12/31/2018 14:20:55.809 EST",
+                    "millis": 1546284055809
+                },
+                {
+                    "sourceId": "24065",
+                    "targetId": "24068",
+                    "flowFileUuid": "f6769953-78c0-49cc-ac0f-b000d8e0842a",
+                    "timestamp": "12/31/2018 14:20:55.836 EST",
+                    "millis": 1546284055836
+                },
+                {
+                    "sourceId": "22952",
+                    "targetId": "f6769953-78c0-49cc-ac0f-b000d8e0842a",
+                    "flowFileUuid": "f6769953-78c0-49cc-ac0f-b000d8e0842a",
+                    "timestamp": "12/31/2018 14:20:53.180 EST",
+                    "millis": 1546284053180
+                },
+                {
+                    "sourceId": "24063",
+                    "targetId": "24065",
+                    "flowFileUuid": "f6769953-78c0-49cc-ac0f-b000d8e0842a",
+                    "timestamp": "12/31/2018 14:20:55.832 EST",
+                    "millis": 1546284055832
+                },
+                {
+                    "sourceId": "24058",
+                    "targetId": "24063",
+                    "flowFileUuid": "f6769953-78c0-49cc-ac0f-b000d8e0842a",
+                    "timestamp": "12/31/2018 14:20:55.830 EST",
+                    "millis": 1546284055830
+                },
+                {
+                    "sourceId": "24068",
+                    "targetId": "24077",
+                    "flowFileUuid": "f6769953-78c0-49cc-ac0f-b000d8e0842a",
+                    "timestamp": "12/31/2018 14:20:55.847 EST",
+                    "millis": 1546284055847
+                },
+                {
+                    "sourceId": "24077",
+                    "targetId": "28860",
+                    "flowFileUuid": "f6769953-78c0-49cc-ac0f-b000d8e0842a",
+                    "timestamp": "12/31/2018 14:23:05.731 EST",
+                    "millis": 1546284185731
+                },
+                {
+                    "sourceId": "28860",
+                    "targetId": "28866",
+                    "flowFileUuid": "f6769953-78c0-49cc-ac0f-b000d8e0842a",
+                    "timestamp": "12/31/2018 14:23:05.819 EST",
+                    "millis": 1546284185819
+                },
+                {
+                    "sourceId": "23849",
+                    "targetId": "23870",
+                    "flowFileUuid": "f6769953-78c0-49cc-ac0f-b000d8e0842a",
+                    "timestamp": "12/31/2018 14:20:54.382 EST",
+                    "millis": 1546284054382
+                }
+            ]
+        }
+    }
+}
