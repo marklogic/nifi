@@ -16,23 +16,22 @@
  */
 package org.apache.nifi.marklogic.processor;
 
-import java.util.concurrent.atomic.AtomicLong;
-
+import org.apache.nifi.components.PropertyDescriptor;
+import org.apache.nifi.components.PropertyValue;
 import org.apache.nifi.marklogic.controller.DefaultMarkLogicDatabaseClientService;
 import org.apache.nifi.marklogic.controller.MarkLogicDatabaseClientService;
-import org.apache.nifi.marklogic.controller.MarkLogicTestConfig;
 import org.apache.nifi.processor.ProcessSession;
 import org.apache.nifi.processor.ProcessSessionFactory;
 import org.apache.nifi.processor.Processor;
 import org.apache.nifi.reporting.InitializationException;
-import org.apache.nifi.util.MockFlowFile;
-import org.apache.nifi.util.MockProcessContext;
-import org.apache.nifi.util.MockProcessSession;
-import org.apache.nifi.util.MockProcessorInitializationContext;
-import org.apache.nifi.util.SharedSessionState;
-import org.apache.nifi.util.TestRunner;
-import org.apache.nifi.util.TestRunners;
+import org.apache.nifi.util.*;
 import org.junit.Assert;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class AbstractMarkLogicProcessorTest extends Assert {
     Processor processor;
@@ -44,15 +43,10 @@ public class AbstractMarkLogicProcessorTest extends Assert {
     protected MockProcessSessionFactory mockProcessSessionFactory;
     protected MarkLogicDatabaseClientService service;
     protected String databaseClientServiceIdentifier = "databaseClientService";
-    protected String hostName = MarkLogicTestConfig.hostName;
-    protected String port = MarkLogicTestConfig.port;
-    protected String database = MarkLogicTestConfig.database;
-    protected String username = MarkLogicTestConfig.username;
-    protected String password = MarkLogicTestConfig.password;
-    protected String loadBalancer= MarkLogicTestConfig.loadBalancer;
-    protected String authentication= "CERTIFICATE";
 
-    protected void initialize(Processor processor) throws InitializationException {
+    protected ApplicationContext applicationContext;
+
+    protected void initialize(Processor processor) {
         this.processor = processor;
         processContext = new MockProcessContext(processor);
         initializationContext = new MockProcessorInitializationContext(processor, processContext);
@@ -61,17 +55,41 @@ public class AbstractMarkLogicProcessorTest extends Assert {
         mockProcessSessionFactory = new MockProcessSessionFactory(sharedSessionState, processor);
         runner = TestRunners.newTestRunner(processor);
         service = new DefaultMarkLogicDatabaseClientService();
-        runner.addControllerService(databaseClientServiceIdentifier, service);
-        runner.setProperty(service, DefaultMarkLogicDatabaseClientService.HOST, hostName);
-        runner.setProperty(service, DefaultMarkLogicDatabaseClientService.PORT, port);
-        runner.setProperty(service, DefaultMarkLogicDatabaseClientService.DATABASE, database);
-        runner.setProperty(service, DefaultMarkLogicDatabaseClientService.USERNAME, username);
-        runner.setProperty(service, DefaultMarkLogicDatabaseClientService.PASSWORD, password);
-        runner.setProperty(service, DefaultMarkLogicDatabaseClientService.SECURITY_CONTEXT_TYPE, MarkLogicTestConfig.authentication);
+
+        applicationContext = new AnnotationConfigApplicationContext(TestConfig.class);
+        TestConfig testConfig = applicationContext.getBean(TestConfig.class);
+
+        try {
+            runner.addControllerService(databaseClientServiceIdentifier, service);
+            
+        } catch (InitializationException e) {
+            throw new RuntimeException(e);
+        }
+
+        runner.setProperty(service, DefaultMarkLogicDatabaseClientService.HOST, testConfig.getHost());
+        runner.setProperty(service, DefaultMarkLogicDatabaseClientService.PORT, testConfig.getRestPort().toString());
+        runner.setProperty(service, DefaultMarkLogicDatabaseClientService.USERNAME, testConfig.getUsername());
+        runner.setProperty(service, DefaultMarkLogicDatabaseClientService.PASSWORD, testConfig.getPassword());
+    }
+
+    /**
+     * Configures the DatabaseClientService that the test runner can run a processor that depends on a
+     * DatabaseClientService being configured.
+     */
+    protected void configureDatabaseClientService() {
+        runner.enableControllerService(service);
+        runner.assertValid(service);
+    }
+    protected MockFlowFile addTestFlowFile() {
+        return addFlowFile("<test/>");
     }
 
     protected MockFlowFile addFlowFile(String... contents) {
-        MockFlowFile flowFile = processSession.createFlowFile(String.join("\n", contents).getBytes());
+        return addFlowFile(new HashMap(), contents);
+    }
+
+    protected MockFlowFile addFlowFile(Map<String, String> attributes, String... contents) {
+        MockFlowFile flowFile = processSession.createFlowFile(String.join("\n", contents).getBytes(), attributes);
         sharedSessionState.getFlowFileQueue().offer(flowFile);
         return flowFile;
     }

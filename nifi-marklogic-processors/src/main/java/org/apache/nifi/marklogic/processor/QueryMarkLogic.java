@@ -267,6 +267,10 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
             dataMovementManager.startJob(queryBatcher);
             queryBatcher.awaitCompletion();
             dataMovementManager.stopJob(queryBatcher);
+            if (input != null) {
+                session.transfer(input, SUCCESS);
+            }
+            session.commit();
         } catch (final Throwable t) {
             context.yield();
             this.handleThrowable(t, session);
@@ -360,7 +364,6 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
                     if (getLogger().isDebugEnabled()) {
                         getLogger().debug("Routing " + doc.getUri() + " to " + SUCCESS.getName());
                     }
-                    session.commit();
                 }
             });
             if (retrieveMetadata) {

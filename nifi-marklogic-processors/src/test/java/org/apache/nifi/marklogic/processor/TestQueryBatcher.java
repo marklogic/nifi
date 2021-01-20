@@ -16,6 +16,7 @@
  */
 package org.apache.nifi.marklogic.processor;
 
+import java.util.Calendar;
 import java.util.concurrent.TimeUnit;
 
 import com.marklogic.client.DatabaseClient;
@@ -175,16 +176,6 @@ class TestQueryBatcher implements QueryBatcher {
         return null;
     }
 
-    @java.lang.Override
-    public java.util.Calendar getJobStartTime() {
-        return null;
-    }
-
-    @java.lang.Override
-    public java.util.Calendar getJobEndTime() {
-        return null;
-    }
-
     @Override
     public void retryListener(QueryBatch batch, QueryBatchListener queryBatchListener) {
     }
@@ -201,4 +192,14 @@ class TestQueryBatcher implements QueryBatcher {
     public QueryDefinition getQueryDefinition() {
         return queryDef;
     }
+
+	@Override
+	public Calendar getJobStartTime() {
+		return null;
+	}
+
+	@Override
+	public Calendar getJobEndTime() {
+		return null;
+	}
 }
