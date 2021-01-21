@@ -27,6 +27,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import com.marklogic.client.DatabaseClient;
 import org.apache.nifi.annotation.behavior.DynamicProperty;
 import org.apache.nifi.annotation.behavior.SystemResource;
 import org.apache.nifi.annotation.behavior.SystemResourceConsideration;
@@ -265,12 +266,17 @@ public class PutMarkLogic extends AbstractMarkLogicProcessor {
     public void onScheduled(ProcessContext context) {
         getLogger().info("OnScheduled");
         super.populatePropertiesByPrefix(context);
-        dataMovementManager = getDatabaseClient(context).newDataMovementManager();
-        writeBatcher = dataMovementManager.newWriteBatcher()
-            .withJobId(context.getProperty(JOB_ID).getValue())
-            .withJobName(context.getProperty(JOB_NAME).getValue())
-            .withBatchSize(context.getProperty(BATCH_SIZE).asInteger())
-            .withTemporalCollection(context.getProperty(TEMPORAL_COLLECTION).getValue());
+        try {
+            DatabaseClient client = getDatabaseClient(context);
+            dataMovementManager = getDatabaseClient(context).newDataMovementManager();
+            writeBatcher = dataMovementManager.newWriteBatcher()
+                    .withJobId(context.getProperty(JOB_ID).getValue())
+                    .withJobName(context.getProperty(JOB_NAME).getValue())
+                    .withBatchSize(context.getProperty(BATCH_SIZE).asInteger())
+                    .withTemporalCollection(context.getProperty(TEMPORAL_COLLECTION).getValue());
+        } catch (Exception ex) {
+            throw new RuntimeException("Unable to create WriteBatcher, cause: " + ex.getMessage(), ex);
+        }
 
         ServerTransform serverTransform = buildServerTransform(context);
         if (serverTransform != null) {

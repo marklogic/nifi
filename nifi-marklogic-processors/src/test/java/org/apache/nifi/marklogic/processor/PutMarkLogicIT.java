@@ -24,7 +24,6 @@ import com.marklogic.client.io.StringHandle;
 import com.marklogic.client.query.StructuredQueryBuilder;
 import org.apache.nifi.reporting.InitializationException;
 import org.apache.nifi.util.TestRunner;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -39,11 +38,6 @@ public class PutMarkLogicIT extends AbstractMarkLogicIT{
     @BeforeEach
     public void setup() {
         super.setup();
-    }
-
-    @AfterEach
-    public void teardown() {
-        super.teardown();
     }
 
     public TestRunner getNewTestRunner(Class processor) {

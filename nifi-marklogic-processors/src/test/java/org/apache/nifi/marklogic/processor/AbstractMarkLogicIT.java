@@ -137,8 +137,6 @@ public class AbstractMarkLogicIT extends AbstractSpringMarkLogicTest {
         runner.enableControllerService(service);
     }
 
-    protected void teardown() {}
-
     protected TestRunner getNewTestRunner(Class processor) {
         TestRunner runner = TestRunners.newTestRunner(processor);
         addDatabaseClientService(runner);

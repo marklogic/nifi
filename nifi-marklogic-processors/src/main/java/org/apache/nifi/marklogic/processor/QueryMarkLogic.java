@@ -142,12 +142,13 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
             .required(false).addValidator(Validator.VALID).build();
 
     protected static final Relationship SUCCESS = new Relationship.Builder().name("success")
-            .description("All FlowFiles that are created from documents read from MarkLogic are routed to"
-                    + " this success relationship.")
-            .build();
+            .description("For each record retrieved for the query, a FlowFile is sent to this relationship").build();
 
     protected static final Relationship FAILURE = new Relationship.Builder().name("failure")
-            .description("All FlowFiles that failed to produce a valid query.").build();
+            .description("If an error occurs while retrieving a batch of records for a query, a FlowFile will be sent to this relationship").build();
+
+    protected static final Relationship ORIGINAL = new Relationship.Builder().name("original")
+            .description("If this processor receives a FlowFile, it will be routed to this relationship").build();
 
     protected QueryBatcher queryBatcher;
 
@@ -168,9 +169,11 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
         list.add(STATE_INDEX_TYPE);
         list.add(COLLECTIONS);
         properties = Collections.unmodifiableList(list);
+
         Set<Relationship> set = new HashSet<>();
         set.add(SUCCESS);
         set.add(FAILURE);
+        set.add(ORIGINAL);
         relationships = Collections.unmodifiableSet(set);
     }
 
@@ -198,18 +201,12 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
     public void onTrigger(final ProcessContext context, final ProcessSession session) throws ProcessException {
         super.populatePropertiesByPrefix(context);
         try {
-            final FlowFile input;
-
-            if (context.hasIncomingConnection()) {
-                input = session.get();
-            } else {
-                input = null;
-            }
+            final FlowFile incomingFlowFile = context.hasIncomingConnection() ? session.get() : null;
 
             StateMap stateMap = context.getStateManager().getState(Scope.CLUSTER);
             DatabaseClient client = getDatabaseClient(context);
             DataMovementManager dataMovementManager = client.newDataMovementManager();
-            queryBatcher = createQueryBatcherWithQueryCriteria(context, session, input, getDatabaseClient(context),
+            queryBatcher = createQueryBatcherWithQueryCriteria(context, session, incomingFlowFile, getDatabaseClient(context),
                     dataMovementManager);
             if (context.getProperty(BATCH_SIZE).asInteger() != null)
                 queryBatcher.withBatchSize(context.getProperty(BATCH_SIZE).asInteger());
@@ -238,7 +235,7 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
                     QueryManager queryMgr = client.newQueryManager();
                     ValuesDefinition valuesDef = queryMgr.newValuesDefinition("state");
                     RawCombinedQueryDefinition qDef = queryMgr.newRawCombinedQueryDefinition(
-                            handleForQuery(buildStateConstraintOptions(context, input), Format.JSON));
+                            handleForQuery(buildStateConstraintOptions(context, incomingFlowFile), Format.JSON));
                     valuesDef.setQueryDefinition(qDef);
                     valuesDef.setAggregate("max");
                     ValuesHandle valuesResult = new ValuesHandle();
@@ -264,12 +261,15 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
                     serverTimestamp.set(batch.getServerTimestamp());
                 }
             });
+
+            // Ensure that this FF has a destination so that session.commit() does not throw an error
+            if (incomingFlowFile != null) {
+                session.transfer(incomingFlowFile, ORIGINAL);
+            }
+
             dataMovementManager.startJob(queryBatcher);
             queryBatcher.awaitCompletion();
             dataMovementManager.stopJob(queryBatcher);
-            if (input != null) {
-                session.transfer(input, SUCCESS);
-            }
             session.commit();
         } catch (final Throwable t) {
             context.yield();
@@ -404,7 +404,6 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
                                 getLogger().debug("Routing " + uri + " to " + SUCCESS.getName());
                             }
                         });
-                        ;
                         session.commit();
                     }
                 }
@@ -414,7 +413,7 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
     }
 
     private QueryBatcher createQueryBatcherWithQueryCriteria(ProcessContext context, ProcessSession session,
-            FlowFile flowFile, DatabaseClient databaseClient, DataMovementManager dataMovementManager) {
+            FlowFile incomingFlowFile, DatabaseClient databaseClient, DataMovementManager dataMovementManager) {
         final PropertyValue queryProperty = context.getProperty(QUERY);
         final String queryValue;
         final String queryTypeValue;
@@ -426,7 +425,7 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
             queryValue = collectionsValue;
             queryTypeValue = QueryTypes.COLLECTION.getValue();
         } else {
-            queryValue = queryProperty.evaluateAttributeExpressions(flowFile).getValue();
+            queryValue = queryProperty.evaluateAttributeExpressions(incomingFlowFile).getValue();
             queryTypeValue = context.getProperty(QUERY_TYPE).getValue();
         }
         final QueryManager queryManager = databaseClient.newQueryManager();
@@ -441,7 +440,7 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
         queryState = (stateMap != null) ? stateMap.get("queryState") : null;
         if (!(queryState == null || "".equals(queryState)) && context.getProperty(STATE_INDEX) != null
                 && context.getProperty(STATE_INDEX).isSet()) {
-            stateQuery = buildStateQuery(queryBuilder, context, flowFile);
+            stateQuery = buildStateQuery(queryBuilder, context, incomingFlowFile);
         }
         Format format = Format.XML;
         if (queryValue != null) {
@@ -542,15 +541,10 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
             throw new IllegalStateException("No valid Query criteria specified!");
         }
         queryBatcher.onQueryFailure(exception -> {
-            FlowFile failureFlowFile = null;
-            if (flowFile != null) {
-                failureFlowFile = session.penalize(flowFile);
-            } else {
-                failureFlowFile = session.create();
-            }
+            getLogger().error("Query failure: " + exception.getMessage());
+            FlowFile failureFlowFile = incomingFlowFile != null ? session.penalize(incomingFlowFile) : session.create();
             session.transfer(failureFlowFile, FAILURE);
             session.commit();
-            getLogger().error("Query failure: " + exception.getMessage());
             context.yield();
         });
         return queryBatcher;
@@ -569,15 +563,15 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
     }
 
     RangeIndexQuery buildStateQuery(StructuredQueryBuilder queryBuilder, final ProcessContext context,
-            final FlowFile flowFile) {
-        String stateIndexValue = context.getProperty(STATE_INDEX).evaluateAttributeExpressions(flowFile).getValue();
+            final FlowFile incomingFlowFile) {
+        String stateIndexValue = context.getProperty(STATE_INDEX).evaluateAttributeExpressions(incomingFlowFile).getValue();
         String stateIndexTypeValue = context.getProperty(STATE_INDEX_TYPE).getValue();
         List<PropertyDescriptor> namespaceProperties = propertiesByPrefix.get("ns");
         EditableNamespaceContext namespaces = new EditableNamespaceContext();
         if (namespaceProperties != null) {
             for (PropertyDescriptor propertyDesc : namespaceProperties) {
                 namespaces.put(propertyDesc.getName().substring(3),
-                        context.getProperty(propertyDesc).evaluateAttributeExpressions(flowFile).getValue());
+                        context.getProperty(propertyDesc).evaluateAttributeExpressions(incomingFlowFile).getValue());
             }
         }
         queryBuilder.setNamespaces(namespaces);

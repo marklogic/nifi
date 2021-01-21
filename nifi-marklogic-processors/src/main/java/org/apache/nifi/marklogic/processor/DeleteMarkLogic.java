@@ -16,11 +16,7 @@
  */
 package org.apache.nifi.marklogic.processor;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 import org.apache.nifi.annotation.behavior.InputRequirement;
 import org.apache.nifi.annotation.behavior.InputRequirement.Requirement;
@@ -73,9 +69,11 @@ public class DeleteMarkLogic extends QueryMarkLogic {
         list.add(STATE_INDEX);
         list.add(STATE_INDEX_TYPE);
         properties = Collections.unmodifiableList(list);
+
         Set<Relationship> set = new HashSet<>();
         set.add(SUCCESS);
         set.add(FAILURE);
+        set.add(ORIGINAL);
         relationships = Collections.unmodifiableSet(set);
     }
 

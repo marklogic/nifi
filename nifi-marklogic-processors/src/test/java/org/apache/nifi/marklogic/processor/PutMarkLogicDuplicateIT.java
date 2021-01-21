@@ -16,19 +16,12 @@
  */
 package org.apache.nifi.marklogic.processor;
 
-import com.marklogic.client.datamovement.QueryBatcher;
-import com.marklogic.client.query.StructuredQueryBuilder;
-import com.marklogic.client.query.StructuredQueryDefinition;
-
 import org.apache.nifi.reporting.InitializationException;
 import org.apache.nifi.util.TestRunner;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.Assert.assertEquals;
 
@@ -48,11 +41,6 @@ public class PutMarkLogicDuplicateIT extends AbstractMarkLogicIT{
     	}
     }
     
-    @AfterEach
-    public void teardown() {
-        super.teardown();
-    }
-
     public TestRunner getNewTestRunner(Class processor) {
         TestRunner runner = super.getNewTestRunner(processor);
         runner.setThreadCount(4);//Change this to higher value than 1 and likely will fail with XDMP-CONFLICTINGUPDATE

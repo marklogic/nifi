@@ -109,7 +109,6 @@ public class ApplyTransformMarkLogicIT extends AbstractMarkLogicIT {
 
     @AfterEach
     public void teardown() {
-        super.teardown();
         deleteDocumentsInCollection(collection);
     }
 }

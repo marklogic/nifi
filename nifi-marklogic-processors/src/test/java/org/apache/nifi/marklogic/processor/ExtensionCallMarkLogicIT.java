@@ -20,7 +20,6 @@ import com.marklogic.client.io.Format;
 import org.apache.nifi.reporting.InitializationException;
 import org.apache.nifi.util.MockFlowFile;
 import org.apache.nifi.util.TestRunner;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -36,11 +35,6 @@ public class ExtensionCallMarkLogicIT extends AbstractMarkLogicIT {
     @BeforeEach
     public void setup() {
         super.setup();
-    }
-
-    @AfterEach
-    public void teardown() {
-        super.teardown();
     }
 
     public TestRunner getNewTestRunner(Class processor) {

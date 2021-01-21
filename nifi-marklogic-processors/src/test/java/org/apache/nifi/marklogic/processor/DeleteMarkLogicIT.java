@@ -22,7 +22,7 @@ import com.marklogic.client.io.DocumentMetadataHandle;
 import com.marklogic.client.io.StringHandle;
 import com.marklogic.client.query.StructuredQueryBuilder;
 import org.apache.nifi.flowfile.attributes.CoreAttributes;
-import org.apache.nifi.reporting.InitializationException;
+import org.apache.nifi.util.MockFlowFile;
 import org.apache.nifi.util.TestRunner;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -58,21 +58,28 @@ public class DeleteMarkLogicIT extends AbstractMarkLogicIT {
     }
 
     @Test
-    public void testSimpleCollectionDelete() throws InitializationException {
+    public void testSimpleCollectionDelete() {
         TestRunner runner = getNewTestRunner(DeleteMarkLogic.class);
         runner.setProperty(QueryMarkLogic.QUERY, collection);
         runner.setProperty(QueryMarkLogic.QUERY_TYPE, QueryMarkLogic.QueryTypes.COLLECTION);
         runner.assertValid();
+        runner.enqueue(new MockFlowFile(12345));
         runner.run();
+
         runner.assertTransferCount(QueryMarkLogic.SUCCESS, numDocs);
-        runner.assertAllFlowFilesContainAttribute(QueryMarkLogic.SUCCESS,CoreAttributes.FILENAME.key());
+        runner.assertAllFlowFilesContainAttribute(QueryMarkLogic.SUCCESS, CoreAttributes.FILENAME.key());
+
+        runner.assertTransferCount(QueryMarkLogic.ORIGINAL, 1);
+        MockFlowFile originalFlowFile = runner.getFlowFilesForRelationship(QueryMarkLogic.ORIGINAL).get(0);
+        assertEquals("If a FlowFile is passed to DeleteML/QueryML, it is expected to be sent to the " +
+                "ORIGINAL relationship before the job completes", 12345, originalFlowFile.getId());
+
         DocumentPage page = getDatabaseClient().newDocumentManager().search(new StructuredQueryBuilder().collection(collection), 1);
         assertEquals(0, page.getTotalSize());
     }
 
     @AfterEach
     public void teardown() {
-        super.teardown();
         deleteDocumentsInCollection(collection);
     }
 }
