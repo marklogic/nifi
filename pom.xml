@@ -13,7 +13,8 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 -->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" 
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
     <modelVersion>4.0.0</modelVersion>
 
@@ -24,15 +25,15 @@
     </parent>
 
 
-    <version>1.9.1</version>
+    <version>1.9.1.5-SNAPSHOT</version>
 
     <artifactId>nifi-marklogic-bundle</artifactId>
     <packaging>pom</packaging>
 
     <properties>
         <nifi.version>1.9.1</nifi.version>
-        <marklogicnar.version>1.9.1</marklogicnar.version>
-        <marklogicclientapi.version>4.1.2</marklogicclientapi.version>
+        <marklogicnar.version>1.9.1.5-SNAPSHOT</marklogicnar.version>
+        <marklogicclientapi.version>4.2.0</marklogicclientapi.version>
         <mljavaclientutil.version>3.10.0</mljavaclientutil.version>
         <marklogicdatamovementcomponents.version>1.1</marklogicdatamovementcomponents.version>
     </properties>

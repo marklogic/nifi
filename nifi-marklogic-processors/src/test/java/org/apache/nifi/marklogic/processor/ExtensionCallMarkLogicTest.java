@@ -16,6 +16,8 @@
  */
 package org.apache.nifi.marklogic.processor;
 
+import com.marklogic.client.DatabaseClient;
+import com.marklogic.client.io.Format;
 import org.apache.nifi.marklogic.processor.ExecuteScriptMarkLogicTest.TestExecuteScriptMarkLogic;
 import org.apache.nifi.marklogic.processor.ExtensionCallMarkLogic.MethodTypes;
 import org.apache.nifi.marklogic.processor.ExtensionCallMarkLogic.PayloadSources;
@@ -23,9 +25,6 @@ import org.apache.nifi.processor.ProcessContext;
 import org.apache.nifi.reporting.InitializationException;
 import org.junit.Before;
 import org.junit.Test;
-
-import com.marklogic.client.DatabaseClient;
-import com.marklogic.client.io.Format;
 
 public class ExtensionCallMarkLogicTest extends AbstractMarkLogicProcessorTest {
     private TestExtensionCallMarkLogic processor;
@@ -49,6 +48,31 @@ public class ExtensionCallMarkLogicTest extends AbstractMarkLogicProcessorTest {
         runner.setProperty(TestExtensionCallMarkLogic.PAYLOAD_FORMAT, Format.TEXT.name());
         runner.setProperty(TestExtensionCallMarkLogic.METHOD_TYPE, MethodTypes.POST);
         runner.assertValid();
+    }
+
+    @Test
+    public void putExtensionParams() {
+        runner.enableControllerService(service);
+
+        runner.setProperty(TestExtensionCallMarkLogic.EXTENSION_NAME, "example-rest");
+        runner.setProperty(TestExtensionCallMarkLogic.REQUIRES_INPUT, "false");
+        runner.setProperty(TestExtensionCallMarkLogic.PAYLOAD_SOURCE, PayloadSources.FLOWFILE_CONTENT_STR);
+        runner.setProperty(TestExtensionCallMarkLogic.PAYLOAD_FORMAT, Format.TEXT.name());
+        runner.setProperty(TestExtensionCallMarkLogic.METHOD_TYPE, MethodTypes.PUT_STR);
+
+        runner.setProperty("param:uri", "value");
+        processor.initialize(initializationContext);
+
+        processor.onTrigger(runner.getProcessContext(), mockProcessSessionFactory);
+
+
+        assertEquals("value", runner.getProcessContext().getProperty("param:uri").getValue());
+        assertEquals(MethodTypes.PUT_STR, runner.getProcessContext().getProperty(TestExtensionCallMarkLogic.METHOD_TYPE).toString());
+
+
+        assertEquals(2, processor.relationships.size());
+
+
     }
 
     class TestExtensionCallMarkLogic extends ExtensionCallMarkLogic {

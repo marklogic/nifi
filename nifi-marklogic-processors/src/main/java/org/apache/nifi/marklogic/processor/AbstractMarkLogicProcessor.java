@@ -31,6 +31,7 @@ import org.apache.nifi.components.AllowableValue;
 import org.apache.nifi.components.PropertyDescriptor;
 import org.apache.nifi.components.Validator;
 import org.apache.nifi.expression.ExpressionLanguageScope;
+import org.apache.nifi.flowfile.FlowFile;
 import org.apache.nifi.marklogic.controller.MarkLogicDatabaseClientService;
 import org.apache.nifi.processor.AbstractSessionFactoryProcessor;
 import org.apache.nifi.processor.ProcessContext;
@@ -251,4 +252,18 @@ public abstract class AbstractMarkLogicProcessor extends AbstractSessionFactoryP
         throw new ProcessException(rootCause);
     }
 
+    /**
+     * See https://github.com/marklogic/nifi/issues/21 for details on why the calls to transfer and commit are within
+     * a synchronized block.
+     *
+     * @param session
+     * @param flowFile
+     * @param relationship
+     */
+    protected void transferAndCommit(ProcessSession session, FlowFile flowFile, Relationship relationship) {
+        synchronized (session) {
+            session.transfer(flowFile, relationship);
+            session.commit();
+        }
+    }
 }

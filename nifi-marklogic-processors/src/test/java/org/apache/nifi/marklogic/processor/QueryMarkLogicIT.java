@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -36,9 +37,9 @@ import org.apache.nifi.processor.Processor;
 import org.apache.nifi.reporting.InitializationException;
 import org.apache.nifi.util.MockFlowFile;
 import org.apache.nifi.util.TestRunner;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.w3c.dom.Document;
 import org.xml.sax.SAXException;
 
@@ -50,7 +51,7 @@ import com.marklogic.client.io.StringHandle;
 public class QueryMarkLogicIT extends AbstractMarkLogicIT {
     private String collection;
 
-    @Before
+    @BeforeEach
     public void setup() {
         super.setup();
         collection = "QueryMarkLogicTest";
@@ -72,13 +73,13 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
         dataMovementManager.stopJob(writeBatcher);
     }
 
-    @After
+    @AfterEach
     public void teardown() {
         //super.teardown();
         //deleteDocumentsInCollection(collection);
     }
 
-    protected TestRunner getNewTestRunner(Class processor) throws InitializationException {
+    protected TestRunner getNewTestRunner(Class processor) {
         TestRunner runner = super.getNewTestRunner(processor);
         runner.assertNotValid();
         runner.setProperty(QueryMarkLogic.CONSISTENT_SNAPSHOT, "true");
@@ -330,10 +331,13 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
     @Test
     public void testStructuredXMLQuery() throws InitializationException, SAXException, IOException, ParserConfigurationException {
         TestRunner runner = getNewTestRunner(QueryMarkLogic.class);
+        Map<String,String> attributes = new HashMap<>();
+        attributes.put("word", "xmlcontent");
+        runner.enqueue("".getBytes(), attributes);
         runner.setProperty(QueryMarkLogic.QUERY, "<query xmlns=\"http://marklogic.com/appservices/search\">\n" +
                 "  <word-query>\n" +
                 "    <element name=\"sample\" ns=\"\" />\n" +
-                "    <text>xmlcontent</text>\n" +
+                "    <text>${word}</text>\n" +
                 "  </word-query>\n" +
                 "</query>");
         runner.setProperty(QueryMarkLogic.QUERY_TYPE, QueryMarkLogic.QueryTypes.STRUCTURED_XML);

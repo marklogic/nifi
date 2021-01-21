@@ -61,9 +61,9 @@ import com.marklogic.client.util.RequestParameters;
 @CapabilityDescription("Allows MarkLogic REST extensions to be called")
 @SystemResourceConsideration(resource = SystemResource.MEMORY)
 @DynamicProperty(name = "param: URL parameter, separator: separator to split values for a parameter.",
-    value = "param: URL parameter, separator: separator to split values for a parameter.",
-    description = "Depending on the property prefix, routes data to parameter, or splits parameter.",
-    expressionLanguageScope = ExpressionLanguageScope.FLOWFILE_ATTRIBUTES)
+        value = "param: URL parameter, separator: separator to split values for a parameter.",
+        description = "Depending on the property prefix, routes data to parameter, or splits parameter.",
+        expressionLanguageScope = ExpressionLanguageScope.FLOWFILE_ATTRIBUTES)
 @TriggerWhenEmpty
 public class ExtensionCallMarkLogic extends AbstractMarkLogicProcessor {
 
@@ -79,7 +79,7 @@ public class ExtensionCallMarkLogic extends AbstractMarkLogicProcessor {
             .name("Requires Input")
             .displayName("Requires Input")
             .required(true)
-            .allowableValues("true","false")
+            .allowableValues("true", "false")
             .description("Whether a FlowFile is required to run.")
             .expressionLanguageSupported(ExpressionLanguageScope.NONE)
             .addValidator(StandardValidators.BOOLEAN_VALIDATOR)
@@ -156,7 +156,7 @@ public class ExtensionCallMarkLogic extends AbstractMarkLogicProcessor {
     @OnScheduled
     public void onScheduled(ProcessContext context) {
         super.populatePropertiesByPrefix(context);
-        DatabaseClient client  = getDatabaseClient(context);
+        DatabaseClient client = getDatabaseClient(context);
         String extensionName = context.getProperty(EXTENSION_NAME).evaluateAttributeExpressions(context.getAllProperties()).getValue();
         resourceManager = new ExtensionResourceManager(client, extensionName);
     }
@@ -180,14 +180,14 @@ public class ExtensionCallMarkLogic extends AbstractMarkLogicProcessor {
             String paramPrefix = "param";
             List<PropertyDescriptor> parameterProperties = propertiesByPrefix.get(paramPrefix);
             if (parameterProperties != null) {
-                for (final PropertyDescriptor propertyDesc: parameterProperties) {
+                for (final PropertyDescriptor propertyDesc : parameterProperties) {
                     String paramName = propertyDesc.getName().substring(paramPrefix.length() + 1);
                     String paramValue = context.getProperty(propertyDesc).evaluateAttributeExpressions(flowFile).getValue();
-                    PropertyValue separatorProperty = context.getProperty("separator:"+propertyDesc.getName());
+                    PropertyValue separatorProperty = context.getProperty("separator:" + propertyDesc.getName());
                     if (separatorProperty != null && separatorProperty.getValue() != null && !separatorProperty.getValue().isEmpty()) {
                         requestParameters.add(
-                            paramName,
-                            paramValue.split(Pattern.quote(separatorProperty.evaluateAttributeExpressions(flowFile).getValue()))
+                                paramName,
+                                paramValue.split(Pattern.quote(separatorProperty.evaluateAttributeExpressions(flowFile).getValue()))
                         );
                     } else {
                         requestParameters.add(paramName, paramValue);
@@ -198,14 +198,16 @@ public class ExtensionCallMarkLogic extends AbstractMarkLogicProcessor {
             BytesHandle bytesHandle = new BytesHandle();
             String payloadType = context.getProperty(PAYLOAD_SOURCE).getValue();
             switch (payloadType) {
-            case PayloadSources.FLOWFILE_CONTENT_STR:
-                final byte[] content = new byte[(int) flowFile.getSize()];
-                session.read(flowFile, inputStream -> StreamUtils.fillBuffer(inputStream, content));
-                bytesHandle.set(content);
-            case PayloadSources.PAYLOAD_PROPERTY_STR:
-                bytesHandle.set(context.getProperty(PAYLOAD).evaluateAttributeExpressions(flowFile).getValue().getBytes());
-            default:
-                bytesHandle.set("\n".getBytes());
+                case PayloadSources.FLOWFILE_CONTENT_STR:
+                    final byte[] content = new byte[(int) flowFile.getSize()];
+                    session.read(flowFile, inputStream -> StreamUtils.fillBuffer(inputStream, content));
+                    bytesHandle.set(content);
+                    break;
+                case PayloadSources.PAYLOAD_PROPERTY_STR:
+                    bytesHandle.set(context.getProperty(PAYLOAD).evaluateAttributeExpressions(flowFile).getValue().getBytes());
+                    break;
+                default:
+                    bytesHandle.set("\n".getBytes());
             }
             if (bytesHandle.get().length == 0) {
                 bytesHandle.set("\n".getBytes());
@@ -214,21 +216,26 @@ public class ExtensionCallMarkLogic extends AbstractMarkLogicProcessor {
             if (format != null) {
                 bytesHandle.withFormat(Format.valueOf(format));
             }
-            synchronized(resourceManager) {
-                ServiceResultIterator resultIterator = resourceManager.callService(method, bytesHandle, requestParameters);
-                while(resultIterator.hasNext()) {
-                    ServiceResult result = resultIterator.next();
-                    session.append(flowFile, out -> out.write(result.getContent(new BytesHandle()).get()));
-                }
-                session.transfer(flowFile, SUCCESS);
-                session.commit();
+
+            ServiceResultIterator resultIterator = resourceManager.callService(method, bytesHandle, requestParameters);
+            if (resultIterator == null || !resultIterator.hasNext()) {
+                transferAndCommit(session, flowFile, SUCCESS);
+                return;
             }
+
+            while (resultIterator.hasNext()) {
+                ServiceResult result = resultIterator.next();
+                session.append(flowFile, out -> out.write(result.getContent(new BytesHandle()).get()));
+            }
+
+            transferAndCommit(session, flowFile, SUCCESS);
         } catch (final Throwable t) {
             this.handleThrowable(t, session);
         }
     }
 
     protected class ExtensionResourceManager extends ResourceManager {
+
         protected ExtensionResourceManager(DatabaseClient client, String resourceName) {
             super();
             client.init(resourceName, this);
@@ -236,27 +243,28 @@ public class ExtensionCallMarkLogic extends AbstractMarkLogicProcessor {
 
         protected ServiceResultIterator callService(String method, AbstractWriteHandle writeHandle, RequestParameters parameters) {
             ServiceResultIterator serviceResultIterator;
-            switch(method) {
-            case MethodTypes.GET_STR:
-                serviceResultIterator = getServices().get(parameters);
-                break;
-            case MethodTypes.POST_STR:
-                serviceResultIterator = getServices().post(parameters, writeHandle);
-                break;
-            case MethodTypes.PUT_STR:
-                serviceResultIterator = getServices().put(parameters, writeHandle, null);
-                break;
-            case MethodTypes.DELETE_STR:
-                serviceResultIterator = getServices().delete(parameters, null);
-                break;
-            default:
-                serviceResultIterator = null;
+            switch (method) {
+                case MethodTypes.GET_STR:
+                    serviceResultIterator = getServices().get(parameters);
+                    break;
+                case MethodTypes.POST_STR:
+                    serviceResultIterator = getServices().post(parameters, writeHandle);
+                    break;
+                case MethodTypes.PUT_STR:
+                    serviceResultIterator = getServices().put(parameters, writeHandle, null);
+                    break;
+                case MethodTypes.DELETE_STR:
+                    serviceResultIterator = getServices().delete(parameters, null);
+                    break;
+                default:
+                    serviceResultIterator = null;
             }
             return serviceResultIterator;
         }
     }
 
     public static class PayloadSources extends AllowableValuesSet {
+
         public static final String NONE_STR = "None";
         public static final AllowableValue NONE = new AllowableValue(NONE_STR, NONE_STR,
                 "No paylod is passed to the request body.");
@@ -267,10 +275,11 @@ public class ExtensionCallMarkLogic extends AbstractMarkLogicProcessor {
         public static final AllowableValue PAYLOAD_PROPERTY = new AllowableValue(PAYLOAD_PROPERTY_STR, PAYLOAD_PROPERTY_STR,
                 "The Payload property is passed as a payload to the request body.");
 
-        public static final AllowableValue[] allValues = new AllowableValue[] { NONE, FLOWFILE_CONTENT, PAYLOAD_PROPERTY };
+        public static final AllowableValue[] allValues = new AllowableValue[]{NONE, FLOWFILE_CONTENT, PAYLOAD_PROPERTY};
     }
 
     public static class MethodTypes extends AllowableValuesSet {
+
         public static final String POST_STR = "POST";
         public static final AllowableValue POST = new AllowableValue(POST_STR, POST_STR,
                 "POST to REST extension");
@@ -284,6 +293,6 @@ public class ExtensionCallMarkLogic extends AbstractMarkLogicProcessor {
         public static final AllowableValue DELETE = new AllowableValue(DELETE_STR, DELETE_STR,
                 "DELETE to REST extension");
 
-        public static final AllowableValue[] allValues = new AllowableValue[] { POST, PUT, GET, DELETE };
+        public static final AllowableValue[] allValues = new AllowableValue[]{POST, PUT, GET, DELETE};
     }
 }
