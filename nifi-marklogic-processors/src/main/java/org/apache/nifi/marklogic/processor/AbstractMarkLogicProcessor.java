@@ -16,38 +16,21 @@
  */
 package org.apache.nifi.marklogic.processor;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.regex.Pattern;
-
-import org.apache.commons.lang3.exception.ExceptionUtils;
-
-import org.apache.nifi.components.AllowableValue;
+import com.marklogic.client.*;
+import com.marklogic.client.document.ServerTransform;
 import org.apache.nifi.components.PropertyDescriptor;
 import org.apache.nifi.components.Validator;
 import org.apache.nifi.expression.ExpressionLanguageScope;
 import org.apache.nifi.flowfile.FlowFile;
 import org.apache.nifi.marklogic.controller.MarkLogicDatabaseClientService;
-import org.apache.nifi.processor.AbstractSessionFactoryProcessor;
-import org.apache.nifi.processor.ProcessContext;
-import org.apache.nifi.processor.ProcessSession;
-import org.apache.nifi.processor.ProcessorInitializationContext;
-import org.apache.nifi.processor.Relationship;
+import org.apache.nifi.processor.*;
 import org.apache.nifi.processor.exception.ProcessException;
 import org.apache.nifi.processor.util.StandardValidators;
 
-import com.marklogic.client.DatabaseClient;
-import com.marklogic.client.FailedRequestException;
-import com.marklogic.client.ForbiddenUserException;
-import com.marklogic.client.MarkLogicBindingException;
-import com.marklogic.client.ResourceNotFoundException;
-import com.marklogic.client.UnauthorizedUserException;
-import com.marklogic.client.document.ServerTransform;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.regex.Pattern;
 
 /**
  * Defines common properties for MarkLogic processors.
@@ -224,35 +207,30 @@ public abstract class AbstractMarkLogicProcessor extends AbstractSessionFactoryP
      * @param session
      */
     protected void logErrorAndRollbackSession(final Throwable t, final ProcessSession session) {
-        Throwable rootCause = logErrorAndReturnRootCause(t);
+        logError(t);
         getLogger().info("Rolling back session");
         session.rollback(true);
-        throw new ProcessException(rootCause);
+        throw new ProcessException(t);
     }
 
-    protected Throwable logErrorAndReturnRootCause(Throwable t) {
+    protected void logError(Throwable t) {
         final String errorMessage = t.getMessage() != null ? t.getMessage() : "";
-        final Throwable rootCause = ExceptionUtils.getRootCause(t);
-
         if (t instanceof UnauthorizedUserException || errorMessage.matches(unauthorizedPattern.pattern())) {
-            getLogger().error("{} failed! Verify your credentials are correct. Throwable exception {}", new Object[]{this, rootCause});
+            getLogger().error("Verify your credentials are correct; error: " + errorMessage, t);
         } else if (t instanceof ForbiddenUserException || errorMessage.matches(forbiddenPattern.pattern())) {
-            getLogger().error("{} failed! Verify your user has ample privileges. Throwable exception {}", new Object[]{this, rootCause});
+            getLogger().error("Verify your user has ample privileges; error: " + errorMessage, t);
         } else if (t instanceof ResourceNotFoundException || errorMessage.matches(resourceNotFoundPattern.pattern())) {
-            getLogger().error("{} failed due to 'Resource Not Found'! " +
-                    "Verify you're pointing a MarkLogic REST instance and referenced extensions/transforms are installed. "+
-                    "Throwable exception {}", new Object[]{this, rootCause});
+            getLogger().error("Failed due to 'Resource Not Found'; " +
+                    "verify you're pointing a MarkLogic REST instance and referenced extensions/transforms are installed; error: " + errorMessage, t);
         } else if (errorMessage.matches(invalidXMLPattern.pattern())) {
-            getLogger().error("{} failed! Expected valid XML payload! Throwable exception {}", new Object[]{this, rootCause});
+            getLogger().error("Expected valid XML payload; error: " + errorMessage, t);
         } else if (errorMessage.matches(invalidJSONPattern.pattern())) {
-            getLogger().error("{} failed! Expected valid JSON payload! Throwable exception {}", new Object[]{this, rootCause});
+            getLogger().error("Expected valid JSON payload; error: " + errorMessage, t);
         } else if (t instanceof MarkLogicBindingException) {
-            getLogger().error("{} failed to bind Java Object to XML or JSON! Throwable exception {}", new Object[]{this, rootCause});
+            getLogger().error("Failed to bind Java Object to XML or JSON; error: " + errorMessage, t);
         } else {
-            getLogger().error("{} failed! Throwable exception {}", new Object[]{this, rootCause});
+            getLogger().error(errorMessage, t);
         }
-
-        return rootCause;
     }
 
     /**

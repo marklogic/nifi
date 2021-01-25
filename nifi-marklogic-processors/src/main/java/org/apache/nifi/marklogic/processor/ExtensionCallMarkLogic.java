@@ -49,7 +49,6 @@ import org.apache.nifi.stream.io.StreamUtils;
 
 import com.marklogic.client.DatabaseClient;
 import com.marklogic.client.extensions.ResourceManager;
-import com.marklogic.client.extensions.ResourceServices.ServiceResult;
 import com.marklogic.client.extensions.ResourceServices.ServiceResultIterator;
 import com.marklogic.client.io.BytesHandle;
 import com.marklogic.client.io.Format;
@@ -177,47 +176,53 @@ public class ExtensionCallMarkLogic extends AbstractMarkLogicProcessor {
         }
 
         try {
-            String method = context.getProperty(METHOD_TYPE).getValue();
-            BytesHandle bytesHandle = new BytesHandle();
-            String payloadType = context.getProperty(PAYLOAD_SOURCE).getValue();
-            switch (payloadType) {
-                case PayloadSources.FLOWFILE_CONTENT_STR:
-                    final byte[] content = new byte[(int) flowFile.getSize()];
-                    session.read(flowFile, inputStream -> StreamUtils.fillBuffer(inputStream, content));
-                    bytesHandle.set(content);
-                    break;
-                case PayloadSources.PAYLOAD_PROPERTY_STR:
-                    bytesHandle.set(context.getProperty(PAYLOAD).evaluateAttributeExpressions(flowFile).getValue().getBytes());
-                    break;
-                default:
-                    bytesHandle.set("\n".getBytes());
-            }
-            if (bytesHandle.get().length == 0) {
-                bytesHandle.set("\n".getBytes());
-            }
-            final String format = context.getProperty(PAYLOAD_FORMAT).getValue();
-            if (format != null) {
-                bytesHandle.withFormat(Format.valueOf(format));
-            }
-
+            BytesHandle requestBody = buildRequestBody(context, session, flowFile);
             RequestParameters requestParams = buildRequestParameters(context, flowFile);
-            ServiceResultIterator resultIterator = resourceManager.callService(method, bytesHandle, requestParams);
+            String method = context.getProperty(METHOD_TYPE).getValue();
+            ServiceResultIterator resultIterator = resourceManager.callService(method, requestBody, requestParams);
             if (resultIterator == null || !resultIterator.hasNext()) {
                 transferAndCommit(session, flowFile, SUCCESS);
                 return;
             }
 
-            while (resultIterator.hasNext()) {
-                ServiceResult result = resultIterator.next();
-                session.append(flowFile, out -> out.write(result.getContent(new BytesHandle()).get()));
+            try {
+                while (resultIterator.hasNext()) {
+                    session.append(flowFile, out -> out.write(resultIterator.next().getContent(new BytesHandle()).get()));
+                }
+            } finally {
+                resultIterator.close();
             }
 
             transferAndCommit(session, flowFile, SUCCESS);
         } catch (Throwable t) {
-            Throwable rootCause = logErrorAndReturnRootCause(t);
-            session.putAttribute(flowFile, "markLogicErrorMessage", rootCause.getMessage());
+            logError(t);
+            if (t.getMessage() != null) {
+                session.putAttribute(flowFile, "markLogicErrorMessage", t.getMessage());
+            }
             transferAndCommit(session, flowFile, FAILURE);
         }
+    }
+
+    private BytesHandle buildRequestBody(ProcessContext context, ProcessSession session, FlowFile flowFile) {
+        BytesHandle requestBody = new BytesHandle();
+        String payloadType = context.getProperty(PAYLOAD_SOURCE).getValue();
+        switch (payloadType) {
+            case PayloadSources.FLOWFILE_CONTENT_STR:
+                final byte[] content = new byte[(int) flowFile.getSize()];
+                session.read(flowFile, inputStream -> StreamUtils.fillBuffer(inputStream, content));
+                requestBody.set(content);
+                break;
+            case PayloadSources.PAYLOAD_PROPERTY_STR:
+                requestBody.set(context.getProperty(PAYLOAD).evaluateAttributeExpressions(flowFile).getValue().getBytes());
+                break;
+        }
+
+        final String format = context.getProperty(PAYLOAD_FORMAT).getValue();
+        if (format != null) {
+            requestBody.withFormat(Format.valueOf(format));
+        }
+
+        return requestBody;
     }
 
     /**
@@ -254,17 +259,21 @@ public class ExtensionCallMarkLogic extends AbstractMarkLogicProcessor {
             client.init(resourceName, this);
         }
 
-        protected ServiceResultIterator callService(String method, AbstractWriteHandle writeHandle, RequestParameters parameters) {
+        protected ServiceResultIterator callService(String method, BytesHandle requestBody, RequestParameters parameters) {
             ServiceResultIterator serviceResultIterator;
             switch (method) {
                 case MethodTypes.GET_STR:
                     serviceResultIterator = getServices().get(parameters);
                     break;
                 case MethodTypes.POST_STR:
-                    serviceResultIterator = getServices().post(parameters, writeHandle);
+                    serviceResultIterator = getServices().post(parameters, requestBody);
                     break;
                 case MethodTypes.PUT_STR:
-                    serviceResultIterator = getServices().put(parameters, writeHandle, null);
+                    // Java Client requires a non-null, non-empty input for PUT calls
+                    if (requestBody.get() == null || requestBody.get().length == 0) {
+                        requestBody.set(new byte[]{});
+                    }
+                    serviceResultIterator = getServices().put(parameters, requestBody, null);
                     break;
                 case MethodTypes.DELETE_STR:
                     serviceResultIterator = getServices().delete(parameters, null);

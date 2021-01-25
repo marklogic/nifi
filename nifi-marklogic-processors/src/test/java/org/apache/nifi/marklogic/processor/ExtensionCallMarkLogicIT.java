@@ -121,4 +121,48 @@ public class ExtensionCallMarkLogicIT extends AbstractMarkLogicIT {
         assertTrue(message.contains("Server Message: GetError Description (GetErrorQName): 500 GetError message"),
                 "The error message should contain the error details from the REST extension");
     }
+
+    @Test
+    void getEmptyPayload() {
+        TestRunner runner = newEmptyEndpointsTestRunner(ExtensionCallMarkLogic.MethodTypes.GET_STR);
+        runWithSingleEmptyFlowFile(runner);
+        assertEquals(1, runner.getFlowFilesForRelationship(ExtensionCallMarkLogic.SUCCESS).size());
+    }
+
+    @Test
+    void putEmptyPayload() {
+        TestRunner runner = newEmptyEndpointsTestRunner(ExtensionCallMarkLogic.MethodTypes.PUT_STR);
+        runWithSingleEmptyFlowFile(runner);
+        assertEquals(1, runner.getFlowFilesForRelationship(ExtensionCallMarkLogic.SUCCESS).size());
+    }
+
+    @Test
+    void postEmptyPayload() {
+        TestRunner runner = newEmptyEndpointsTestRunner(ExtensionCallMarkLogic.MethodTypes.POST_STR);
+        runWithSingleEmptyFlowFile(runner);
+        assertEquals(1, runner.getFlowFilesForRelationship(ExtensionCallMarkLogic.SUCCESS).size());
+    }
+
+    @Test
+    void deleteEmptyPayload() {
+        TestRunner runner = newEmptyEndpointsTestRunner(ExtensionCallMarkLogic.MethodTypes.DELETE_STR);
+        runWithSingleEmptyFlowFile(runner);
+        assertEquals(1, runner.getFlowFilesForRelationship(ExtensionCallMarkLogic.SUCCESS).size());
+    }
+
+    private TestRunner newEmptyEndpointsTestRunner(String methodType) {
+        TestRunner runner = getNewTestRunner(ExtensionCallMarkLogic.class);
+        runner.setValidateExpressionUsage(false);
+        runner.setProperty(ExtensionCallMarkLogic.EXTENSION_NAME, "emptyEndpoints");
+        runner.setProperty(ExtensionCallMarkLogic.METHOD_TYPE, methodType);
+        runner.setProperty(ExtensionCallMarkLogic.REQUIRES_INPUT, "true");
+        runner.setProperty(ExtensionCallMarkLogic.PAYLOAD_SOURCE, ExtensionCallMarkLogic.PayloadSources.NONE);
+        return runner;
+    }
+
+    private void runWithSingleEmptyFlowFile(TestRunner runner) {
+        runner.enqueue(new MockFlowFile(1));
+        runner.run(1);
+        runner.assertQueueEmpty();
+    }
 }
