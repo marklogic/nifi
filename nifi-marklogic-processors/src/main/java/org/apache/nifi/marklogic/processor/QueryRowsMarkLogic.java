@@ -81,10 +81,18 @@ public class QueryRowsMarkLogic extends AbstractMarkLogicProcessor {
 			PlanBuilder.Plan plan = rowManager.newRawPlanDefinition(new StringHandle(jsonPlan));
 			InputStream inputStream = rowManager.resultDoc(plan, new InputStreamHandle().withMimetype(mimeType)).get();
 
-			if (inputStream != null) {
-				flowFile = session.write(flowFile, out -> {
-					IOUtils.copy(inputStream, out);
-				});
+			InputStreamHandle handle = new InputStreamHandle();
+			if( handle != null) {
+			  try {
+			     InputStream inputStream = rowManager.resultDoc(plan, handle.withMimetpe(mimeType)).get();
+			     if (inputStream != null) { 
+			       flowFile = session.write(flowFile, out -> { 
+				  IOUtils.copy(inputStream, out);
+			       });
+			     }
+			  } finally {
+			     handle.close();
+			  }
 			}
 			
 			transferAndCommit(session, flowFile, SUCCESS);
