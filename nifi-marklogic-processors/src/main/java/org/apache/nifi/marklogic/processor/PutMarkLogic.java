@@ -16,21 +16,15 @@
  */
 package org.apache.nifi.marklogic.processor;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
-import org.apache.nifi.annotation.behavior.DynamicProperty;
-import org.apache.nifi.annotation.behavior.SystemResource;
-import org.apache.nifi.annotation.behavior.SystemResourceConsideration;
-import org.apache.nifi.annotation.behavior.TriggerWhenEmpty;
-import org.apache.nifi.annotation.behavior.WritesAttribute;
+import com.marklogic.client.datamovement.DataMovementManager;
+import com.marklogic.client.datamovement.WriteBatcher;
+import com.marklogic.client.datamovement.WriteEvent;
+import com.marklogic.client.datamovement.impl.WriteEventImpl;
+import com.marklogic.client.document.ServerTransform;
+import com.marklogic.client.io.BytesHandle;
+import com.marklogic.client.io.DocumentMetadataHandle;
+import com.marklogic.client.io.Format;
+import org.apache.nifi.annotation.behavior.*;
 import org.apache.nifi.annotation.documentation.CapabilityDescription;
 import org.apache.nifi.annotation.documentation.Tags;
 import org.apache.nifi.annotation.lifecycle.OnScheduled;
@@ -44,24 +38,16 @@ import org.apache.nifi.components.Validator;
 import org.apache.nifi.expression.ExpressionLanguageScope;
 import org.apache.nifi.flowfile.FlowFile;
 import org.apache.nifi.flowfile.attributes.CoreAttributes;
-import org.apache.nifi.processor.ProcessContext;
-import org.apache.nifi.processor.ProcessSession;
-import org.apache.nifi.processor.ProcessSessionFactory;
-import org.apache.nifi.processor.ProcessorInitializationContext;
-import org.apache.nifi.processor.Relationship;
+import org.apache.nifi.processor.*;
 import org.apache.nifi.processor.exception.ProcessException;
 import org.apache.nifi.processor.util.StandardValidators;
 import org.apache.nifi.stream.io.StreamUtils;
 import org.json.JSONObject;
 
-import com.marklogic.client.datamovement.DataMovementManager;
-import com.marklogic.client.datamovement.WriteBatcher;
-import com.marklogic.client.datamovement.WriteEvent;
-import com.marklogic.client.datamovement.impl.WriteEventImpl;
-import com.marklogic.client.document.ServerTransform;
-import com.marklogic.client.io.BytesHandle;
-import com.marklogic.client.io.DocumentMetadataHandle;
-import com.marklogic.client.io.Format;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 
 /**
@@ -227,10 +213,6 @@ public class PutMarkLogic extends AbstractMarkLogicProcessor {
     
     private volatile DataMovementManager dataMovementManager;
     protected volatile WriteBatcher writeBatcher;
-    // If no FlowFile exists when this processor is triggered, this variable determines whether or not a call is made to
-    // flush the WriteBatcher
-    private volatile boolean shouldFlushIfEmpty = true;
-    
 
     @Override
     public void init(ProcessorInitializationContext context) {
@@ -352,14 +334,11 @@ public class PutMarkLogic extends AbstractMarkLogicProcessor {
         try {
             FlowFile flowFile = session.get();
             if (flowFile == null) {
-                if (shouldFlushIfEmpty) {
-                    flushWriteBatcherAsync(this.writeBatcher);
-                }
-                shouldFlushIfEmpty = false;
+                getLogger().info("Flushing the WriteBatcher asynchronously in case a number of documents less than batchSize are waiting to be written");
+                flushWriteBatcherAsync(this.writeBatcher);
+                getLogger().info("Calling yield() on the ProcessContext");
                 context.yield();
             } else {
-                shouldFlushIfEmpty = true;
-                
                 String duplicateHandler = context.getProperty(DUPLICATE_URI_HANDLING).getValue();
                 WriteEvent writeEvent = buildWriteEvent(context, session, flowFile);
                 
