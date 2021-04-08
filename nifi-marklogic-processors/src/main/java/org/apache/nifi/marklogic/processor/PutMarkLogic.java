@@ -58,10 +58,17 @@ import java.util.stream.Stream;
 @CapabilityDescription("Write batches of FlowFiles as documents to a MarkLogic server using the " +
     "MarkLogic Data Movement SDK (DMSDK)")
 @SystemResourceConsideration(resource = SystemResource.MEMORY)
-@DynamicProperty(name = "trans: Server transform parameter name, property: Property name to add, meta: Metadata name to add",
-    value = "trans: Value of the server transform parameter, property: Property value to add, meta: Metadata value to add",
-    description = "Depending on the property prefix, routes data to transform, metadata, or property.",
-    expressionLanguageScope = ExpressionLanguageScope.VARIABLE_REGISTRY)
+@DynamicProperties({
+        @DynamicProperty(name = "trans:", value = "Value of the transform parameter",
+                description = "Defines the name and value of a REST transform parameter",
+                expressionLanguageScope = ExpressionLanguageScope.VARIABLE_REGISTRY),
+        @DynamicProperty(name = "property:", value = "Value of the document property",
+                description = "Defines the name and value of a property to add to the properties fragment of each document",
+                expressionLanguageScope = ExpressionLanguageScope.FLOWFILE_ATTRIBUTES),
+        @DynamicProperty(name = "meta:", value = "Value of the document metadata key",
+                description = "Defines the name and value of a document metadata key to add to each document",
+                expressionLanguageScope = ExpressionLanguageScope.FLOWFILE_ATTRIBUTES)
+})
 @TriggerWhenEmpty
 @WritesAttribute(attribute = "URIs", description = "On batch_success, writes successful URIs as coma-separated list.")
 

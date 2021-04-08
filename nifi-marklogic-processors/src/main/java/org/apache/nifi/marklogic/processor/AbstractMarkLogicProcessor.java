@@ -139,34 +139,36 @@ public abstract class AbstractMarkLogicProcessor extends AbstractSessionFactoryP
         String prefix = parts[0];
         String postfix = (parts.length > 1) ? parts[1] : "";
         String description;
+        ExpressionLanguageScope scope = ExpressionLanguageScope.VARIABLE_REGISTRY;
 
         switch(prefix) {
             case "trans":
-                description = "Passes the parameter '" + propertyDescriptorName + "' for transform";
+                description = "Defines a parameter named '" + postfix + "' that will be passed to a REST transform";
                 break;
             case "ns":
                 description = "Maps value to namespace prefix '" + postfix + "'";
                 break;
             case "meta":
-                description = "Adds the value as the metadata '" + postfix + "'";
+                description = "Defines a document metadata key with name '" + postfix + "' that will be added to each document";
+                scope = ExpressionLanguageScope.FLOWFILE_ATTRIBUTES;
                 break;
             case "property":
-                description = "Adds the value as the property '" + postfix + "'";
+                description = "Defines a property with name '" + postfix + "' that will be added to the properties fragment of each document";
+                scope = ExpressionLanguageScope.FLOWFILE_ATTRIBUTES;
                 break;
             default:
                 description = "";
                 break;
         }
 
-        PropertyDescriptor propertyDesc = new PropertyDescriptor.Builder()
+        return new PropertyDescriptor.Builder()
             .name(propertyDescriptorName)
             .addValidator(Validator.VALID)
             .dynamic(true)
-            .expressionLanguageSupported(ExpressionLanguageScope.VARIABLE_REGISTRY)
+            .expressionLanguageSupported(scope)
             .required(false)
             .description(description)
             .build();
-        return propertyDesc;
     }
 
     protected ServerTransform buildServerTransform(ProcessContext context) {

@@ -16,22 +16,13 @@
  */
 package org.apache.nifi.marklogic.processor;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-
-import org.apache.nifi.annotation.behavior.DynamicProperty;
-import org.apache.nifi.annotation.behavior.EventDriven;
-import org.apache.nifi.annotation.behavior.InputRequirement;
-import org.apache.nifi.annotation.behavior.SystemResource;
-import org.apache.nifi.annotation.behavior.SystemResourceConsideration;
+import com.marklogic.client.DatabaseClient;
+import com.marklogic.client.datamovement.WriteEvent;
+import com.marklogic.client.datamovement.impl.WriteEventImpl;
+import com.marklogic.client.io.BytesHandle;
+import com.marklogic.client.io.DocumentMetadataHandle;
+import com.marklogic.client.io.Format;
+import org.apache.nifi.annotation.behavior.*;
 import org.apache.nifi.annotation.documentation.CapabilityDescription;
 import org.apache.nifi.annotation.documentation.Tags;
 import org.apache.nifi.annotation.lifecycle.OnScheduled;
@@ -46,21 +37,14 @@ import org.apache.nifi.processor.ProcessorInitializationContext;
 import org.apache.nifi.processor.Relationship;
 import org.apache.nifi.processor.exception.ProcessException;
 import org.apache.nifi.schema.access.SchemaNotFoundException;
-import org.apache.nifi.serialization.MalformedRecordException;
-import org.apache.nifi.serialization.RecordReader;
-import org.apache.nifi.serialization.RecordReaderFactory;
-import org.apache.nifi.serialization.RecordSetWriter;
-import org.apache.nifi.serialization.RecordSetWriterFactory;
-import org.apache.nifi.serialization.WriteResult;
+import org.apache.nifi.serialization.*;
 import org.apache.nifi.serialization.record.Record;
 import org.apache.nifi.serialization.record.RecordSchema;
 
-import com.marklogic.client.DatabaseClient;
-import com.marklogic.client.datamovement.WriteEvent;
-import com.marklogic.client.datamovement.impl.WriteEventImpl;
-import com.marklogic.client.io.BytesHandle;
-import com.marklogic.client.io.DocumentMetadataHandle;
-import com.marklogic.client.io.Format;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.*;
 
 @EventDriven
 @Tags({"MarkLogic", "Put", "Bulk", "Insert"})
@@ -68,10 +52,20 @@ import com.marklogic.client.io.Format;
 @CapabilityDescription("Breaks down FlowFiles into batches of Records and inserts JSON documents to a MarkLogic server using the " +
         "MarkLogic Data Movement SDK (DMSDK)")
 @SystemResourceConsideration(resource = SystemResource.MEMORY)
-@DynamicProperty(name = "trans: Server transform parameter name, property: Property name to add, meta: Metadata name to add",
-    value = "trans: Value of the server transform parameter, property: Property value to add, meta: Metadata value to add",
-    description = "Depending on the property prefix, routes data to transform, metadata, or property.",
-    expressionLanguageScope = ExpressionLanguageScope.VARIABLE_REGISTRY)
+// These are intentionally duplicated here from the parent class. It's unknown how NiFi actually makes use of these,
+// as it appears that the getSupportedDynamicPropertyDescriptor method in AbstractMarkLogicProcessor is what NiFi uses
+// to provide information about each dynamic property. 
+@DynamicProperties({
+        @DynamicProperty(name = "trans:", value = "Value of the transform parameter",
+                description = "Defines the name and value of a REST transform parameter",
+                expressionLanguageScope = ExpressionLanguageScope.VARIABLE_REGISTRY),
+        @DynamicProperty(name = "property:", value = "Value of the document property",
+                description = "Defines the name and value of a property to add to the properties fragment of each document",
+                expressionLanguageScope = ExpressionLanguageScope.FLOWFILE_ATTRIBUTES),
+        @DynamicProperty(name = "meta:", value = "Value of the document metadata key",
+                description = "Defines the name and value of a document metadata key to add to each document",
+                expressionLanguageScope = ExpressionLanguageScope.FLOWFILE_ATTRIBUTES)
+})
 public class PutMarkLogicRecord extends PutMarkLogic {
     static final PropertyDescriptor RECORD_READER = new PropertyDescriptor.Builder()
             .name("record-reader")

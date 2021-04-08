@@ -21,6 +21,8 @@ import com.marklogic.client.datamovement.WriteEvent;
 import com.marklogic.client.io.BytesHandle;
 import com.marklogic.client.io.DocumentMetadataHandle;
 import com.marklogic.client.io.Format;
+import org.apache.nifi.components.PropertyDescriptor;
+import org.apache.nifi.expression.ExpressionLanguageScope;
 import org.apache.nifi.reporting.InitializationException;
 import org.apache.nifi.util.MockFlowFile;
 import org.junit.Before;
@@ -220,7 +222,7 @@ public class PutMarkLogicTest extends AbstractMarkLogicProcessorTest {
         processContext.setProperty(PutMarkLogic.PERMISSIONS, "${readRole},read,${updateRole},update");
         processor.initialize(initializationContext);
 
-        Map<String,String> attributes = new HashMap<>();
+        Map<String, String> attributes = new HashMap<>();
         attributes.put("readRole", "manage-user");
         attributes.put("updateRole", "manage-admin");
         addFlowFile(attributes, "<test/>");
@@ -288,9 +290,9 @@ public class PutMarkLogicTest extends AbstractMarkLogicProcessorTest {
     public void noFlowFileExists() {
         processor.onTrigger(processContext, mockProcessSessionFactory);
         assertTrue(
-            "When no FlowFile exists in the session, flushAsync should be called on the WriteBatcher so that any documents that " +
-                "haven't been written to ML yet can be flushed",
-            processor.flushAsyncCalled
+                "When no FlowFile exists in the session, flushAsync should be called on the WriteBatcher so that any documents that " +
+                        "haven't been written to ML yet can be flushed",
+                processor.flushAsyncCalled
         );
     }
 
@@ -355,6 +357,25 @@ public class PutMarkLogicTest extends AbstractMarkLogicProcessorTest {
         processor.onTrigger(processContext, mockProcessSessionFactory);
 
         checkContentFormat(Format.UNKNOWN);
+    }
+
+    @Test
+    public void getSupportedDynamicPropertyDescriptor() {
+        PropertyDescriptor descriptor = processor.getSupportedDynamicPropertyDescriptor("trans:test");
+        assertEquals("Transform params are not specific to a document/FlowFile",
+                ExpressionLanguageScope.VARIABLE_REGISTRY, descriptor.getExpressionLanguageScope());
+
+        descriptor = processor.getSupportedDynamicPropertyDescriptor("ns:test");
+        assertEquals("Namespace prefixes are not specific to a document/FlowFile",
+                ExpressionLanguageScope.VARIABLE_REGISTRY, descriptor.getExpressionLanguageScope());
+
+        descriptor = processor.getSupportedDynamicPropertyDescriptor("meta:test");
+        assertEquals("Document metadata keys are specific to a document/FlowFile",
+                ExpressionLanguageScope.FLOWFILE_ATTRIBUTES, descriptor.getExpressionLanguageScope());
+
+        descriptor = processor.getSupportedDynamicPropertyDescriptor("property:test");
+        assertEquals("FlowFile metadata keys are specific to a document/FlowFile",
+                ExpressionLanguageScope.FLOWFILE_ATTRIBUTES, descriptor.getExpressionLanguageScope());
     }
 }
 
