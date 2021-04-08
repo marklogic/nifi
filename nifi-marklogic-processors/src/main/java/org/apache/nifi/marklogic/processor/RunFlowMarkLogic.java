@@ -166,19 +166,19 @@ public class RunFlowMarkLogic extends AbstractMarkLogicProcessor {
 	}
 
 	protected HubConfigImpl initializeHubConfig(ProcessContext context, DatabaseClientConfig clientConfig) {
-		HubConfigImpl hubConfig = HubConfigImpl.withDefaultProperties();
+		Properties props = new Properties();
+		props.setProperty("mlHost", clientConfig.getHost());
+		props.setProperty("mlStagingPort", clientConfig.getPort() + "");
+		props.setProperty("mlUsername", clientConfig.getUsername());
+		props.setProperty("mlPassword", clientConfig.getPassword());
+		props.setProperty("mlFinalPort", context.getProperty(FINAL_PORT).evaluateAttributeExpressions().getValue());
+		props.setProperty("mlJobPort", context.getProperty(JOB_PORT).evaluateAttributeExpressions().getValue());
 
-		hubConfig.setHost(clientConfig.getHost());
-		hubConfig.setPort(DatabaseKind.STAGING, clientConfig.getPort());
-		hubConfig.setMlUsername(clientConfig.getUsername());
-		hubConfig.setMlPassword(clientConfig.getPassword());
+		props.setProperty("mlStagingAuth", clientConfig.getSecurityContextType().toString());
+		props.setProperty("mlFinalAuth", clientConfig.getSecurityContextType().toString());
+		props.setProperty("mlJobAuth", clientConfig.getSecurityContextType().toString());
 
-		hubConfig.setPort(DatabaseKind.FINAL, context.getProperty(FINAL_PORT).evaluateAttributeExpressions().asInteger());
-		hubConfig.setPort(DatabaseKind.JOB, context.getProperty(JOB_PORT).evaluateAttributeExpressions().asInteger());
-
-		hubConfig.setAuthMethod(DatabaseKind.STAGING, clientConfig.getSecurityContextType().toString());
-		hubConfig.setAuthMethod(DatabaseKind.FINAL, clientConfig.getSecurityContextType().toString());
-		hubConfig.setAuthMethod(DatabaseKind.JOB, clientConfig.getSecurityContextType().toString());
+		HubConfigImpl hubConfig = HubConfigImpl.withProperties(props);
 
 		SSLContext sslContext = clientConfig.getSslContext();
 		if (sslContext != null) {

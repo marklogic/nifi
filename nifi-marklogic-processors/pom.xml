@@ -29,6 +29,10 @@
 
     <repositories>
         <repository>
+            <id>mavenCentral</id>
+            <url>https://repo1.maven.org/maven2/</url>
+        </repository>
+        <repository>
             <id>jcenter</id>
             <url>https://jcenter.bintray.com/</url>
         </repository>
@@ -53,21 +57,12 @@
         <dependency>
             <groupId>com.marklogic</groupId>
             <artifactId>marklogic-data-hub</artifactId>
-            <version>5.2.0</version>
-            <!-- Excluding DH stuff we don't need. Also, the inclusion of Spring Boot stuff caused a mysterious error of
-            spring-core dependencies not being found. -->
+            <version>5.4.2</version>
+            <!-- Excluding DH stuff we don't need -->
             <exclusions>
                 <exclusion>
                     <groupId>com.marklogic</groupId>
                     <artifactId>mlcp-util</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>com.marklogic</groupId>
-                    <artifactId>marklogic-client-api</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>com.marklogic</groupId>
-                    <artifactId>ml-javaclient-util</artifactId>
                 </exclusion>
                 <exclusion>
                     <groupId>com.marklogic</groupId>
@@ -76,18 +71,6 @@
                 <exclusion>
                     <groupId>com.beust</groupId>
                     <artifactId>jcommander</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>org.springframework.boot</groupId>
-                    <artifactId>*</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>org.springframework.integration</groupId>
-                    <artifactId>*</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>io.jaegertracing</groupId>
-                    <artifactId>*</artifactId>
                 </exclusion>
             </exclusions>
         </dependency>
@@ -170,29 +153,47 @@
             <scope>test</scope>
         </dependency>
         <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-test</artifactId>
+            <version>5.2.9.RELEASE</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- TODO Need to upgrade to marklogic-junit5 -->
+        <dependency>
             <groupId>com.marklogic</groupId>
             <artifactId>marklogic-junit</artifactId>
             <version>0.11.0</version>
             <scope>test</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.springframework</groupId>
+                    <artifactId>spring-context</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.springframework</groupId>
+                    <artifactId>spring-test</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <!-- Forcing Spring to use logback -->
         <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
-            <version>1.1.8</version>
+            <version>1.2.3</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>jcl-over-slf4j</artifactId>
-            <version>1.7.22</version>
+            <version>1.7.30</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
-            <version>1.7.22</version>
+            <version>1.7.30</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
