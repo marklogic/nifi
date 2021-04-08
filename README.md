@@ -54,7 +54,7 @@ You should have output like this:
 
 ```
 [INFO] ------------------------------------------------------------------------
-[INFO] Reactor Summary for nifi-marklogic-bundle 1.9.1.5:
+[INFO] Reactor Summary for nifi-marklogic-bundle 1.9.1.6:
 [INFO] 
 [INFO] nifi-marklogic-bundle .............................. SUCCESS [  1.062 s]
 [INFO] nifi-marklogic-services-api ........................ SUCCESS [  1.032 s]

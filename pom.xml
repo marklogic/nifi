@@ -25,14 +25,14 @@
     </parent>
 
 
-    <version>1.9.1.5</version>
+    <version>1.9.1.6</version>
 
     <artifactId>nifi-marklogic-bundle</artifactId>
     <packaging>pom</packaging>
 
     <properties>
         <nifi.version>1.9.1</nifi.version>
-        <marklogicnar.version>1.9.1.5</marklogicnar.version>
+        <marklogicnar.version>1.9.1.6</marklogicnar.version>
         <marklogicclientapi.version>5.3.2</marklogicclientapi.version>
         <mljavaclientutil.version>4.1.1</mljavaclientutil.version>
         <marklogicdatamovementcomponents.version>2.2.1</marklogicdatamovementcomponents.version>
