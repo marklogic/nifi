@@ -82,17 +82,15 @@ public class QueryRowsMarkLogic extends AbstractMarkLogicProcessor {
 			InputStream inputStream = rowManager.resultDoc(plan, new InputStreamHandle().withMimetype(mimeType)).get();
 
 			InputStreamHandle handle = new InputStreamHandle();
-			if( handle != null) {
-			  try {
-			     InputStream inputStream = rowManager.resultDoc(plan, handle.withMimetpe(mimeType)).get();
-			     if (inputStream != null) { 
-			       flowFile = session.write(flowFile, out -> { 
-				  IOUtils.copy(inputStream, out);
-			       });
-			     }
-			  } finally {
-			     handle.close();
-			  }
+			try {
+			   InputStream inputStream = rowManager.resultDoc(plan, handle.withMimetpe(mimeType)).get();
+			   if (inputStream != null) { 
+			     flowFile = session.write(flowFile, out -> { 
+				IOUtils.copy(inputStream, out);
+			     });
+			   }
+			} finally {
+			   handle.close();
 			}
 			
 			transferAndCommit(session, flowFile, SUCCESS);
