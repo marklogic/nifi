@@ -274,21 +274,22 @@ public class PutMarkLogic extends AbstractMarkLogicProcessor {
         }
         this.writeBatcher.onBatchSuccess(writeBatch -> {
             if (writeBatch.getItems().length > 0) {
-                ProcessSession session = getFlowFileInfoForWriteEvent(writeBatch.getItems()[0]).session;
-                String uriList = Stream.of(writeBatch.getItems()).map((item) -> {
-                    return item.getTargetUri();
-                }).collect(Collectors.joining(","));
-                FlowFile batchFlowFile = session.create();
-        	    JSONObject optionsJSONObj = new JSONObject();
-        	    optionsJSONObj.put("uris", uriList.split(","));        	    
-                session.putAttribute(batchFlowFile, "URIs", uriList);
-                session.putAttribute(batchFlowFile, "optionsJson", optionsJSONObj.toString());
-                synchronized(session) {
-                    session.transfer(batchFlowFile, BATCH_SUCCESS);
-                }
-                for(WriteEvent writeEvent : writeBatch.getItems()) {
-                    routeDocumentToRelationship(writeEvent, SUCCESS);
-                    duplicateFlowFileMap.remove(writeEvent.getTargetUri());
+                FlowFileInfo flowFileInfo = getFlowFileInfoForWriteEvent(writeBatch.getItems()[0]);
+                if (flowFileInfo != null) {
+                    ProcessSession session = flowFileInfo.session;
+                    String uriList = Stream.of(writeBatch.getItems()).map(item -> item.getTargetUri()).collect(Collectors.joining(","));
+                    FlowFile batchFlowFile = session.create();
+                    JSONObject optionsJSONObj = new JSONObject();
+                    optionsJSONObj.put("uris", uriList.split(","));
+                    session.putAttribute(batchFlowFile, "URIs", uriList);
+                    session.putAttribute(batchFlowFile, "optionsJson", optionsJSONObj.toString());
+                    synchronized(session) {
+                        session.transfer(batchFlowFile, BATCH_SUCCESS);
+                    }
+                    for(WriteEvent writeEvent : writeBatch.getItems()) {
+                        routeDocumentToRelationship(writeEvent, SUCCESS);
+                        duplicateFlowFileMap.remove(writeEvent.getTargetUri());
+                    }
                 }
             }
         }).onBatchFailure((writeBatch, throwable) -> {

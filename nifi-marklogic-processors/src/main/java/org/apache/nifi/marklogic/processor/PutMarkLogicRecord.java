@@ -183,19 +183,26 @@ public class PutMarkLogicRecord extends PutMarkLogic {
             final RecordSchema schema = recordSetWriterFactory.getSchema(flowFile.getAttributes(), reader.getSchema());
             final ByteArrayOutputStream baos = new ByteArrayOutputStream(1024);
             Record record;
+
+            // A FlowFile may produce N records, and for each record, a WriteEvent is created. But the uriToFlowFileMap
+            // only needs one entry in it for the original FlowFile; that allows for the batch_success relationship
+            // to receive the correct data. It doesn't matter which WriteEvent is added to the map, we just need one
+            // and only one entry added to the map.
+            boolean addedToFlowFileMap = false;
+
             while ((record = reader.nextRecord(coerceTypes, dropUnknownFields)) != null) {
                 baos.reset();
-                Map<String, String> additionalAttributes;
                 try (final RecordSetWriter writer = recordSetWriterFactory.createWriter(getLogger(), schema, baos)) {
-                    final WriteResult writeResult = writer.write(record);
-                    additionalAttributes = writeResult.getAttributes();
+                    writer.write(record);
                     writer.flush();
                     BytesHandle bytesHandle = new BytesHandle().with(baos.toByteArray());
-                    final String uriKey = uriFieldName == null ? UUID.randomUUID().toString() : record.getAsString(uriFieldName);
-                    WriteEvent writeEvent = buildWriteEvent(context, session, flowFile, uriKey, bytesHandle, additionalAttributes);
-                    uriFlowFileMap.put(uriKey, new FlowFileInfo(flowFile, session,writeEvent));
+                    final String uri = uriFieldName == null ? UUID.randomUUID().toString() : record.getAsString(uriFieldName);
+                    WriteEvent writeEvent = buildWriteEvent(context, flowFile, uri, bytesHandle);
+                    if (!addedToFlowFileMap) {
+                        uriFlowFileMap.put(flowFile.getAttribute(CoreAttributes.UUID.key()), new FlowFileInfo(flowFile, session, writeEvent));
+                        addedToFlowFileMap = true;
+                    }
                     this.addWriteEvent(writeBatcher, writeEvent);
-                    
                     added++;
                 }
             }
@@ -235,13 +242,11 @@ public class PutMarkLogicRecord extends PutMarkLogic {
         }
     }
 
-    protected WriteEvent buildWriteEvent(
+    private WriteEvent buildWriteEvent(
             final ProcessContext context,
-            final ProcessSession session,
             final FlowFile flowFile,
             String uri,
-            final BytesHandle contentHandle,
-            final Map<String, String> additionalAttributes
+            final BytesHandle contentHandle
     ) {
         final String prefix = context.getProperty(URI_PREFIX).evaluateAttributeExpressions(flowFile).getValue();
         if (prefix != null) {
@@ -254,9 +259,6 @@ public class PutMarkLogicRecord extends PutMarkLogic {
         uri.replaceAll("//", "/");
 
         DocumentMetadataHandle metadata = buildMetadataHandle(context, flowFile, context.getProperty(COLLECTIONS), context.getProperty(PERMISSIONS));
-        // Add the flow file UUID for Provenance purposes and for sending them
-        // to the appropriate relationship
-        String flowFileUUID = flowFile.getAttribute(CoreAttributes.UUID.key());
         final String format = context.getProperty(FORMAT).getValue();
         if (format != null) {
             contentHandle.withFormat(Format.valueOf(format));
@@ -269,7 +271,6 @@ public class PutMarkLogicRecord extends PutMarkLogic {
             contentHandle.withMimetype(mimetype);
         }
 
-        //uriFlowFileMap.put(flowFileUUID, new FlowFileInfo(flowFile, session,writeEvent));
         return new WriteEventImpl()
             .withTargetUri(uri)
             .withMetadata(metadata)
