@@ -32,6 +32,7 @@ import org.apache.nifi.serialization.RecordReader;
 import org.apache.nifi.serialization.RecordReaderFactory;
 import org.apache.nifi.serialization.SimpleRecordSchema;
 import org.apache.nifi.serialization.record.*;
+import org.apache.nifi.util.MockFlowFile;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -104,13 +105,13 @@ public class PutMarkLogicRecordTest extends AbstractMarkLogicProcessorTest {
         configureRecordSetWriterFactory(recordWriter);
         configureDatabaseClientService();
 
-        runner.setProperty(PutMarkLogicRecord.FORMAT, Format.JSON.name());
+        runner.setProperty(PutMarkLogicRecord.FORMAT, Format.TEXT.name());
         runner.setProperty(PutMarkLogicRecord.URI_FIELD_NAME, "docID");
         runner.setProperty(PutMarkLogicRecord.URI_PREFIX, "/prefix/");
-        runner.setProperty(PutMarkLogicRecord.URI_SUFFIX, "/suffix.json");
+        runner.setProperty(PutMarkLogicRecord.URI_SUFFIX, "/suffix.txt");
         String[] expectedUris = new String[] {
-           "/prefix/123/suffix.json",
-           "/prefix/456/suffix.json"
+           "/prefix/123/suffix.txt",
+           "/prefix/456/suffix.txt"
         };
 
         recordReader.addRecord("123");
@@ -123,12 +124,19 @@ public class PutMarkLogicRecordTest extends AbstractMarkLogicProcessorTest {
         assertEquals(processor.writeEvents.size(), 2);
         for (String expectedUri:expectedUris) {
             Stream<WriteEvent> writeEventStream = processor.writeEvents.parallelStream();
-            assertTrue(
-                writeEventStream.anyMatch((writeEvent) -> {
-                    return writeEvent.getTargetUri().equals(expectedUri);
-                })
-            );
+            assertTrue(writeEventStream.anyMatch(writeEvent -> writeEvent.getTargetUri().equals(expectedUri)));
         }
+
+        // Verify that a FlowFile was sent to batch_success containing all the URIs in the batch; that the original
+        // FlowFile was passed along; and that 2 FlowFiles were sent to "success", one for each URI
+        runner.assertTransferCount("batch_success", 1);
+        runner.assertTransferCount("original", 1);
+        runner.assertTransferCount("failure", 0);
+        runner.assertTransferCount("success", 2);
+
+        MockFlowFile mockFile = runner.getFlowFilesForRelationship("batch_success").get(0);
+        assertEquals("The FF sent to batch_success is expected to contain each of the URIs in that batch",
+                "/prefix/123/suffix.txt,/prefix/456/suffix.txt", mockFile.getAttribute("URIs"));
     }
 
     private void configureRecordReaderFactory(ControllerService recordReaderFactory) {
@@ -153,21 +161,19 @@ public class PutMarkLogicRecordTest extends AbstractMarkLogicProcessorTest {
         runner.setProperty(PutMarkLogicRecord.RECORD_WRITER, "writer");
     }
 }
-/**
- * This subclass allows us to intercept the calls to WriteBatcher so that no calls are made to MarkLogic.
- */
+
 class TestPutMarkLogicRecord extends PutMarkLogicRecord {
 
-    public boolean flushAsyncCalled = false;
-    public List<WriteEvent> writeEvents = new ArrayList<WriteEvent>();
+    public List<WriteEvent> writeEvents = new ArrayList<>();
 
     @Override
     protected void flushWriteBatcherAsync(WriteBatcher writeBatcher) {
-        flushAsyncCalled = true;
+        writeBatcher.flushAndWait();
     }
 
     @Override
     protected void addWriteEvent(WriteBatcher writeBatcher, WriteEvent writeEvent) {
+        super.addWriteEvent(writeBatcher, writeEvent);
         this.writeEvents.add(writeEvent);
     }
 }
