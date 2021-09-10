@@ -57,6 +57,15 @@ public abstract class AbstractMarkLogicProcessor extends AbstractSessionFactoryP
         .addValidator(StandardValidators.POSITIVE_INTEGER_VALIDATOR)
         .build();
 
+    public static final PropertyDescriptor QUALITY = new PropertyDescriptor.Builder()
+        .name("Quality")
+        .displayName("Document Quality")
+        .required(false)
+        .defaultValue("0")
+        .description("The quality of the document; higher quality documents will have higher relevancy scores")
+        .addValidator(StandardValidators.POSITIVE_INTEGER_VALIDATOR)
+        .build();
+
     public static final PropertyDescriptor THREAD_COUNT = new PropertyDescriptor.Builder()
         .name("Thread Count")
         .displayName("Thread Count")
