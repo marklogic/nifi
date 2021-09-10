@@ -377,6 +377,44 @@ public class PutMarkLogicTest extends AbstractMarkLogicProcessorTest {
         assertEquals("FlowFile metadata keys are specific to a document/FlowFile",
                 ExpressionLanguageScope.FLOWFILE_ATTRIBUTES, descriptor.getExpressionLanguageScope());
     }
+
+    @Test
+    public void checkDefaultQuality() {
+        processor.initialize(initializationContext);
+        // Sample Random File
+        addFlowFile("<test/>");
+
+        processor.onTrigger(processContext, mockProcessSessionFactory);
+
+        DocumentMetadataHandle metadata = (DocumentMetadataHandle) processor.writeEvent.getMetadata();
+        assertEquals(0, metadata.getQuality());
+    }
+
+    @Test
+    public void setQuality() {
+        processContext.setProperty(PutMarkLogic.QUALITY, "10");
+        processor.initialize(initializationContext);
+        // Sample Random File
+        addFlowFile("<test/>");
+
+        processor.onTrigger(processContext, mockProcessSessionFactory);
+
+        DocumentMetadataHandle metadata = (DocumentMetadataHandle) processor.writeEvent.getMetadata();
+        assertEquals(10, metadata.getQuality());
+    }
+
+    @Test
+    public void setNegativeQuality() {
+        processContext.setProperty(PutMarkLogic.QUALITY, "-10");
+        processor.initialize(initializationContext);
+        // Sample Random File
+        addFlowFile("<test/>");
+
+        processor.onTrigger(processContext, mockProcessSessionFactory);
+
+        DocumentMetadataHandle metadata = (DocumentMetadataHandle) processor.writeEvent.getMetadata();
+        assertEquals(-10, metadata.getQuality());
+    }
 }
 
 /**

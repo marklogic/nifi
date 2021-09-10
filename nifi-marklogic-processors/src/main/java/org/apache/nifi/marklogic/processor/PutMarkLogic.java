@@ -106,6 +106,15 @@ public class PutMarkLogic extends AbstractMarkLogicProcessor {
         .addValidator(Validator.VALID)
         .build();
 
+    public static final PropertyDescriptor QUALITY = new PropertyDescriptor.Builder()
+        .name("Quality")
+        .displayName("Quality")
+        .expressionLanguageSupported(ExpressionLanguageScope.FLOWFILE_ATTRIBUTES)
+        .description("Quality for each document; if not specified, MarkLogic will set default quality 0")
+        .required(false)
+        .addValidator(StandardValidators.INTEGER_VALIDATOR)
+        .build();
+
     public static final PropertyDescriptor FORMAT = new PropertyDescriptor.Builder()
         .name("Format")
         .displayName("Format")
@@ -228,6 +237,7 @@ public class PutMarkLogic extends AbstractMarkLogicProcessor {
         List<PropertyDescriptor> list = new ArrayList<>();
         list.addAll(properties);
         list.add(COLLECTIONS);
+        list.add(QUALITY);
         list.add(FORMAT);
         list.add(JOB_ID);
         list.add(JOB_NAME);
@@ -462,6 +472,12 @@ public class PutMarkLogic extends AbstractMarkLogicProcessor {
         final String permissionsValue = permissionsProperty.isSet() ?
             permissionsProperty.evaluateAttributeExpressions(flowFile).getValue() : null;
         final String[] tokens = getArrayFromCommaSeparatedString(permissionsValue);
+
+        Integer quality = context.getProperty(QUALITY).evaluateAttributeExpressions(flowFile).asInteger();
+        if (quality != null) {
+            metadata.withQuality(quality);
+        }
+        
         if (tokens != null) {
             DocumentMetadataHandle.DocumentPermissions permissions = metadata.getPermissions();
             for (int i = 0; i < tokens.length; i += 2) {
