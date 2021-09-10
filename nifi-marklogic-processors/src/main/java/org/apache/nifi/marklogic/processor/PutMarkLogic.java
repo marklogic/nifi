@@ -109,9 +109,10 @@ public class PutMarkLogic extends AbstractMarkLogicProcessor {
     public static final PropertyDescriptor QUALITY = new PropertyDescriptor.Builder()
         .name("Quality")
         .displayName("Quality")
+        .expressionLanguageSupported(ExpressionLanguageScope.FLOWFILE_ATTRIBUTES)
         .description("Quality for each document; if not specified, MarkLogic will set default quality 0")
         .required(false)
-        .addValidator(Validator.VALID)
+        .addValidator(StandardValidators.INTEGER_VALIDATOR)
         .build();
 
     public static final PropertyDescriptor FORMAT = new PropertyDescriptor.Builder()
@@ -472,9 +473,9 @@ public class PutMarkLogic extends AbstractMarkLogicProcessor {
             permissionsProperty.evaluateAttributeExpressions(flowFile).getValue() : null;
         final String[] tokens = getArrayFromCommaSeparatedString(permissionsValue);
 
-        Integer quality = context.getProperty(QUALITY).asInteger();
-        if(quality != null) {
-        	metadata.withQuality(quality);
+        Integer quality = context.getProperty(QUALITY).evaluateAttributeExpressions(flowFile).asInteger();
+        if (quality != null) {
+            metadata.withQuality(quality);
         }
         
         if (tokens != null) {
