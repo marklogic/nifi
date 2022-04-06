@@ -274,7 +274,7 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
             getLogger().info("Stopping job");
             dataMovementManager.stopJob(queryBatcher);
             getLogger().info("Committing session");
-            session.commit();
+            session.commitAsync();
         } catch (final Throwable t) {
             context.yield();
             this.logErrorAndRollbackSession(t, session);
@@ -408,7 +408,7 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
                                 getLogger().debug("Routing " + uri + " to " + SUCCESS.getName());
                             }
                         });
-                        session.commit();
+                        session.commitAsync();
                     }
                 }
             };
@@ -548,7 +548,7 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
             getLogger().error("Query failure: " + exception.getMessage());
             FlowFile failureFlowFile = incomingFlowFile != null ? session.penalize(incomingFlowFile) : session.create();
             session.transfer(failureFlowFile, FAILURE);
-            session.commit();
+            session.commitAsync();
             context.yield();
         });
         return queryBatcher;

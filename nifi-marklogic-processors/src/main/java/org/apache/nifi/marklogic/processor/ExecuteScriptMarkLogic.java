@@ -299,7 +299,7 @@ public class ExecuteScriptMarkLogic extends AbstractMarkLogicProcessor {
                 session.transfer(lastFF, LAST_RESULT);
             }
 
-            session.commit();
+            session.commitAsync();
         } catch (final Throwable t) {
             this.logErrorAndRollbackSession(t, session);
         }

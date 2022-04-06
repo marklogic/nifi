@@ -224,7 +224,7 @@ public class PutMarkLogicRecord extends PutMarkLogic {
                 getLogger().info("Inserted {} records into MarkLogic", new Object[]{ added });
             }
         }
-        session.commit();
+        session.commitAsync();
     }
 
     @Override

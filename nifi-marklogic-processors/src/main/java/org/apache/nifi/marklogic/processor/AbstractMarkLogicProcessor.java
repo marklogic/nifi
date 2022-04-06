@@ -246,7 +246,7 @@ public abstract class AbstractMarkLogicProcessor extends AbstractSessionFactoryP
     protected void transferAndCommit(ProcessSession session, FlowFile flowFile, Relationship relationship) {
         synchronized (session) {
             session.transfer(flowFile, relationship);
-            session.commit();
+            session.commitAsync();
         }
     }
 }

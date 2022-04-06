@@ -16,6 +16,7 @@
  */
 package org.apache.nifi.marklogic.processor;
 
+import com.google.gson.*;
 import com.marklogic.client.datamovement.DataMovementManager;
 import com.marklogic.client.datamovement.WriteBatcher;
 import com.marklogic.client.datamovement.WriteEvent;
@@ -42,7 +43,7 @@ import org.apache.nifi.processor.*;
 import org.apache.nifi.processor.exception.ProcessException;
 import org.apache.nifi.processor.util.StandardValidators;
 import org.apache.nifi.stream.io.StreamUtils;
-import org.json.JSONObject;
+//import org.json.JSONObject;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -279,8 +280,14 @@ public class PutMarkLogic extends AbstractMarkLogicProcessor {
                     ProcessSession session = flowFileInfo.session;
                     String uriList = Stream.of(writeBatch.getItems()).map(item -> item.getTargetUri()).collect(Collectors.joining(","));
                     FlowFile batchFlowFile = session.create();
-                    JSONObject optionsJSONObj = new JSONObject();
-                    optionsJSONObj.put("uris", uriList.split(","));
+
+                    JsonObject optionsJSONObj = new JsonObject();
+                    JsonArray jsonArray = new JsonArray();
+                    for (String uri : uriList.split(",")) {
+                        jsonArray.add(uri);
+                    };
+                    optionsJSONObj.add("uris", jsonArray);
+
                     session.putAttribute(batchFlowFile, "URIs", uriList);
                     session.putAttribute(batchFlowFile, "optionsJson", optionsJSONObj.toString());
                     synchronized(session) {
@@ -313,7 +320,7 @@ public class PutMarkLogic extends AbstractMarkLogicProcessor {
             synchronized(flowFile.session) {
                 flowFile.session.getProvenanceReporter().send(flowFile.flowFile, writeEvent.getTargetUri());
                 flowFile.session.transfer(flowFile.flowFile, relationship);
-                flowFile.session.commit();
+                flowFile.session.commitAsync();
             }
             if (getLogger().isDebugEnabled()) {
                 getLogger().debug("Routing " + writeEvent.getTargetUri() + " to " + relationship.getName());

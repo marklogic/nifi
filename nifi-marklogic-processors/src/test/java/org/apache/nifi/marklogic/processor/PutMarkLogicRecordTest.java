@@ -16,6 +16,7 @@
  */
 package org.apache.nifi.marklogic.processor;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
@@ -28,6 +29,8 @@ import org.apache.nifi.flowfile.FlowFile;
 import org.apache.nifi.logging.ComponentLog;
 import org.apache.nifi.marklogic.processor.ExecuteScriptMarkLogicTest.TestExecuteScriptMarkLogic;
 import org.apache.nifi.reporting.InitializationException;
+import org.apache.nifi.schema.access.SchemaNotFoundException;
+import org.apache.nifi.serialization.MalformedRecordException;
 import org.apache.nifi.serialization.RecordReader;
 import org.apache.nifi.serialization.RecordReaderFactory;
 import org.apache.nifi.serialization.SimpleRecordSchema;
@@ -182,14 +185,19 @@ class TestRecordReaderFactory extends AbstractControllerService implements Recor
 
     public TestRecordReader testRecordReader = new TestRecordReader();
 
-    @Override
-    public RecordReader createRecordReader(Map<String, String> map, InputStream inputStream, ComponentLog componentLog) {
-        return testRecordReader;
-    }
+//    @Override
+//    public RecordReader createRecordReader(Map<String, String> map, InputStream inputStream, ComponentLog componentLog) {
+//        return testRecordReader;
+//    }
 
     @Override
     public RecordReader createRecordReader(FlowFile flowFile, InputStream in, ComponentLog logger) {
         return testRecordReader;
+    }
+
+    @Override
+    public RecordReader createRecordReader(Map<String, String> map, InputStream inputStream, long l, ComponentLog componentLog) throws MalformedRecordException, IOException, SchemaNotFoundException {
+        return null;
     }
 }
 

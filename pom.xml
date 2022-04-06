@@ -21,18 +21,18 @@
     <parent>
         <groupId>org.apache.nifi</groupId>
         <artifactId>nifi-nar-bundles</artifactId>
-        <version>1.9.1</version>
+        <version>1.15.3</version>
     </parent>
 
 
-    <version>1.9.1.7</version>
+    <version>1.15.3</version>
 
     <artifactId>nifi-marklogic-bundle</artifactId>
     <packaging>pom</packaging>
 
     <properties>
-        <nifi.version>1.9.1</nifi.version>
-        <marklogicnar.version>1.9.1.7</marklogicnar.version>
+        <nifi.version>1.15.3</nifi.version>
+        <marklogicnar.version>1.15.3</marklogicnar.version>
         <marklogicclientapi.version>5.3.2</marklogicclientapi.version>
         <mljavaclientutil.version>4.1.1</mljavaclientutil.version>
         <marklogicdatamovementcomponents.version>2.2.1</marklogicdatamovementcomponents.version>
