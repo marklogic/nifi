@@ -3,7 +3,7 @@
 The MarkLogic NiFi connector simplifies integrating [Apache NiFi](https://nifi.apache.org/) with MarkLogic, allowing for 
 data to be easily written to and read from MarkLogic. The connector consists of a set of custom NiFi processors and 
 controller services which can be used in NiFi flows for integrating with MarkLogic. The connector has been developed 
-and tested on NiFi 1.9.1; it may work in more recent versions of NiFi too. 
+and tested on NiFi 1.15.3; it may work in more recent versions of NiFi too. 
 
 Please see the [Getting Started guide](https://marklogic-community.github.io/marklogic-nifi-incubator/getting-started.html) 
 for information on obtaining the connector, installing it, and using it. 
@@ -13,7 +13,7 @@ for information on obtaining the connector, installing it, and using it.
 
 If you'd like to build the MarkLogic NiFi connector from source, you'll first need to 
 [download and install Apache Maven](https://maven.apache.org/) if you do not already have it installed. Additionally, 
-you should use Java 8, which NiFi 1.9.x requires. 
+you should use Java 8, which NiFi 1.15.x requires. 
 
 Then, clone this repository locally and run the following command to build the two NAR files:
 
@@ -54,7 +54,7 @@ You should have output like this:
 
 ```
 [INFO] ------------------------------------------------------------------------
-[INFO] Reactor Summary for nifi-marklogic-bundle 1.9.1.6:
+[INFO] Reactor Summary for nifi-marklogic-bundle 1.15.3:
 [INFO] 
 [INFO] nifi-marklogic-bundle .............................. SUCCESS [  1.062 s]
 [INFO] nifi-marklogic-services-api ........................ SUCCESS [  1.032 s]

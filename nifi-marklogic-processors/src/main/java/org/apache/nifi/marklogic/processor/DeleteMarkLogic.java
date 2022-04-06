@@ -96,7 +96,7 @@ public class DeleteMarkLogic extends QueryMarkLogic {
                     session.putAttribute(flowFile, CoreAttributes.FILENAME.key(), uri);
                     session.transfer(flowFile, FAILURE);
                 }
-                session.commit();
+                session.commitAsync();
                 context.yield();
             }
         });
@@ -119,7 +119,7 @@ public class DeleteMarkLogic extends QueryMarkLogic {
                     session.putAttribute(flowFile, CoreAttributes.FILENAME.key(), uri);
                     session.transfer(flowFile, SUCCESS);
                 }
-                session.commit();
+                session.commitAsync();
             }
         }
     }

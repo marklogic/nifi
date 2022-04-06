@@ -111,7 +111,7 @@ public class ApplyTransformMarkLogic extends QueryMarkLogic {
                         session.putAttribute(flowFile, CoreAttributes.FILENAME.key(), uri);
                         session.transfer(flowFile, SUCCESS);
                     }
-                    session.commit();
+                    session.commitAsync();
                 }
             })
             .onFailure((batch, throwable) -> {
@@ -122,7 +122,7 @@ public class ApplyTransformMarkLogic extends QueryMarkLogic {
                         session.putAttribute(flowFile, CoreAttributes.FILENAME.key(), uri);
                         session.transfer(flowFile, FAILURE);
                     }
-                    session.commit();
+                    session.commitAsync();
                 }
                 context.yield();
             });
