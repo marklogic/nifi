@@ -16,9 +16,6 @@
  */
 package org.apache.nifi.marklogic.processor;
 
-import java.util.Calendar;
-import java.util.concurrent.TimeUnit;
-
 import com.marklogic.client.DatabaseClient;
 import com.marklogic.client.datamovement.ForestConfiguration;
 import com.marklogic.client.datamovement.JobTicket;
@@ -28,7 +25,10 @@ import com.marklogic.client.datamovement.QueryBatcher;
 import com.marklogic.client.datamovement.QueryBatcherListener;
 import com.marklogic.client.datamovement.QueryEvent;
 import com.marklogic.client.datamovement.QueryFailureListener;
-import com.marklogic.client.query.QueryDefinition;
+import com.marklogic.client.query.SearchQueryDefinition;
+
+import java.util.Calendar;
+import java.util.concurrent.TimeUnit;
 
 /*
  * Methods of QueryBatcher interface are minimally implemented for the purpose of testing.
@@ -37,9 +37,10 @@ class TestQueryBatcher implements QueryBatcher {
 
     int batchSize = 100;
     int threadCount = 3;
-    QueryDefinition queryDef;
+    SearchQueryDefinition queryDef;
 
-    public TestQueryBatcher(QueryDefinition queryDef) {
+
+    public TestQueryBatcher(SearchQueryDefinition queryDef) {
         this.queryDef = queryDef;
     }
 
@@ -150,6 +151,43 @@ class TestQueryBatcher implements QueryBatcher {
         return this;
     }
 
+    /**
+     * Sets the number of documents processed in a batch and the ratio of the document processing batch to
+     * the document uri collection batch. For example, if docBatchSize is 100 and docToUriBatchRatio is 5,
+     * the document processing batch size is 100 and the document URI collection batch is 500.
+     *
+     * @param docBatchSize       the number of documents processed in a batch
+     * @param docToUriBatchRatio the ratio of the document processing batch to the document uri collection batch. The
+     *                           docToUriBatchRatio should ordinarily be larger than 1 because URIs are small relative to
+     *                           full documents and because collecting URIs from indexes is ordinarily faster than
+     *                           processing documents.
+     * @return this instance for method chaining
+     */
+    @Override
+    public QueryBatcher withBatchSize(int docBatchSize, int docToUriBatchRatio) {
+        return null;
+    }
+
+    /**
+     * Returns docToUriBatchRatio set to the QueryBatcher
+     *
+     * @return docToUriBatchRatio
+     */
+    @Override
+    public int getDocToUriBatchRatio() {
+        return 0;
+    }
+
+    /**
+     * Returns defaultDocBatchSize, which is calculated according to server status
+     *
+     * @return defaultDocBatchSize
+     */
+    @Override
+    public int getDefaultDocBatchSize() {
+        return 0;
+    }
+
     @Override
     public QueryBatcher withThreadCount(int threadCount) {
         this.threadCount = threadCount;
@@ -189,7 +227,7 @@ class TestQueryBatcher implements QueryBatcher {
         return null;
     }
 
-    public QueryDefinition getQueryDefinition() {
+    public SearchQueryDefinition getQueryDefinition() {
         return queryDef;
     }
 
@@ -217,4 +255,15 @@ class TestQueryBatcher implements QueryBatcher {
     public long getMaxBatches() {
         return 0;
     }
+
+    @Override
+    public int getMaxDocToUriBatchRatio() {
+        return 1;
+    }
+
+    @Override
+    public int getMaxUriBatchSize() {
+        return 1;
+    }
+
 }
