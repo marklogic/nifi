@@ -16,23 +16,31 @@
  */
 package org.apache.nifi.marklogic.processor;
 
-import java.util.Iterator;
-
 import com.marklogic.client.DatabaseClient.ConnectionType;
-import com.marklogic.client.datamovement.*;
+import com.marklogic.client.datamovement.Batcher;
+import com.marklogic.client.datamovement.DataMovementManager;
+import com.marklogic.client.datamovement.ForestConfiguration;
+import com.marklogic.client.datamovement.JobReport;
+import com.marklogic.client.datamovement.JobTicket;
+import com.marklogic.client.datamovement.QueryBatcher;
+import com.marklogic.client.datamovement.RowBatcher;
+import com.marklogic.client.datamovement.WriteBatcher;
 import com.marklogic.client.io.marker.ContentHandle;
-import com.marklogic.client.query.QueryDefinition;
+import com.marklogic.client.query.CtsQueryDefinition;
 import com.marklogic.client.query.RawCombinedQueryDefinition;
 import com.marklogic.client.query.RawCtsQueryDefinition;
 import com.marklogic.client.query.RawStructuredQueryDefinition;
+import com.marklogic.client.query.SearchQueryDefinition;
 import com.marklogic.client.query.StringQueryDefinition;
 import com.marklogic.client.query.StructuredQueryDefinition;
+
+import java.util.Iterator;
 
 /*
  * Methods of DataMovementManager interface are minimally implemented for the purpose of testing.
  */
 class TestDataMovementManager implements DataMovementManager {
-    QueryDefinition queryDef = null;
+    SearchQueryDefinition queryDef = null;
     @Override
     public void release() {
     }
@@ -97,6 +105,12 @@ class TestDataMovementManager implements DataMovementManager {
         queryDef = query;
         return new TestQueryBatcher(query);
 	}
+
+    @Override
+    public QueryBatcher newQueryBatcher(CtsQueryDefinition query) {
+        queryDef = query;
+        return new TestQueryBatcher(query);
+    }
 
 	@Override
     public QueryBatcher newQueryBatcher(Iterator<String> iterator) {
