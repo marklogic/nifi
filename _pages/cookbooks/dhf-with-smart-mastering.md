@@ -73,7 +73,7 @@ DatabaseClient Service
  : *Staging Database Client*
 
 Server Transform
- : ml:sjsInputFlow
+ : mlSjsInputFlow
 
 URI Prefix
  : /organizations/
@@ -104,7 +104,7 @@ DatabaseClient Service
  : *Staging Database Client*
 
 Extension Name
- : ml:sjsFlow
+ : mlSjsFlow
 
 Payload Source
  : Payload Property

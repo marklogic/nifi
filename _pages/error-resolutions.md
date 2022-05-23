@@ -38,6 +38,7 @@ Message
 
 Resolution
  : Ensure the [Database Client Service][client-service] is pointing to a REST instance and that referenced Server Transforms or REST Extension is installed on the referenced REST instance. For more information on setting up a REST instance see the [MarkLogic REST Developer's Guide][rest-guide]. 
+ : Ensure that your REST extensions and transform parameters are written in camel case format. If your REST extensions and transform parameters must be written in the "ml:" prefix format, upgrade your Data Hub version to 5.7 or later.
 
 ## Query Related Errors
 

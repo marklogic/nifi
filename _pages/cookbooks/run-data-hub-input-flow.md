@@ -27,7 +27,7 @@ These are the parameters that map to properties in PutMarkLogic:
 -transform_param "entity-name=Order,flow-name=Load%20Orders"
 ```
 
-Because the transform module is SJS, the `Server Transform` property value is `ml:sjsInputFlow`. If it were XQuery, we would use `ml:inputFlow`.
+Because the transform module is SJS, the `Server Transform` property value is `mlSjsInputFlow`. If it were XQuery, we would use `mlInputFlow`.
 
 The transform parameters are given as separate custom properties prefixed with `trans:`. (see below under PutMarkLogic)
 
@@ -145,7 +145,7 @@ Collections
  : Order,LoadOrders,input
 
 Server transform
- : ml:sjsInputFlow
+ : mlSjsInputFlow
 
 URI attribute name
  : marklogic.uri

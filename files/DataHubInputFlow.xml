@@ -663,7 +663,7 @@
                     </entry>
                     <entry>
                         <key>Server Transform</key>
-                        <value>ml:sjsInputFlow</value>
+                        <value>mlSjsInputFlow</value>
                     </entry>
                     <entry>
                         <key>Temporal Collection</key>
