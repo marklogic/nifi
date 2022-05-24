@@ -224,7 +224,7 @@
 -transform_param "entity-name=Order,flow-name=Load%20Orders"
 </code></pre></div></div>
 
-<p>Because the transform module is SJS, the <code class="highlighter-rouge">Server Transform</code> property value is <code class="highlighter-rouge">ml:sjsInputFlow</code>. If it were XQuery, we would use <code class="highlighter-rouge">ml:inputFlow</code>.</p>
+<p>Because the transform module is SJS, the <code class="highlighter-rouge">Server Transform</code> property value is <code class="highlighter-rouge">mlSjsInputFlow</code>. If it were XQuery, we would use <code class="highlighter-rouge">mlInputFlow</code>.</p>
 
 <p>The transform parameters are given as separate custom properties prefixed with <code class="highlighter-rouge">trans:</code>. (see below under PutMarkLogic)</p>
 
@@ -356,7 +356,7 @@
   <dt>Collections</dt>
   <dd>Order,LoadOrders,input</dd>
   <dt>Server transform</dt>
-  <dd>ml:sjsInputFlow</dd>
+  <dd>mlSjsInputFlow</dd>
   <dt>URI attribute name</dt>
   <dd>marklogic.uri</dd>
   <dt>trans:entity-name <em>(custom property)</em></dt>

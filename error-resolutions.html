@@ -237,7 +237,8 @@
   <dt>Message</dt>
   <dd>[ProcessorClass] failed due to ‘Resource Not Found’!</dd>
   <dt>Resolution</dt>
-  <dd>Ensure the <a href="./nifi-features">Database Client Service</a> is pointing to a REST instance and that referenced Server Transforms or REST Extension is installed on the referenced REST instance. For more information on setting up a REST instance see the <a href="https://docs.marklogic.com/guide/rest-dev/service">MarkLogic REST Developer’s Guide</a>.</dd>
+  <dd><p>Ensure the <a href="./nifi-features">Database Client Service</a> is pointing to a REST instance and that referenced Server Transforms or REST Extension is installed on the referenced REST instance. For more information on setting up a REST instance see the <a href="https://docs.marklogic.com/guide/rest-dev/service">MarkLogic REST Developer’s Guide</a>.</p>
+  <p>Ensure that your REST extensions and transform parameters are written in camel case format. If your REST extensions and transform parameters must be written in the "ml:" prefix format, upgrade your Data Hub version to 5.7 or later.</p></dd>
 </dl>
 
 <h2 id="query-related-errors">Query Related Errors</h2>
