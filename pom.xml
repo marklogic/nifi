@@ -32,7 +32,7 @@
 
     <properties>
         <nifi.version>1.15.3</nifi.version>
-        <marklogicnar.version>1.15.3</marklogicnar.version>
+        <marklogicnar.version>1.15.3.1</marklogicnar.version>
         <!-- MarkLogic Client 5.5.0 is required for DHF 5.4.x projects to continue to work -->
         <marklogicclientapi.version>5.5.0</marklogicclientapi.version>
         <mljavaclientutil.version>4.3.1</mljavaclientutil.version>

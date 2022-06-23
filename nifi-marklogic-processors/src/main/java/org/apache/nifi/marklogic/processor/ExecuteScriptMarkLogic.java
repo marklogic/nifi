@@ -212,8 +212,9 @@ public class ExecuteScriptMarkLogic extends AbstractMarkLogicProcessor {
     }
 
     public void onTrigger(ProcessContext context, ProcessSession session) throws ProcessException {
-        try {
-            FlowFile originalFF = session.get();
+    	FlowFile originalFF= null;
+    	try {
+            originalFF = session.get();
             if (originalFF == null) {
                 return;
             }
@@ -272,7 +273,9 @@ public class ExecuteScriptMarkLogic extends AbstractMarkLogicProcessor {
             for (EvalResult result : call.eval()) {
 
                 count++;
-
+                if (result != null) {
+                    System.out.println("no results");
+                }
                 // get result as string
                 String resultStr = result.getString();
                 last = resultStr;
@@ -298,10 +301,13 @@ public class ExecuteScriptMarkLogic extends AbstractMarkLogicProcessor {
                 resultToFlowFile(session, last, lastFF, resultsDest);
                 session.transfer(lastFF, LAST_RESULT);
             }
-
             session.commitAsync();
         } catch (final Throwable t) {
-            this.logErrorAndRollbackSession(t, session);
+            logError(t);
+            getLogger().info("Error Rolling back session " );
+            session.transfer(originalFF, FAILURE);
+            session.commitAsync();
+            throw new ProcessException(t);
         }
     }
 
@@ -352,4 +358,5 @@ public class ExecuteScriptMarkLogic extends AbstractMarkLogicProcessor {
 
         return propertyBuilder.addValidator(StandardValidators.NON_EMPTY_VALIDATOR).build();
     }
+
 }
