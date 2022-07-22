@@ -64,4 +64,30 @@ public class ExecuteScriptMarkLogicIT extends AbstractMarkLogicIT {
         assertEquals("2", resultValue, "The script is expected to return the value 2");
     }
 
+    @Test
+    public void jsWithError() {
+        TestRunner runner = super.getNewTestRunner(ExecuteScriptMarkLogic.class);
+        runner.setValidateExpressionUsage(false);
+
+        runner.setProperty(ExecuteScriptMarkLogic.EXECUTION_TYPE, ExecuteScriptMarkLogic.AV_JAVASCRIPT);
+        runner.setProperty(ExecuteScriptMarkLogic.RESULTS_DESTINATION, ExecuteScriptMarkLogic.AV_CONTENT);
+        // The following script should cause a null access error. The processor should then route the flowfile
+        // to the FAILURE relationship. 
+        runner.setProperty(ExecuteScriptMarkLogic.SCRIPT_BODY, "const foo = {}; foo.bar.stuff");
+        runner.setProperty(ExecuteScriptMarkLogic.SKIP_FIRST, "false");
+
+
+        MockFlowFile mockFlowFile = new MockFlowFile(3);
+        Map<String, String> attributes = new HashMap<>();
+        mockFlowFile.putAttributes(attributes);
+
+        runner.enqueue(mockFlowFile);
+        runner.run(1);
+
+        runner.assertQueueEmpty();
+        assertEquals(1, runner.getFlowFilesForRelationship(ExecuteScriptMarkLogic.ERROR).size());
+        assertEquals(0, runner.getFlowFilesForRelationship(ExecuteScriptMarkLogic.FAILURE).size());
+        assertEquals(0, runner.getFlowFilesForRelationship(ExecuteScriptMarkLogic.RESULTS).size());
+    }
+
 }

@@ -67,6 +67,7 @@ import com.marklogic.client.eval.ServerEvaluationCall;
 public class ExecuteScriptMarkLogic extends AbstractMarkLogicProcessor {
     public static final String MARKLOGIC_RESULT = "marklogic.result";
     public static final String MARKLOGIC_RESULTS_COUNT = "marklogic.results.count";
+    public static final String MARKLOGIC_RESULTS_ERROR = "marklogic.results.error";
 
     protected static Validator PATH_SCRIPT_VALIDATOR = new Validator() {
         @Override
@@ -174,6 +175,10 @@ public class ExecuteScriptMarkLogic extends AbstractMarkLogicProcessor {
     protected static final Relationship FAILURE = new Relationship.Builder().name("failure")
             .description("Failure Relationship").build();
 
+    protected static final Relationship ERROR = new Relationship.Builder().name("error")
+            .description("Flowfiles that trigger a run-time error during execution are routed to the error relationship")
+            .build();
+
     private static Charset UTF8 = Charset.forName("UTF-8");
 
     @Override
@@ -196,6 +201,7 @@ public class ExecuteScriptMarkLogic extends AbstractMarkLogicProcessor {
         relationships.add(LAST_RESULT);
         relationships.add(ORIGINAL);
         relationships.add(FAILURE);
+        relationships.add(ERROR);
         this.relationships = Collections.unmodifiableSet(relationships);
     }
 
@@ -302,7 +308,16 @@ public class ExecuteScriptMarkLogic extends AbstractMarkLogicProcessor {
                 session.transfer(lastFF, LAST_RESULT);
             }
             session.commitAsync();
+        } catch (com.marklogic.client.FailedRequestException ex) {
+            // If there's an error running the script, rolling back the session and trying again isn't likely to work.
+            // Instead, transfer the flowfile to ERROR so that the flow can handle the error. 
+            getLogger().info("Error in ExecuteScriptMarkLogic. Sending to ERROR");
+            logError(ex);
+            originalFF = session.putAttribute(originalFF, MARKLOGIC_RESULTS_ERROR, ex.getMessage());
+            session.transfer(originalFF, ERROR);
+            session.commitAsync();
         } catch (final Throwable t) {
+            // Other errors could mean that MarkLogic is unreachable or some other problem. Transfer to FAILURE. 
             logError(t);
             getLogger().info("Error Rolling back session " );
             session.transfer(originalFF, FAILURE);
