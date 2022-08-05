@@ -31,6 +31,8 @@
     <packaging>pom</packaging>
 
     <properties>
+        <!-- Ensure that the NARs will work on Java 8, as NiFi requires either Java 8 or 11 -->
+        <maven.compiler.release>8</maven.compiler.release>
         <nifi.version>1.15.3</nifi.version>
         <marklogicnar.version>1.15.3.2</marklogicnar.version>
         <!-- MarkLogic Client 5.5.0 is required for DHF 5.4.x projects to continue to work -->
