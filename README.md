@@ -5,17 +5,21 @@ data to be easily written to and read from MarkLogic. The connector consists of 
 controller services which can be used in NiFi flows for integrating with MarkLogic. The connector has been developed 
 and tested on NiFi 1.15.3; it may work in more recent versions of NiFi too. 
 
-Please see the [Getting Started guide](https://marklogic-community.github.io/marklogic-nifi-incubator/getting-started.html) 
+Please see the [Getting Started guide](https://marklogic.github.io/nifi/getting-started) 
 for information on obtaining the connector, installing it, and using it. 
 
 
 ## Building and testing the connector
 
 If you'd like to build the MarkLogic NiFi connector from source, you'll first need to 
-[download and install Apache Maven](https://maven.apache.org/) if you do not already have it installed. Additionally, 
-you should use Java 8, which NiFi 1.15.x requires. 
+[download and install Apache Maven](https://maven.apache.org/) if you do not already have it installed. 
 
-Then, clone this repository locally and run the following command to build the two NAR files:
+As of the 1.15.3.2 release, Java 11 should be used to run the Maven commands below. The Maven pom.xml file now ensures
+that the NAR files constructed by Maven will run on Java 8, but it does so via a compiler switch introduced in Java 9. 
+Thus, Java 8 cannot be used to run Maven, but the NAR files will run on both Java 8 and Java 11. This is consistent
+with the [NiFi system requirements](https://nifi.apache.org/docs/nifi-docs/html/administration-guide.html#system_requirements).
+
+Next, clone this repository and run the following command to build the two NAR files:
 
     mvn clean install -DskipTests
 
@@ -29,7 +33,11 @@ After "install" completes, the below NARs will have been created:
 - ./nifi-marklogic-services-api-nar/target/nifi-marklogic-services-api-nar-(version).nar
 
 You can then copy these NAR files into your NiFi installation as described in the 
-[Getting Started guide](https://marklogic-community.github.io/marklogic-nifi-incubator/getting-started.html). 
+[Getting Started guide](https://marklogic.github.io/nifi/getting-started).
+
+Note that depending on the version of NiFi you're running, NiFi may require you to login after accessing the NiFi 
+home page after starting it up. See [these NiFi docs](https://nifi.apache.org/docs/nifi-docs/html/getting-started.html#i-started-nifi-now-what)
+for instructions on how to login.
 
 
 Running the tests
