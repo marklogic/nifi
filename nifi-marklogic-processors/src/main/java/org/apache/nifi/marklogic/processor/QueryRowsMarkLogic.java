@@ -5,7 +5,6 @@ import com.marklogic.client.expression.PlanBuilder;
 import com.marklogic.client.io.InputStreamHandle;
 import com.marklogic.client.io.StringHandle;
 import com.marklogic.client.row.RowManager;
-import org.apache.commons.io.IOUtils;
 import org.apache.nifi.annotation.behavior.InputRequirement;
 import org.apache.nifi.annotation.documentation.CapabilityDescription;
 import org.apache.nifi.annotation.documentation.Tags;
@@ -15,6 +14,7 @@ import org.apache.nifi.expression.ExpressionLanguageScope;
 import org.apache.nifi.flowfile.FlowFile;
 import org.apache.nifi.processor.*;
 import org.apache.nifi.processor.exception.ProcessException;
+import org.springframework.util.FileCopyUtils;
 
 import java.io.InputStream;
 import java.util.*;
@@ -84,7 +84,7 @@ public class QueryRowsMarkLogic extends AbstractMarkLogicProcessor {
 			if (inputStream != null) {
 				try {
 					flowFile = session.write(flowFile, out -> {
-						IOUtils.copy(inputStream, out);
+						FileCopyUtils.copy(inputStream, out);
 					});
 				} finally {
 					inputStream.close();

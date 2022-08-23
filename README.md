@@ -52,11 +52,11 @@ at the same time.
 After cloning this repository locally and installing Maven, you can run the tests for the connector by performing the 
 following steps (as noted above, be sure to use Java 8):
 
-1. cd nifi-marklogic-processors
+1. `cd nifi-marklogic-processors`
 1. Put your ML admin username/password in gradle-local.properties (a gitignored file, so you'll need to create it)
-1. Run ./gradlew -i mldeploy (uses Gradle to deploy a small test application to ML)
-1. cd ..
-1. Run "mvn clean test"
+1. Run `./gradlew -i mldeploy` (uses Gradle to deploy a small test application to ML)
+1. `cd ..`
+1. Run `mvn clean test`
 
 You should have output like this:
 

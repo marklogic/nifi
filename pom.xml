@@ -21,11 +21,10 @@
     <parent>
         <groupId>org.apache.nifi</groupId>
         <artifactId>nifi-nar-bundles</artifactId>
-        <version>1.15.3</version>
+        <version>1.16.3</version>
     </parent>
 
-
-    <version>1.15.3.2</version>
+    <version>1.16.3.1</version>
 
     <artifactId>nifi-marklogic-bundle</artifactId>
     <packaging>pom</packaging>
@@ -33,12 +32,9 @@
     <properties>
         <!-- Ensure that the NARs will work on Java 8, as NiFi requires either Java 8 or 11 -->
         <maven.compiler.release>8</maven.compiler.release>
-        <nifi.version>1.15.3</nifi.version>
-        <marklogicnar.version>1.15.3.2</marklogicnar.version>
-        <!-- MarkLogic Client 5.5.0 is required for DHF 5.4.x projects to continue to work -->
-        <marklogicclientapi.version>5.5.0</marklogicclientapi.version>
-        <mljavaclientutil.version>4.3.1</mljavaclientutil.version>
-        <marklogicdatamovementcomponents.version>2.4.0</marklogicdatamovementcomponents.version>
+        <nifi.version>1.16.3</nifi.version>
+        <marklogicnar.version>1.16.3.1</marklogicnar.version>
+        <marklogicclientapi.version>5.5.3</marklogicclientapi.version>
     </properties>
 
     <modules>
