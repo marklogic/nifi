@@ -28,10 +28,10 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import com.marklogic.client.FailedRequestException;
 import org.apache.nifi.annotation.behavior.DynamicProperty;
 import org.apache.nifi.annotation.documentation.CapabilityDescription;
 import org.apache.nifi.annotation.documentation.Tags;
-import org.apache.nifi.annotation.lifecycle.OnScheduled;
 import org.apache.nifi.components.AllowableValue;
 import org.apache.nifi.components.PropertyDescriptor;
 import org.apache.nifi.components.ValidationContext;
@@ -67,6 +67,7 @@ import com.marklogic.client.eval.ServerEvaluationCall;
 public class ExecuteScriptMarkLogic extends AbstractMarkLogicProcessor {
     public static final String MARKLOGIC_RESULT = "marklogic.result";
     public static final String MARKLOGIC_RESULTS_COUNT = "marklogic.results.count";
+    public static final String MARKLOGIC_RESULTS_ERROR = "marklogic.results.error";
 
     protected static Validator PATH_SCRIPT_VALIDATOR = new Validator() {
         @Override
@@ -160,19 +161,22 @@ public class ExecuteScriptMarkLogic extends AbstractMarkLogicProcessor {
     // ---------- RELATIONSHIPS ----------
 
     protected static final Relationship RESULTS = new Relationship.Builder().name("results")
-            .description("Results Relationship").build();
+            .description("Receives a FlowFile for each result returned by the executed script. Will not receive a " +
+                    "FlowFile for the first result if 'Skip First Result' is true.").build();
 
     protected static final Relationship FIRST_RESULT = new Relationship.Builder().name("first result")
-            .description("First Result Relationship").build();
+            .description("Receives a FlowFile for the first result returned by the executed script").build();
 
     protected static final Relationship LAST_RESULT = new Relationship.Builder().name("last result")
-            .description("Last Result Relationship").build();
+            .description("Receives a FlowFile for the last result returned by the executed script if it returns at " +
+                    "least two results.").build();
 
     protected static final Relationship ORIGINAL = new Relationship.Builder().name("original")
-            .description("Original Relationship").build();
+            .description("Receives the original FlowFile that this processor received").build();
 
     protected static final Relationship FAILURE = new Relationship.Builder().name("failure")
-            .description("Failure Relationship").build();
+            .description("Receives the original FlowFile if the call to MarkLogic fails for any reason").build();
+
 
     private static Charset UTF8 = Charset.forName("UTF-8");
 
@@ -180,7 +184,7 @@ public class ExecuteScriptMarkLogic extends AbstractMarkLogicProcessor {
     public void init(ProcessorInitializationContext context) {
         super.init(context);
 
-        final List<PropertyDescriptor> descriptors = new ArrayList<PropertyDescriptor>();
+        final List<PropertyDescriptor> descriptors = new ArrayList<>();
         descriptors.add(DATABASE_CLIENT_SERVICE);
         descriptors.add(EXECUTION_TYPE);
         descriptors.add(SCRIPT_BODY);
@@ -190,7 +194,7 @@ public class ExecuteScriptMarkLogic extends AbstractMarkLogicProcessor {
         descriptors.add(SKIP_FIRST);
         this.properties = Collections.unmodifiableList(descriptors);
 
-        final Set<Relationship> relationships = new HashSet<Relationship>();
+        final Set<Relationship> relationships = new HashSet<>();
         relationships.add(RESULTS);
         relationships.add(FIRST_RESULT);
         relationships.add(LAST_RESULT);
@@ -199,51 +203,22 @@ public class ExecuteScriptMarkLogic extends AbstractMarkLogicProcessor {
         this.relationships = Collections.unmodifiableSet(relationships);
     }
 
-    @OnScheduled
-    public void onScheduled(ProcessContext context) {
-
-    }
-
     @Override
     public final void onTrigger(final ProcessContext context, final ProcessSessionFactory sessionFactory)
             throws ProcessException {
         final ProcessSession session = sessionFactory.createSession();
-        onTrigger(context, session);
-    }
-
-    public void onTrigger(ProcessContext context, ProcessSession session) throws ProcessException {
+        FlowFile originalFF = null;
         try {
-            FlowFile originalFF = session.get();
+            originalFF = session.get();
             if (originalFF == null) {
                 return;
             }
 
-            DatabaseClient client = getDatabaseClient(context);
+            final String resultsDest = context.getProperty(RESULTS_DESTINATION).getValue();
+            final String contentVariable = context.getProperty(CONTENT_VARIABLE).evaluateAttributeExpressions(originalFF).getValue();
+            final boolean skipFirst = context.getProperty(SKIP_FIRST).getValue().equals("true");
 
-            String execType = context.getProperty(EXECUTION_TYPE).getValue();
-            String resultsDest = context.getProperty(RESULTS_DESTINATION).getValue();
-            String scriptBody = context.getProperty(SCRIPT_BODY).evaluateAttributeExpressions(originalFF).getValue();
-            String modulePath = context.getProperty(MODULE_PATH).evaluateAttributeExpressions(originalFF).getValue();
-            String contentVariable = context.getProperty(CONTENT_VARIABLE).evaluateAttributeExpressions(originalFF)
-                    .getValue();
-
-            boolean skipFirst = context.getProperty(SKIP_FIRST).getValue().equals("true");
-
-            ServerEvaluationCall call = null;
-
-            switch (execType) {
-            case STR_XQUERY:
-                call = client.newServerEval().xquery(scriptBody);
-                break;
-            case STR_JAVASCRIPT:
-                call = client.newServerEval().javascript(scriptBody);
-                break;
-            case STR_MODULE_PATH:
-                call = client.newServerEval().modulePath(modulePath);
-                break;
-            default:
-                call = client.newServerEval().xquery(scriptBody);
-            }
+            ServerEvaluationCall call = buildCall(context, originalFF);
 
             // write the content to the contentVariable external variable, if supplied
             if (contentVariable != null && contentVariable.length() > 0) {
@@ -265,24 +240,17 @@ public class ExecuteScriptMarkLogic extends AbstractMarkLogicProcessor {
             }
 
             int count = 0;
-
             String last = null;
 
-            // iterate over the query results
             for (EvalResult result : call.eval()) {
-
                 count++;
-
-                // get result as string
-                String resultStr = result.getString();
+                final String resultStr = result.getString();
                 last = resultStr;
-
                 if (count == 1) {
                     FlowFile firstFF = session.create(originalFF);
                     resultToFlowFile(session, resultStr, firstFF, resultsDest);
                     session.transfer(firstFF, FIRST_RESULT);
                 }
-
                 if (count > 1 || !skipFirst) {
                     FlowFile resultFF = session.create(originalFF);
                     resultToFlowFile(session, resultStr, resultFF, resultsDest);
@@ -301,8 +269,21 @@ public class ExecuteScriptMarkLogic extends AbstractMarkLogicProcessor {
 
             session.commitAsync();
         } catch (final Throwable t) {
-            this.logErrorAndRollbackSession(t, session);
+            logErrorAndTransfer(t, originalFF, session, FAILURE);
         }
+    }
+
+    private ServerEvaluationCall buildCall(ProcessContext context, FlowFile originalFlowFile) {
+        DatabaseClient client = getDatabaseClient(context);
+        final String executionType = context.getProperty(EXECUTION_TYPE).getValue();
+        ServerEvaluationCall call = client.newServerEval();
+
+        if (STR_MODULE_PATH.equals(executionType)) {
+            return call.modulePath(context.getProperty(MODULE_PATH).evaluateAttributeExpressions(originalFlowFile).getValue());
+        }
+
+        final String scriptBody = context.getProperty(SCRIPT_BODY).evaluateAttributeExpressions(originalFlowFile).getValue();
+        return STR_JAVASCRIPT.equals(executionType) ? call.javascript(scriptBody) : call.xquery(scriptBody);
     }
 
     private void resultToFlowFile(ProcessSession session, String resultStr, FlowFile flowFile, String resultsDest) {

@@ -215,6 +215,24 @@ public abstract class AbstractMarkLogicProcessor extends AbstractSessionFactoryP
         throw new ProcessException(t);
     }
 
+    /**
+     * Use this for transferring the FlowFile to a Relationship while both logging the error and capturing its
+     * message in the FlowFile. This allows the user to do whatever they'd like with the FlowFile after a failure
+     * occurs - i.e. they can send it back to the processor for retry, discard it, etc.
+     *
+     * @param t
+     * @param flowFile
+     * @param session
+     * @param relationship
+     */
+    protected void logErrorAndTransfer(Throwable t, FlowFile flowFile, ProcessSession session, Relationship relationship) {
+        logError(t);
+        if (t.getMessage() != null) {
+            session.putAttribute(flowFile, "markLogicErrorMessage", t.getMessage());
+        }
+        transferAndCommit(session, flowFile, relationship);
+    }
+
     protected void logError(Throwable t) {
         final String errorMessage = t.getMessage() != null ? t.getMessage() : "";
         if (t instanceof UnauthorizedUserException || errorMessage.matches(unauthorizedPattern.pattern())) {

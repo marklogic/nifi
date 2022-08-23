@@ -169,11 +169,7 @@ public class ExtensionCallMarkLogic extends AbstractMarkLogicProcessor {
             ServiceResultIterator results = callExtension(context, session, originalFlowFile);
             handleExtensionCallResults(results, session, originalFlowFile);
         } catch (Throwable t) {
-            logError(t);
-            if (t.getMessage() != null) {
-                session.putAttribute(originalFlowFile, "markLogicErrorMessage", t.getMessage());
-            }
-            transferAndCommit(session, originalFlowFile, FAILURE);
+            logErrorAndTransfer(t, originalFlowFile, session, FAILURE);
         }
     }
 
