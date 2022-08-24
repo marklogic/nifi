@@ -5,6 +5,7 @@ import com.marklogic.client.ext.SecurityContextType;
 import org.apache.nifi.components.PropertyDescriptor;
 import org.apache.nifi.expression.ExpressionLanguageScope;
 import org.apache.nifi.registry.VariableDescriptor;
+import org.apache.nifi.security.util.ClientAuth;
 import org.apache.nifi.ssl.SSLContextService;
 import org.apache.nifi.util.MockConfigurationContext;
 import org.apache.nifi.util.MockVariableRegistry;
@@ -99,9 +100,9 @@ public class EvaluateExpressionsTest extends Assert {
 	@Test
 	public void evaluateClientAuth() {
 		verifyScope(DefaultMarkLogicDatabaseClientService.CLIENT_AUTH);
-		variableRegistry.setVariable(new VariableDescriptor("myValue"), SSLContextService.ClientAuth.WANT.name());
+		variableRegistry.setVariable(new VariableDescriptor("myValue"), "WANT");
 		properties.put(DefaultMarkLogicDatabaseClientService.CLIENT_AUTH, "${myValue}");
-		assertEquals(SSLContextService.ClientAuth.WANT, service.determineClientAuth(context));
+		assertEquals(ClientAuth.WANT, service.determineClientAuth(context));
 	}
 
 	private void verifyScope(PropertyDescriptor descriptor) {
