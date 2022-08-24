@@ -79,7 +79,7 @@ public class ExtensionCallMarkLogic extends AbstractMarkLogicProcessor {
             .displayName("Requires Input")
             .required(true)
             .allowableValues("true", "false")
-            .description("Whether a FlowFile is required to run.")
+            .description("Whether an incoming FlowFile is required to run.")
             .expressionLanguageSupported(ExpressionLanguageScope.NONE)
             .addValidator(StandardValidators.BOOLEAN_VALIDATOR)
             .defaultValue("true")
@@ -123,8 +123,7 @@ public class ExtensionCallMarkLogic extends AbstractMarkLogicProcessor {
             .addValidator(Validator.VALID)
             .build();
 
-    public volatile ExtensionResourceManager resourceManager;
-    public boolean requiresInput = true;
+    private volatile ExtensionResourceManager resourceManager;
 
     protected static final Relationship SUCCESS = new Relationship.Builder().name("success")
             .description("All FlowFiles that are created from documents read from MarkLogic are routed to"
@@ -157,21 +156,20 @@ public class ExtensionCallMarkLogic extends AbstractMarkLogicProcessor {
         super.populatePropertiesByPrefix(context);
         DatabaseClient client = getDatabaseClient(context);
         String extensionName = context.getProperty(EXTENSION_NAME).evaluateAttributeExpressions(context.getAllProperties()).getValue();
+        getLogger().info("Creating ResourceManager for REST extension: " + extensionName);
         resourceManager = new ExtensionResourceManager(client, extensionName);
     }
 
     @Override
     public void onTrigger(ProcessContext context, ProcessSessionFactory sessionFactory) throws ProcessException {
         final ProcessSession session = sessionFactory.createSession();
-        onTrigger(context, session);
-    }
 
-    public void onTrigger(ProcessContext context, ProcessSession session) throws ProcessException {
+        final String requiresInput = context.getProperty(REQUIRES_INPUT).getValue();
         FlowFile flowFile = session.get();
-        if (requiresInput && flowFile == null) {
+        if ("true".equals(requiresInput) && flowFile == null) {
             context.yield();
             return;
-        } else if (!requiresInput) {
+        } else if ("false".equals(requiresInput)) {
             flowFile = session.create();
         }
 
