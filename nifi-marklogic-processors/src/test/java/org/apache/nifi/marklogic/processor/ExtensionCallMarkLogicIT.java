@@ -19,7 +19,6 @@ package org.apache.nifi.marklogic.processor;
 import com.marklogic.client.io.Format;
 import org.apache.nifi.util.MockFlowFile;
 import org.apache.nifi.util.TestRunner;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
@@ -31,13 +30,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class ExtensionCallMarkLogicIT extends AbstractMarkLogicIT {
 
-    @BeforeEach
-    public void beforeEach() {
-        super.setup();
-    }
-
     @Test
-    public void simpleGet() {
+    void simpleGet() {
         TestRunner runner = super.getNewTestRunner(ExtensionCallMarkLogic.class);
         runner.setValidateExpressionUsage(false);
         runner.setProperty(ExtensionCallMarkLogic.EXTENSION_NAME, "replay");
@@ -46,6 +40,12 @@ public class ExtensionCallMarkLogicIT extends AbstractMarkLogicIT {
         runner.setProperty(ExtensionCallMarkLogic.PAYLOAD_SOURCE, ExtensionCallMarkLogic.PayloadSources.NONE);
         runner.setProperty(ExtensionCallMarkLogic.PAYLOAD_FORMAT, Format.TEXT.name());
         runner.setProperty("param:replay", "${dynamicParam}");
+
+        runner.run();
+        assertEquals(0, runner.getFlowFilesForRelationship(ExtensionCallMarkLogic.FAILURE).size());
+        assertEquals(0, runner.getFlowFilesForRelationship(ExtensionCallMarkLogic.SUCCESS).size(),
+                "Expecting no FlowFiles; the processor should not have run since requiresInput=true and no " +
+                        "FlowFile was enqueued");
 
         MockFlowFile mockFlowFile = new MockFlowFile(1);
         Map<String, String> attributes = new HashMap<>();
@@ -72,7 +72,7 @@ public class ExtensionCallMarkLogicIT extends AbstractMarkLogicIT {
     }
 
     @Test
-    public void simplePost() {
+    void simplePost() {
         TestRunner runner = getNewTestRunner(ExtensionCallMarkLogic.class);
         runner.setValidateExpressionUsage(false);
         runner.setProperty(ExtensionCallMarkLogic.EXTENSION_NAME, "replay");
@@ -104,14 +104,16 @@ public class ExtensionCallMarkLogicIT extends AbstractMarkLogicIT {
         runner.setValidateExpressionUsage(false);
         runner.setProperty(ExtensionCallMarkLogic.EXTENSION_NAME, "throwsError");
         runner.setProperty(ExtensionCallMarkLogic.METHOD_TYPE, ExtensionCallMarkLogic.MethodTypes.GET_STR);
-        runner.setProperty(ExtensionCallMarkLogic.REQUIRES_INPUT, "true");
+        runner.setProperty(ExtensionCallMarkLogic.REQUIRES_INPUT, "false");
         runner.setProperty(ExtensionCallMarkLogic.PAYLOAD_SOURCE, ExtensionCallMarkLogic.PayloadSources.NONE);
 
-        runner.enqueue(new MockFlowFile(1));
-        runner.run(1);
+        runner.enqueue();
+        runner.run();
         runner.assertQueueEmpty();
 
-        assertEquals(1, runner.getFlowFilesForRelationship(ExtensionCallMarkLogic.FAILURE).size());
+        assertEquals(1, runner.getFlowFilesForRelationship(ExtensionCallMarkLogic.FAILURE).size(),
+                "One FlowFile should exist due to the REST extension throwing an error; the FlowFile should " +
+                        "have been created since requiresInput=false");
         assertEquals(0, runner.getFlowFilesForRelationship(ExtensionCallMarkLogic.SUCCESS).size());
 
         MockFlowFile flowFile = runner.getFlowFilesForRelationship(ExtensionCallMarkLogic.FAILURE).get(0);
