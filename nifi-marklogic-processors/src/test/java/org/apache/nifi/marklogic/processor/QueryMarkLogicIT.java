@@ -16,10 +16,13 @@
  */
 package org.apache.nifi.marklogic.processor;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.marklogic.client.datamovement.QueryBatcher;
 import com.marklogic.client.document.DocumentWriteSet;
 import com.marklogic.client.document.GenericDocumentManager;
 import com.marklogic.client.io.DocumentMetadataHandle;
+import com.marklogic.client.io.JacksonHandle;
 import com.marklogic.client.io.StringHandle;
 import org.apache.nifi.components.state.Scope;
 import org.apache.nifi.flowfile.attributes.CoreAttributes;
@@ -32,36 +35,35 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.w3c.dom.Document;
 
+import javax.xml.namespace.QName;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static org.junit.Assert.*;
 
 public class QueryMarkLogicIT extends AbstractMarkLogicIT {
 
-    private String collection;
+    private final static String TEST_COLLECTION = "QueryMarkLogicTest";
 
     @BeforeEach
-    public void setup() {
+    public void insertTestDocumentsForQuerying() {
         super.setup();
-        collection = "QueryMarkLogicTest";
-        // Load documents to Query
-        loadDocumentsIntoCollection(collection, documents);
-    }
 
-    private void loadDocumentsIntoCollection(String collection, List<IngestDoc> documents) {
         GenericDocumentManager mgr = getDatabaseClient().newDocumentManager();
         DocumentWriteSet writeSet = mgr.newWriteSet();
         for(IngestDoc document : documents) {
-            DocumentMetadataHandle handle = new DocumentMetadataHandle();
-            handle.withCollections(collection);
-            writeSet.add(document.getFileName(), handle, new StringHandle(document.getContent()));
+            DocumentMetadataHandle metadata = new DocumentMetadataHandle();
+            metadata.getPermissions().add("rest-reader", DocumentMetadataHandle.Capability.READ,
+                    DocumentMetadataHandle.Capability.EXECUTE);
+            metadata.getPermissions().add("rest-writer", DocumentMetadataHandle.Capability.UPDATE);
+            metadata.getMetadataValues().add("my-uri", document.getFileName());
+            metadata.getProperties().put(new QName("org:example", "hello"), "world");
+            metadata.withCollections(TEST_COLLECTION, TEST_COLLECTION + "-2");
+            metadata.setQuality(12);
+            writeSet.add(document.getFileName(), metadata, new StringHandle(document.getContent()));
         }
         mgr.write(writeSet);
     }
@@ -77,7 +79,7 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
     @Test
     public void testSimpleCollectionQuery() {
         TestRunner runner = getNewTestRunner(QueryMarkLogic.class);
-        runner.setProperty(QueryMarkLogic.QUERY, collection);
+        runner.setProperty(QueryMarkLogic.QUERY, TEST_COLLECTION);
         runner.setProperty(QueryMarkLogic.QUERY_TYPE, QueryMarkLogic.QueryTypes.COLLECTION);
         runner.enqueue(new MockFlowFile(12345));
         runner.assertValid();
@@ -107,7 +109,7 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
     @Test
     public void testOldCollectionQuery() {
         TestRunner runner = getNewTestRunner(QueryMarkLogic.class);
-        runner.setProperty(QueryMarkLogic.COLLECTIONS, collection);
+        runner.setProperty(QueryMarkLogic.COLLECTIONS, TEST_COLLECTION);
         runner.assertValid();
         runner.run();
         runner.assertTransferCount(QueryMarkLogic.SUCCESS, numDocs);
@@ -391,7 +393,7 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
     @Test
     public void testUrisOnly() {
         TestRunner runner = getNewTestRunner(QueryMarkLogic.class);
-        runner.setProperty(QueryMarkLogic.RETURN_TYPE, QueryMarkLogic.ReturnTypes.META);
+        runner.setProperty(QueryMarkLogic.RETURN_TYPE, QueryMarkLogic.ReturnTypes.URIS_ONLY);
         runner.setProperty(QueryMarkLogic.QUERY, "xmlcontent");
         runner.setProperty(QueryMarkLogic.QUERY_TYPE, QueryMarkLogic.QueryTypes.STRING);
         runner.assertValid();
@@ -402,7 +404,82 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
         assertEquals(flowFiles.size(), expectedXmlCount);
         for(MockFlowFile flowFile : flowFiles) {
             byte[] actualByteArray = runner.getContentAsByteArray(flowFile);
-            assertEquals(actualByteArray.length,0);
+            assertEquals("Content should be empty since we only asked for URIs", actualByteArray.length,0);
+            String uri = flowFile.getAttribute("filename");
+            assertTrue("Unexpected URI: " + uri, uri.startsWith("/PutMarkLogicTest/") && uri.endsWith(".xml"));
+        }
+        runner.shutdown();
+    }
+
+    @Test
+    public void documentAndMetadataWithNoMetadata() {
+        final String uri = "/QueryMarkLogicIT/123.json";
+        final String uniqueString = "thisShouldOnlyAppearHere";
+        try {
+            ObjectNode content = new ObjectMapper().createObjectNode().put("hello", uniqueString);
+            getDatabaseClient().newJSONDocumentManager().write(uri, new DocumentMetadataHandle(), new JacksonHandle(content));
+
+            TestRunner runner = getNewTestRunner(QueryMarkLogic.class);
+            runner.setProperty(QueryMarkLogic.RETURN_TYPE, QueryMarkLogic.ReturnTypes.META);
+            runner.setProperty(QueryMarkLogic.QUERY, uniqueString);
+            runner.setProperty(QueryMarkLogic.QUERY_TYPE, QueryMarkLogic.QueryTypes.STRING);
+            runner.assertValid();
+            runner.run();
+
+            List<MockFlowFile> flowFiles = runner.getFlowFilesForRelationship(QueryMarkLogic.SUCCESS);
+            assertEquals(1, flowFiles.size());
+            MockFlowFile flowFile = flowFiles.get(0);
+            System.out.println(flowFile.getAttributes());
+            assertEquals("", flowFile.getAttribute("marklogic-collections"));
+            assertEquals("", flowFile.getAttribute("marklogic-permissions"));
+            assertEquals("0", flowFile.getAttribute("marklogic-quality"));
+
+            Set<String> attributeNames = flowFile.getAttributes().keySet();
+            for (String name: attributeNames) {
+                assertFalse("No meta: attributes should exist since the document doesn't have any metadata values",
+                        name.startsWith("meta:"));
+                assertFalse("No property: attributes should exist since the document doesn't have any properties",
+                        name.startsWith("property:"));
+            }
+        } finally {
+            getDatabaseClient().newJSONDocumentManager().delete(uri);
+        }
+    }
+
+    @Test
+    public void onlyMetadata() {
+        TestRunner runner = getNewTestRunner(QueryMarkLogic.class);
+        runner.setProperty(QueryMarkLogic.RETURN_TYPE, QueryMarkLogic.ReturnTypes.META);
+        runner.setProperty(QueryMarkLogic.QUERY, "xmlcontent");
+        runner.setProperty(QueryMarkLogic.QUERY_TYPE, QueryMarkLogic.QueryTypes.STRING);
+        runner.assertValid();
+        runner.run();
+
+        runner.assertTransferCount(QueryMarkLogic.SUCCESS, expectedXmlCount);
+        runner.assertAllFlowFilesContainAttribute(QueryMarkLogic.SUCCESS,CoreAttributes.FILENAME.key());
+
+        List<MockFlowFile> flowFiles = runner.getFlowFilesForRelationship(QueryMarkLogic.SUCCESS);
+        assertEquals(flowFiles.size(), expectedXmlCount);
+        for(MockFlowFile flowFile : flowFiles) {
+            byte[] actualByteArray = runner.getContentAsByteArray(flowFile);
+            assertEquals("Content should be empty since we only asked for metadata", actualByteArray.length,0);
+
+            // Verify metadata attributes exist
+            assertEquals("world", flowFile.getAttribute("property:{org:example}hello"));
+            String uri = flowFile.getAttribute("filename");
+            assertEquals(uri, flowFile.getAttribute("meta:my-uri"));
+
+            String permissions = flowFile.getAttribute("marklogic-permissions");
+            System.out.println(permissions);
+            assertTrue(permissions.contains("rest-reader,read"));
+            assertTrue(permissions.contains("rest-reader,execute"));
+            assertTrue(permissions.contains("rest-writer,update"));
+
+            List<String> collections = Arrays.asList(flowFile.getAttribute("marklogic-collections").split(","));
+            assertTrue(collections.contains(TEST_COLLECTION));
+            assertTrue(collections.contains(TEST_COLLECTION + "-2"));
+
+            assertEquals("12", flowFile.getAttribute("marklogic-quality"));
         }
         runner.shutdown();
     }
@@ -410,7 +487,7 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
     @Test
     public void testJobProperties() {
         TestRunner runner = getNewTestRunner(QueryMarkLogic.class);
-        runner.setProperty(QueryMarkLogic.QUERY, collection);
+        runner.setProperty(QueryMarkLogic.QUERY, TEST_COLLECTION);
         runner.setProperty(QueryMarkLogic.QUERY_TYPE, QueryMarkLogic.QueryTypes.COLLECTION);
         runner.run();
         Processor processor = runner.getProcessor();
@@ -480,7 +557,7 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
         runner.run();
         runner.assertTransferCount(QueryMarkLogic.SUCCESS, expectedCount);
         runner.clearTransferState();
-        runner.getStateManager().setState(new HashMap<String,String>(), Scope.CLUSTER);
+        runner.getStateManager().setState(new HashMap<>(), Scope.CLUSTER);
     }
 
     private void verifyCombinedXMLQueryResults(TestRunner runner) {
