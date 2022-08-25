@@ -16,19 +16,17 @@
  */
 package org.apache.nifi.marklogic.processor;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.regex.Pattern;
-
+import com.marklogic.client.DatabaseClient;
+import com.marklogic.client.extensions.ResourceManager;
+import com.marklogic.client.extensions.ResourceServices.ServiceResultIterator;
+import com.marklogic.client.io.BytesHandle;
+import com.marklogic.client.io.Format;
+import com.marklogic.client.util.RequestParameters;
 import org.apache.nifi.annotation.behavior.DynamicProperty;
 import org.apache.nifi.annotation.behavior.InputRequirement;
+import org.apache.nifi.annotation.behavior.InputRequirement.Requirement;
 import org.apache.nifi.annotation.behavior.SystemResource;
 import org.apache.nifi.annotation.behavior.SystemResourceConsideration;
-import org.apache.nifi.annotation.behavior.TriggerWhenEmpty;
-import org.apache.nifi.annotation.behavior.InputRequirement.Requirement;
 import org.apache.nifi.annotation.documentation.CapabilityDescription;
 import org.apache.nifi.annotation.documentation.Tags;
 import org.apache.nifi.annotation.lifecycle.OnScheduled;
@@ -38,32 +36,25 @@ import org.apache.nifi.components.PropertyValue;
 import org.apache.nifi.components.Validator;
 import org.apache.nifi.expression.ExpressionLanguageScope;
 import org.apache.nifi.flowfile.FlowFile;
-import org.apache.nifi.processor.ProcessContext;
-import org.apache.nifi.processor.ProcessSession;
-import org.apache.nifi.processor.ProcessSessionFactory;
-import org.apache.nifi.processor.ProcessorInitializationContext;
-import org.apache.nifi.processor.Relationship;
+import org.apache.nifi.processor.*;
 import org.apache.nifi.processor.exception.ProcessException;
 import org.apache.nifi.processor.util.StandardValidators;
 import org.apache.nifi.stream.io.StreamUtils;
 
-import com.marklogic.client.DatabaseClient;
-import com.marklogic.client.extensions.ResourceManager;
-import com.marklogic.client.extensions.ResourceServices.ServiceResultIterator;
-import com.marklogic.client.io.BytesHandle;
-import com.marklogic.client.io.Format;
-import com.marklogic.client.io.marker.AbstractWriteHandle;
-import com.marklogic.client.util.RequestParameters;
+import java.util.*;
+import java.util.regex.Pattern;
 
-@Tags({"MarkLogic", "REST", "Extension"})
+@Tags({"MarkLogic", "REST", "Extension", "Deprecated"})
 @InputRequirement(Requirement.INPUT_ALLOWED)
-@CapabilityDescription("Allows MarkLogic REST extensions to be called")
+@CapabilityDescription("DEPRECATED as of 1.16.3.1; allows MarkLogic REST extensions to be called. Deprecated due to the " +
+        "output from the call to MarkLogic being appended to the incoming FlowFile which is unlikely to be desirable " +
+        "behavior. CallRestExtensionMarkLogic should be used instead.")
 @SystemResourceConsideration(resource = SystemResource.MEMORY)
 @DynamicProperty(name = "param: URL parameter, separator: separator to split values for a parameter.",
         value = "param: URL parameter, separator: separator to split values for a parameter.",
         description = "Depending on the property prefix, routes data to parameter, or splits parameter.",
         expressionLanguageScope = ExpressionLanguageScope.FLOWFILE_ATTRIBUTES)
-@TriggerWhenEmpty
+@Deprecated
 public class ExtensionCallMarkLogic extends AbstractMarkLogicProcessor {
 
     public static final PropertyDescriptor EXTENSION_NAME = new PropertyDescriptor.Builder()
@@ -79,7 +70,8 @@ public class ExtensionCallMarkLogic extends AbstractMarkLogicProcessor {
             .displayName("Requires Input")
             .required(true)
             .allowableValues("true", "false")
-            .description("Whether an incoming FlowFile is required to run.")
+            .description("Whether an incoming FlowFile is required to run; should only be 'false' if the processor " +
+                    "has no incoming connections")
             .expressionLanguageSupported(ExpressionLanguageScope.NONE)
             .addValidator(StandardValidators.BOOLEAN_VALIDATOR)
             .defaultValue("true")
@@ -126,8 +118,8 @@ public class ExtensionCallMarkLogic extends AbstractMarkLogicProcessor {
     private volatile ExtensionResourceManager resourceManager;
 
     protected static final Relationship SUCCESS = new Relationship.Builder().name("success")
-            .description("All FlowFiles that are created from documents read from MarkLogic are routed to"
-                    + " this success relationship.")
+            .description("All items returned by the extension call to MarkLogic are appended to the content of the " +
+                    "incoming FlowFile and sent to this relationship.")
             .build();
 
     protected static final Relationship FAILURE = new Relationship.Builder().name("failure")
@@ -165,40 +157,54 @@ public class ExtensionCallMarkLogic extends AbstractMarkLogicProcessor {
         final ProcessSession session = sessionFactory.createSession();
 
         final String requiresInput = context.getProperty(REQUIRES_INPUT).getValue();
-        FlowFile flowFile = session.get();
-        if ("true".equals(requiresInput) && flowFile == null) {
+        FlowFile originalFlowFile = session.get();
+        if ("true".equals(requiresInput) && originalFlowFile == null) {
             context.yield();
             return;
         } else if ("false".equals(requiresInput)) {
-            flowFile = session.create();
+            originalFlowFile = session.create();
         }
 
         try {
-            BytesHandle requestBody = buildRequestBody(context, session, flowFile);
-            RequestParameters requestParams = buildRequestParameters(context, flowFile);
-            String method = context.getProperty(METHOD_TYPE).getValue();
-            ServiceResultIterator resultIterator = resourceManager.callService(method, requestBody, requestParams);
-            if (resultIterator == null || !resultIterator.hasNext()) {
-                transferAndCommit(session, flowFile, SUCCESS);
-                return;
-            }
-
-            try {
-                while (resultIterator.hasNext()) {
-                    session.append(flowFile, out -> out.write(resultIterator.next().getContent(new BytesHandle()).get()));
-                }
-            } finally {
-                resultIterator.close();
-            }
-
-            transferAndCommit(session, flowFile, SUCCESS);
+            ServiceResultIterator results = callExtension(context, session, originalFlowFile);
+            handleExtensionCallResults(results, session, originalFlowFile);
         } catch (Throwable t) {
             logError(t);
             if (t.getMessage() != null) {
-                session.putAttribute(flowFile, "markLogicErrorMessage", t.getMessage());
+                session.putAttribute(originalFlowFile, "markLogicErrorMessage", t.getMessage());
             }
-            transferAndCommit(session, flowFile, FAILURE);
+            transferAndCommit(session, originalFlowFile, FAILURE);
         }
+    }
+
+    /**
+     * Extracted so it can be overridden by CallRestExtensionMarkLogic to provide what we think is the more
+     * desirable behavior. This captures the behavior that has always existed in this processor.
+     *
+     * @param results
+     * @param session
+     * @param originalFlowFile
+     */
+    protected void handleExtensionCallResults(ServiceResultIterator results, ProcessSession session, FlowFile originalFlowFile) {
+        if (results == null || !results.hasNext()) {
+            transferAndCommit(session, originalFlowFile, SUCCESS);
+            return;
+        }
+        try {
+            while (results.hasNext()) {
+                session.append(originalFlowFile, out -> out.write(results.next().getContent(new BytesHandle()).get()));
+            }
+        } finally {
+            results.close();
+            transferAndCommit(session, originalFlowFile, SUCCESS);
+        }
+    }
+
+    private ServiceResultIterator callExtension(ProcessContext context, ProcessSession session, FlowFile originalFlowFile) {
+        BytesHandle requestBody = buildRequestBody(context, session, originalFlowFile);
+        RequestParameters requestParams = buildRequestParameters(context, originalFlowFile);
+        String method = context.getProperty(METHOD_TYPE).getValue();
+        return resourceManager.callService(method, requestBody, requestParams);
     }
 
     private BytesHandle buildRequestBody(ProcessContext context, ProcessSession session, FlowFile flowFile) {
@@ -250,7 +256,7 @@ public class ExtensionCallMarkLogic extends AbstractMarkLogicProcessor {
         return requestParameters;
     }
 
-    protected class ExtensionResourceManager extends ResourceManager {
+    private class ExtensionResourceManager extends ResourceManager {
 
         protected ExtensionResourceManager(DatabaseClient client, String resourceName) {
             super();

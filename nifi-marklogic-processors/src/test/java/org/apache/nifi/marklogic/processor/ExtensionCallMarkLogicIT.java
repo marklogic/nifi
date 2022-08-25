@@ -28,6 +28,7 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@Deprecated
 public class ExtensionCallMarkLogicIT extends AbstractMarkLogicIT {
 
     @Test
