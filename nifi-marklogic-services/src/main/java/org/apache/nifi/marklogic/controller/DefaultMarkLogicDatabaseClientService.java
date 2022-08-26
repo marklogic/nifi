@@ -33,6 +33,7 @@ import org.apache.nifi.controller.ConfigurationContext;
 import org.apache.nifi.expression.ExpressionLanguageScope;
 import org.apache.nifi.processor.exception.ProcessException;
 import org.apache.nifi.processor.util.StandardValidators;
+import org.apache.nifi.security.util.ClientAuth;
 import org.apache.nifi.security.util.KeyStoreUtils;
 import org.apache.nifi.ssl.SSLContextService;
 
@@ -144,7 +145,7 @@ public class DefaultMarkLogicDatabaseClientService extends AbstractControllerSer
         .description("Client authentication policy when connecting via a secure connection. This property is only used when an SSL Context "
             + "has been defined and enabled")
         .required(false)
-        .allowableValues(SSLContextService.ClientAuth.values())
+        .allowableValues(ClientAuth.values())
         .expressionLanguageSupported(ExpressionLanguageScope.VARIABLE_REGISTRY)
         .build();
 
@@ -199,14 +200,12 @@ public class DefaultMarkLogicDatabaseClientService extends AbstractControllerSer
 
         final SSLContextService sslService = context.getProperty(SSL_CONTEXT_SERVICE).asControllerService(SSLContextService.class);
         if(sslService != null) {
-            final SSLContextService.ClientAuth clientAuth = determineClientAuth(context);
+            final ClientAuth clientAuth = determineClientAuth(context);
+            getLogger().info("Configuring SSL connection; client authentication: " + clientAuth);
             try {
                 if (sslService.isTrustStoreConfigured()) {
+                    getLogger().info("Configuring TrustManager based on trust store found in SSLService");
                     final TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
-//                    final KeyStore trustStore = KeyStoreUtils.getTrustStore(sslService.getTrustStoreType());
-//                    try (final InputStream is = new FileInputStream(sslService.getTrustStoreFile())) {
-//                        trustStore.load(is, );
-//                    }
                     final KeyStore trustStore = KeyStoreUtils.loadTrustStore(
                             sslService.getTrustStoreFile(),
                             sslService.getTrustStorePassword().toCharArray(),
@@ -227,13 +226,13 @@ public class DefaultMarkLogicDatabaseClientService extends AbstractControllerSer
         return config;
     }
 
-    protected SSLContextService.ClientAuth determineClientAuth(ConfigurationContext context) {
+    protected ClientAuth determineClientAuth(ConfigurationContext context) {
         try {
-            return context.getProperty(CLIENT_AUTH).getValue() == null ? SSLContextService.ClientAuth.REQUIRED :
-                    SSLContextService.ClientAuth.valueOf(context.getProperty(CLIENT_AUTH).evaluateAttributeExpressions().getValue());
+            return context.getProperty(CLIENT_AUTH).getValue() == null ? ClientAuth.REQUIRED :
+                    ClientAuth.valueOf(context.getProperty(CLIENT_AUTH).evaluateAttributeExpressions().getValue());
         } catch (IllegalArgumentException exception) {
             throw new ProviderCreationException("Client Authentication should be one of the following values : "
-                + Arrays.toString(SSLContextService.ClientAuth.values()));
+                + Arrays.toString(ClientAuth.values()));
         }
     }
 

@@ -12,6 +12,8 @@ import com.marklogic.hub.impl.HubConfigImpl;
 import org.junit.Before;
 import org.junit.Test;
 
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.X509TrustManager;
 import java.util.Map;
 
 public class RunFlowMarkLogicTest extends AbstractMarkLogicProcessorTest {
@@ -93,5 +95,53 @@ public class RunFlowMarkLogicTest extends AbstractMarkLogicProcessorTest {
 		assertNull(inputs.getSteps());
 		assertNull(inputs.getJobId());
 		assertNull(inputs.getOptions());
+	}
+
+	@Test
+	public void configureSslWithNoTrustManager() {
+		DatabaseClientConfig config = new DatabaseClientConfig("somehost", 9010, "someuser", "someword");
+		final SSLContext sslContext = SimpleX509TrustManager.newSSLContext();
+		config.setSslContext(sslContext);
+		config.setSslHostnameVerifier(DatabaseClientFactory.SSLHostnameVerifier.STRICT);
+		config.setTrustManager(null);
+
+		HubConfigImpl hubConfig = processor.initializeHubConfig(processContext, config);
+
+		assertTrue(sslContext == hubConfig.getSslContext(DatabaseKind.STAGING));
+		assertTrue(sslContext == hubConfig.getSslContext(DatabaseKind.FINAL));
+		assertTrue(sslContext == hubConfig.getSslContext(DatabaseKind.JOB));
+		assertEquals(DatabaseClientFactory.SSLHostnameVerifier.STRICT, hubConfig.getSslHostnameVerifier(DatabaseKind.STAGING));
+		assertEquals(DatabaseClientFactory.SSLHostnameVerifier.STRICT, hubConfig.getSslHostnameVerifier(DatabaseKind.FINAL));
+		assertEquals(DatabaseClientFactory.SSLHostnameVerifier.STRICT, hubConfig.getSslHostnameVerifier(DatabaseKind.JOB));
+
+		String message = "Since no trust manager was provided, a simple trust-everything one should be used";
+		assertTrue(message, hubConfig.getTrustManager(DatabaseKind.STAGING) instanceof SimpleX509TrustManager);
+		assertTrue(message, hubConfig.getTrustManager(DatabaseKind.FINAL) instanceof SimpleX509TrustManager);
+		assertTrue(message, hubConfig.getTrustManager(DatabaseKind.JOB) instanceof SimpleX509TrustManager);
+	}
+
+	@Test
+	public void configureSslWithTrustManager() {
+		DatabaseClientConfig config = new DatabaseClientConfig("somehost", 9010, "someuser", "someword");
+		final SSLContext sslContext = SimpleX509TrustManager.newSSLContext();
+		final X509TrustManager trustManager = new SimpleX509TrustManager();
+		config.setSslContext(sslContext);
+		config.setSslHostnameVerifier(DatabaseClientFactory.SSLHostnameVerifier.COMMON);
+		config.setTrustManager(trustManager);
+
+		HubConfigImpl hubConfig = processor.initializeHubConfig(processContext, config);
+
+		assertTrue(sslContext == hubConfig.getSslContext(DatabaseKind.STAGING));
+		assertTrue(sslContext == hubConfig.getSslContext(DatabaseKind.FINAL));
+		assertTrue(sslContext == hubConfig.getSslContext(DatabaseKind.JOB));
+		assertEquals(DatabaseClientFactory.SSLHostnameVerifier.COMMON, hubConfig.getSslHostnameVerifier(DatabaseKind.STAGING));
+		assertEquals(DatabaseClientFactory.SSLHostnameVerifier.COMMON, hubConfig.getSslHostnameVerifier(DatabaseKind.FINAL));
+		assertEquals(DatabaseClientFactory.SSLHostnameVerifier.COMMON, hubConfig.getSslHostnameVerifier(DatabaseKind.JOB));
+
+		String message = "Should use the trust manager in the DatabaseClientConfig, which will have been configured " +
+				"by the user in the NiFi SSL service";
+        assertTrue(message, trustManager == hubConfig.getTrustManager(DatabaseKind.STAGING));
+        assertTrue(message, trustManager == hubConfig.getTrustManager(DatabaseKind.FINAL));
+        assertTrue(message, trustManager == hubConfig.getTrustManager(DatabaseKind.JOB));
 	}
 }
