@@ -50,49 +50,49 @@ import java.util.*;
 @Tags({"MarkLogic", "Put", "Bulk", "Insert"})
 @InputRequirement(InputRequirement.Requirement.INPUT_REQUIRED)
 @CapabilityDescription("Breaks down FlowFiles into batches of Records and inserts JSON documents to a MarkLogic server using the " +
-        "MarkLogic Data Movement SDK (DMSDK)")
+    "MarkLogic Data Movement SDK (DMSDK)")
 @SystemResourceConsideration(resource = SystemResource.MEMORY)
 // These are intentionally duplicated here from the parent class. It's unknown how NiFi actually makes use of these,
 // as it appears that the getSupportedDynamicPropertyDescriptor method in AbstractMarkLogicProcessor is what NiFi uses
-// to provide information about each dynamic property. 
+// to provide information about each dynamic property.
 @DynamicProperties({
-        @DynamicProperty(name = "trans:", value = "Value of the transform parameter",
-                description = "Defines the name and value of a REST transform parameter",
-                expressionLanguageScope = ExpressionLanguageScope.VARIABLE_REGISTRY),
-        @DynamicProperty(name = "property:", value = "Value of the document property",
-                description = "Defines the name and value of a property to add to the properties fragment of each document",
-                expressionLanguageScope = ExpressionLanguageScope.FLOWFILE_ATTRIBUTES),
-        @DynamicProperty(name = "meta:", value = "Value of the document metadata key",
-                description = "Defines the name and value of a document metadata key to add to each document",
-                expressionLanguageScope = ExpressionLanguageScope.FLOWFILE_ATTRIBUTES)
+    @DynamicProperty(name = "trans:", value = "Value of the transform parameter",
+        description = "Defines the name and value of a REST transform parameter",
+        expressionLanguageScope = ExpressionLanguageScope.VARIABLE_REGISTRY),
+    @DynamicProperty(name = "property:", value = "Value of the document property",
+        description = "Defines the name and value of a property to add to the properties fragment of each document",
+        expressionLanguageScope = ExpressionLanguageScope.FLOWFILE_ATTRIBUTES),
+    @DynamicProperty(name = "meta:", value = "Value of the document metadata key",
+        description = "Defines the name and value of a document metadata key to add to each document",
+        expressionLanguageScope = ExpressionLanguageScope.FLOWFILE_ATTRIBUTES)
 })
 public class PutMarkLogicRecord extends PutMarkLogic {
     static final PropertyDescriptor RECORD_READER = new PropertyDescriptor.Builder()
-            .name("record-reader")
-            .displayName("Record Reader")
-            .description("The Record Reader to use for incoming FlowFiles")
-            .identifiesControllerService(RecordReaderFactory.class)
-            .expressionLanguageSupported(ExpressionLanguageScope.NONE)
-            .required(true)
-            .build();
+        .name("record-reader")
+        .displayName("Record Reader")
+        .description("The Record Reader to use for incoming FlowFiles")
+        .identifiesControllerService(RecordReaderFactory.class)
+        .expressionLanguageSupported(ExpressionLanguageScope.NONE)
+        .required(true)
+        .build();
 
     static final PropertyDescriptor RECORD_WRITER = new PropertyDescriptor.Builder()
-            .name("record-writer")
-            .displayName("Record Writer")
-            .description("The Record Writer to use in order to serialize the data before sending to MarkLogic")
-            .identifiesControllerService(RecordSetWriterFactory.class)
-            .expressionLanguageSupported(ExpressionLanguageScope.NONE)
-            .required(true)
-            .build();
+        .name("record-writer")
+        .displayName("Record Writer")
+        .description("The Record Writer to use in order to serialize the data before sending to MarkLogic")
+        .identifiesControllerService(RecordSetWriterFactory.class)
+        .expressionLanguageSupported(ExpressionLanguageScope.NONE)
+        .required(true)
+        .build();
 
     public static final PropertyDescriptor URI_FIELD_NAME = new PropertyDescriptor.Builder()
-            .name("URI Field Name")
-            .displayName("URI Field Name")
-            .required(false)
-            .description("Field name used for generating the document URI. If none is specified, a UUID is generated.")
-            .expressionLanguageSupported(ExpressionLanguageScope.FLOWFILE_ATTRIBUTES)
-            .addValidator(Validator.VALID)
-            .build();
+        .name("URI Field Name")
+        .displayName("URI Field Name")
+        .required(false)
+        .description("Field name used for generating the document URI. If none is specified, a UUID is generated.")
+        .expressionLanguageSupported(ExpressionLanguageScope.FLOWFILE_ATTRIBUTES)
+        .addValidator(Validator.VALID)
+        .build();
 
     public static final PropertyDescriptor RECORD_COERCE_TYPES = new PropertyDescriptor.Builder()
         .name("Coerce Types in Records")
@@ -109,16 +109,16 @@ public class PutMarkLogicRecord extends PutMarkLogic {
         .displayName("Drop Unknown Fields in Records")
         .required(true)
         .description("If true, any field that is found in the data that is not present in the schema will be dropped. " +
-	        "If false, those fields will still be part of the Record (though their type cannot be coerced, since the schema does not provide a type for it).")
+            "If false, those fields will still be part of the Record (though their type cannot be coerced, since the schema does not provide a type for it).")
         .addValidator(Validator.VALID)
         .allowableValues("true", "false")
         .defaultValue("true")
         .build();
 
     protected static final Relationship ORIGINAL = new Relationship.Builder()
-            .name("original")
-            .description("Original FlowFiles coming into PutMarkLogicRecord.")
-            .build();
+        .name("original")
+        .description("Original FlowFiles coming into PutMarkLogicRecord.")
+        .build();
 
     private RecordReaderFactory recordReaderFactory;
     private RecordSetWriterFactory recordSetWriterFactory;
@@ -164,7 +164,7 @@ public class PutMarkLogicRecord extends PutMarkLogic {
         dropUnknownFields = context.getProperty(RECORD_DROP_UNKNOWN_FIELDS).asBoolean();
     }
 
-	@Override
+    @Override
     public final void onTrigger(ProcessContext context, ProcessSession session) throws ProcessException {
         final FlowFile flowFile = session.get();
         if (flowFile == null) {
@@ -174,11 +174,11 @@ public class PutMarkLogicRecord extends PutMarkLogic {
 
         final String uriFieldName = context.getProperty(URI_FIELD_NAME).evaluateAttributeExpressions(flowFile).getValue();
 
-        int added   = 0;
+        int added = 0;
         boolean error = false;
 
         try (final InputStream inStream = session.read(flowFile);
-            final RecordReader reader = recordReaderFactory.createRecordReader(flowFile, inStream, getLogger())) {
+             final RecordReader reader = recordReaderFactory.createRecordReader(flowFile, inStream, getLogger())) {
 
             final RecordSchema schema = recordSetWriterFactory.getSchema(flowFile.getAttributes(), reader.getSchema());
             final ByteArrayOutputStream baos = new ByteArrayOutputStream(1024);
@@ -215,13 +215,13 @@ public class PutMarkLogicRecord extends PutMarkLogic {
             if (!error) {
                 DatabaseClient client = getDatabaseClient(context);
                 String url = client != null
-                        ? client.getHost() + ":" + client.getPort()
-                        : "MarkLogic cluster";
+                    ? client.getHost() + ":" + client.getPort()
+                    : "MarkLogic cluster";
                 writeBatcher.flushAndWait();
                 session.getProvenanceReporter().send(flowFile, url, String.format("Added %d documents to MarkLogic.", added));
                 session.transfer(flowFile, ORIGINAL);
                 uriFlowFileMap.remove(flowFile.getAttribute(CoreAttributes.UUID.key()));
-                getLogger().info("Inserted {} records into MarkLogic", new Object[]{ added });
+                getLogger().info("Inserted {} records into MarkLogic", new Object[]{added});
             }
         }
         session.commitAsync();
@@ -230,8 +230,8 @@ public class PutMarkLogicRecord extends PutMarkLogic {
     @Override
     protected void routeDocumentToRelationship(WriteEvent writeEvent, Relationship relationship) {
         FlowFileInfo flowFileInfo = getFlowFileInfoForWriteEvent(writeEvent);
-        if(flowFileInfo != null) {
-            synchronized(flowFileInfo.session) {
+        if (flowFileInfo != null) {
+            synchronized (flowFileInfo.session) {
                 FlowFile flowFile = flowFileInfo.session.create();
                 flowFileInfo.session.getProvenanceReporter().send(flowFile, writeEvent.getTargetUri());
                 flowFileInfo.session.transfer(flowFile, relationship);
@@ -243,10 +243,10 @@ public class PutMarkLogicRecord extends PutMarkLogic {
     }
 
     private WriteEvent buildWriteEvent(
-            final ProcessContext context,
-            final FlowFile flowFile,
-            String uri,
-            final BytesHandle contentHandle
+        final ProcessContext context,
+        final FlowFile flowFile,
+        String uri,
+        final BytesHandle contentHandle
     ) {
         final String prefix = context.getProperty(URI_PREFIX).evaluateAttributeExpressions(flowFile).getValue();
         if (prefix != null) {

@@ -3,6 +3,6 @@
  * run against.
  */
 plugins {
-	id 'net.saliman.properties' version '1.5.2'
-	id 'com.marklogic.ml-gradle' version '4.3.5'
+  id 'net.saliman.properties' version '1.5.2'
+  id 'com.marklogic.ml-gradle' version '4.3.5'
 }

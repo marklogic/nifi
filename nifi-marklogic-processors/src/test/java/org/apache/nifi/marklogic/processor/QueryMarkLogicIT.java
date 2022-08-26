@@ -54,10 +54,10 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
 
         GenericDocumentManager mgr = getDatabaseClient().newDocumentManager();
         DocumentWriteSet writeSet = mgr.newWriteSet();
-        for(IngestDoc document : documents) {
+        for (IngestDoc document : documents) {
             DocumentMetadataHandle metadata = new DocumentMetadataHandle();
             metadata.getPermissions().add("rest-reader", DocumentMetadataHandle.Capability.READ,
-                    DocumentMetadataHandle.Capability.EXECUTE);
+                DocumentMetadataHandle.Capability.EXECUTE);
             metadata.getPermissions().add("rest-writer", DocumentMetadataHandle.Capability.UPDATE);
             metadata.getMetadataValues().add("my-uri", document.getFileName());
             metadata.getProperties().put(new QName("org:example", "hello"), "world");
@@ -88,15 +88,15 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
         runner.assertTransferCount(QueryMarkLogic.ORIGINAL, 1);
         MockFlowFile originalFlowFile = runner.getFlowFilesForRelationship(QueryMarkLogic.ORIGINAL).get(0);
         assertEquals("If a FlowFile is passed to DeleteML/QueryML, it is expected to be sent to the " +
-                "ORIGINAL relationship before the job completes", 12345, originalFlowFile.getId());
+            "ORIGINAL relationship before the job completes", 12345, originalFlowFile.getId());
 
         runner.assertTransferCount(QueryMarkLogic.SUCCESS, numDocs);
-        runner.assertAllFlowFilesContainAttribute(QueryMarkLogic.SUCCESS,CoreAttributes.FILENAME.key());
+        runner.assertAllFlowFilesContainAttribute(QueryMarkLogic.SUCCESS, CoreAttributes.FILENAME.key());
 
         List<MockFlowFile> flowFiles = runner.getFlowFilesForRelationship(QueryMarkLogic.SUCCESS);
         byte[] actualByteArray = null;
-        for(MockFlowFile flowFile : flowFiles) {
-            if(flowFile.getAttribute(CoreAttributes.FILENAME.key()).endsWith("/" + Integer.toString(jsonMod) + ".json")) {
+        for (MockFlowFile flowFile : flowFiles) {
+            if (flowFile.getAttribute(CoreAttributes.FILENAME.key()).endsWith("/" + Integer.toString(jsonMod) + ".json")) {
                 actualByteArray = runner.getContentAsByteArray(flowFile);
                 break;
             }
@@ -113,11 +113,11 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
         runner.assertValid();
         runner.run();
         runner.assertTransferCount(QueryMarkLogic.SUCCESS, numDocs);
-        runner.assertAllFlowFilesContainAttribute(QueryMarkLogic.SUCCESS,CoreAttributes.FILENAME.key());
+        runner.assertAllFlowFilesContainAttribute(QueryMarkLogic.SUCCESS, CoreAttributes.FILENAME.key());
         List<MockFlowFile> flowFiles = runner.getFlowFilesForRelationship(QueryMarkLogic.SUCCESS);
         byte[] actualByteArray = null;
-        for(MockFlowFile flowFile : flowFiles) {
-            if(flowFile.getAttribute(CoreAttributes.FILENAME.key()).endsWith("/" + Integer.toString(jsonMod) + ".json")) {
+        for (MockFlowFile flowFile : flowFiles) {
+            if (flowFile.getAttribute(CoreAttributes.FILENAME.key()).endsWith("/" + Integer.toString(jsonMod) + ".json")) {
                 actualByteArray = runner.getContentAsByteArray(flowFile);
                 break;
             }
@@ -134,20 +134,20 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
     public void testJSONSerializedCTSQuery() {
         TestRunner runner = getNewTestRunner(QueryMarkLogic.class);
         runner.setProperty(QueryMarkLogic.QUERY, "{\n" +
-                "  \"ctsquery\": {\n" +
-                "    \"jsonPropertyValueQuery\": {\n" +
-                "      \"property\": [\n" +
-                "        \"sample\"\n" +
-                "      ],\n" +
-                "      \"value\": [\n" +
-                "        \"jsoncontent\"\n" +
-                "      ],\n" +
-                "      \"options\": [\n" +
-                "        \"lang=en\"\n" +
-                "      ]\n" +
-                "    }\n" +
-                "  }\n" +
-                "}");
+            "  \"ctsquery\": {\n" +
+            "    \"jsonPropertyValueQuery\": {\n" +
+            "      \"property\": [\n" +
+            "        \"sample\"\n" +
+            "      ],\n" +
+            "      \"value\": [\n" +
+            "        \"jsoncontent\"\n" +
+            "      ],\n" +
+            "      \"options\": [\n" +
+            "        \"lang=en\"\n" +
+            "      ]\n" +
+            "    }\n" +
+            "  }\n" +
+            "}");
         runner.setProperty(QueryMarkLogic.QUERY_TYPE, QueryMarkLogic.QueryTypes.COMBINED_JSON);
 
         verifyCombinedJSONQueryResults(runner);
@@ -157,13 +157,13 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
     public void testCombinedJSONQuery() {
         TestRunner runner = getNewTestRunner(QueryMarkLogic.class);
         runner.setProperty(QueryMarkLogic.QUERY, "{\"search\" : {\n" +
-                "  \"ctsquery\": {\n" +
-                "    \"jsonPropertyValueQuery\":{\n" +
-                "      \"property\":[\"sample\"],\n" +
-                "      \"value\":[\"jsoncontent\"]\n" +
-                "      } \n" +
-                "  }\n" +
-                "} }");
+            "  \"ctsquery\": {\n" +
+            "    \"jsonPropertyValueQuery\":{\n" +
+            "      \"property\":[\"sample\"],\n" +
+            "      \"value\":[\"jsoncontent\"]\n" +
+            "      } \n" +
+            "  }\n" +
+            "} }");
         runner.setProperty(QueryMarkLogic.QUERY_TYPE, QueryMarkLogic.QueryTypes.COMBINED_JSON);
 
         verifyCombinedJSONQueryResults(runner);
@@ -173,13 +173,13 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
     public void testStateManagerWithJSONCombinedQuery() throws IOException {
         TestRunner runner = getNewTestRunner(QueryMarkLogic.class);
         runner.setProperty(QueryMarkLogic.QUERY, "{\"search\" : {\n" +
-                "  \"ctsquery\": {\n" +
-                "    \"jsonPropertyValueQuery\":{\n" +
-                "      \"property\":[\"sample\"],\n" +
-                "      \"value\":[\"jsoncontent\"]\n" +
-                "      } \n" +
-                "  }\n" +
-                "} }");
+            "  \"ctsquery\": {\n" +
+            "    \"jsonPropertyValueQuery\":{\n" +
+            "      \"property\":[\"sample\"],\n" +
+            "      \"value\":[\"jsoncontent\"]\n" +
+            "      } \n" +
+            "  }\n" +
+            "} }");
         runner.setProperty(QueryMarkLogic.RETURN_TYPE, QueryMarkLogic.ReturnTypes.DOCUMENTS_AND_META);
         runner.setProperty(QueryMarkLogic.QUERY_TYPE, QueryMarkLogic.QueryTypes.COMBINED_JSON);
         testStateManagerJSON(runner, expectedJsonCount);
@@ -198,9 +198,9 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
     public void testStateManagerWithXMLSerializedCTSQuery() throws IOException {
         TestRunner runner = getNewTestRunner(QueryMarkLogic.class);
         runner.setProperty(QueryMarkLogic.QUERY, "<cts:element-value-query xmlns:cts=\"http://marklogic.com/cts\">\n" +
-                "  <cts:element>sample</cts:element>\n" +
-                "  <cts:text xml:lang=\"en\">xmlcontent</cts:text>\n" +
-                "</cts:element-value-query>");
+            "  <cts:element>sample</cts:element>\n" +
+            "  <cts:text xml:lang=\"en\">xmlcontent</cts:text>\n" +
+            "</cts:element-value-query>");
         runner.setProperty(QueryMarkLogic.QUERY_TYPE, QueryMarkLogic.QueryTypes.COMBINED_XML);
         testStateManagerXML(runner, expectedXmlCount);
         runner.shutdown();
@@ -210,18 +210,18 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
     public void testStateManagerWithJSONStructuredQuery() throws IOException {
         TestRunner runner = getNewTestRunner(QueryMarkLogic.class);
         runner.setProperty(QueryMarkLogic.QUERY, "{\n" +
-                "  \"query\": {\n" +
-                "    \"queries\": [\n" +
-                "      { \n" +
-                "       \"value-query\": {\n" +
-                "          \"type\": \"string\",\n" +
-                "          \"json-property\": [\"sample\"],\n" +
-                "          \"text\": [\"jsoncontent\"]\n" +
-                "        }" +
-                "      }\n" +
-                "    ]\n" +
-                "  }\n" +
-                "}");
+            "  \"query\": {\n" +
+            "    \"queries\": [\n" +
+            "      { \n" +
+            "       \"value-query\": {\n" +
+            "          \"type\": \"string\",\n" +
+            "          \"json-property\": [\"sample\"],\n" +
+            "          \"text\": [\"jsoncontent\"]\n" +
+            "        }" +
+            "      }\n" +
+            "    ]\n" +
+            "  }\n" +
+            "}");
         runner.setProperty(QueryMarkLogic.QUERY_TYPE, QueryMarkLogic.QueryTypes.STRUCTURED_JSON);
         testStateManagerJSON(runner, expectedJsonCount);
         runner.shutdown();
@@ -232,11 +232,11 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
     public void testStateManagerWithXMLStructuredQuery() throws IOException {
         TestRunner runner = getNewTestRunner(QueryMarkLogic.class);
         runner.setProperty(QueryMarkLogic.QUERY, "<query xmlns=\"http://marklogic.com/appservices/search\">\n" +
-                "  <word-query>\n" +
-                "    <element name=\"sample\" ns=\"\" />\n" +
-                "    <text>xmlcontent</text>\n" +
-                "  </word-query>\n" +
-                "</query>");
+            "  <word-query>\n" +
+            "    <element name=\"sample\" ns=\"\" />\n" +
+            "    <text>xmlcontent</text>\n" +
+            "  </word-query>\n" +
+            "</query>");
         runner.setProperty(QueryMarkLogic.QUERY_TYPE, QueryMarkLogic.QueryTypes.STRUCTURED_XML);
         testStateManagerXML(runner, expectedXmlCount);
         runner.shutdown();
@@ -268,9 +268,9 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
     public void testXMLSerializedCTSQuery() {
         TestRunner runner = getNewTestRunner(QueryMarkLogic.class);
         runner.setProperty(QueryMarkLogic.QUERY, "<cts:element-value-query xmlns:cts=\"http://marklogic.com/cts\">\n" +
-                "  <cts:element>sample</cts:element>\n" +
-                "  <cts:text xml:lang=\"en\">xmlcontent</cts:text>\n" +
-                "</cts:element-value-query>");
+            "  <cts:element>sample</cts:element>\n" +
+            "  <cts:text xml:lang=\"en\">xmlcontent</cts:text>\n" +
+            "</cts:element-value-query>");
         runner.setProperty(QueryMarkLogic.QUERY_TYPE, QueryMarkLogic.QueryTypes.COMBINED_XML);
 
         verifyCombinedXMLQueryResults(runner);
@@ -280,13 +280,13 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
     void testCombinedXMLQuery() {
         TestRunner runner = getNewTestRunner(QueryMarkLogic.class);
         String combinedQuery = "<search:search xmlns:search=\"http://marklogic.com/appservices/search\">\n" +
-                "  <search:query>\n" +
-                "    <search:word-query>\n" +
-                "      <search:element name=\"sample\"/>\n" +
-                "      <search:text>xmlcontent</search:text>\n" +
-                "    </search:word-query>" +
-                "  </search:query>" +
-                "</search:search>";
+            "  <search:query>\n" +
+            "    <search:word-query>\n" +
+            "      <search:element name=\"sample\"/>\n" +
+            "      <search:text>xmlcontent</search:text>\n" +
+            "    </search:word-query>" +
+            "  </search:query>" +
+            "</search:search>";
         runner.setProperty(QueryMarkLogic.QUERY, combinedQuery);
         runner.setProperty(QueryMarkLogic.QUERY_TYPE, QueryMarkLogic.QueryTypes.COMBINED_XML);
 
@@ -297,28 +297,28 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
     public void testStructuredJSONQuery() {
         TestRunner runner = getNewTestRunner(QueryMarkLogic.class);
         runner.setProperty(QueryMarkLogic.QUERY, "{\n" +
-                "  \"query\": {\n" +
-                "    \"queries\": [\n" +
-                "      { \n" +
-                "       \"value-query\": {\n" +
-                "          \"type\": \"string\",\n" +
-                "          \"json-property\": [\"sample\"],\n" +
-                "          \"text\": [\"jsoncontent\"]\n" +
-                "        }" +
-                "      }\n" +
-                "    ]\n" +
-                "  }\n" +
-                "}");
+            "  \"query\": {\n" +
+            "    \"queries\": [\n" +
+            "      { \n" +
+            "       \"value-query\": {\n" +
+            "          \"type\": \"string\",\n" +
+            "          \"json-property\": [\"sample\"],\n" +
+            "          \"text\": [\"jsoncontent\"]\n" +
+            "        }" +
+            "      }\n" +
+            "    ]\n" +
+            "  }\n" +
+            "}");
         runner.setProperty(QueryMarkLogic.QUERY_TYPE, QueryMarkLogic.QueryTypes.STRUCTURED_JSON);
         runner.assertValid();
         runner.run();
         runner.assertTransferCount(QueryMarkLogic.SUCCESS, expectedJsonCount);
-        runner.assertAllFlowFilesContainAttribute(QueryMarkLogic.SUCCESS,CoreAttributes.FILENAME.key());
+        runner.assertAllFlowFilesContainAttribute(QueryMarkLogic.SUCCESS, CoreAttributes.FILENAME.key());
         List<MockFlowFile> flowFiles = runner.getFlowFilesForRelationship(QueryMarkLogic.SUCCESS);
         assertEquals(flowFiles.size(), expectedJsonCount);
         byte[] actualByteArray = null;
-        for(MockFlowFile flowFile : flowFiles) {
-            if(flowFile.getAttribute(CoreAttributes.FILENAME.key()).endsWith("/" + Integer.toString(jsonMod) + ".json")) {
+        for (MockFlowFile flowFile : flowFiles) {
+            if (flowFile.getAttribute(CoreAttributes.FILENAME.key()).endsWith("/" + Integer.toString(jsonMod) + ".json")) {
                 actualByteArray = runner.getContentAsByteArray(flowFile);
                 break;
             }
@@ -332,15 +332,15 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
     @Test
     public void testStructuredXMLQuery() {
         TestRunner runner = getNewTestRunner(QueryMarkLogic.class);
-        Map<String,String> attributes = new HashMap<>();
+        Map<String, String> attributes = new HashMap<>();
         attributes.put("word", "xmlcontent");
         runner.enqueue("".getBytes(), attributes);
         runner.setProperty(QueryMarkLogic.QUERY, "<query xmlns=\"http://marklogic.com/appservices/search\">\n" +
-                "  <word-query>\n" +
-                "    <element name=\"sample\" ns=\"\" />\n" +
-                "    <text>${word}</text>\n" +
-                "  </word-query>\n" +
-                "</query>");
+            "  <word-query>\n" +
+            "    <element name=\"sample\" ns=\"\" />\n" +
+            "    <text>${word}</text>\n" +
+            "  </word-query>\n" +
+            "</query>");
         runner.setProperty(QueryMarkLogic.QUERY_TYPE, QueryMarkLogic.QueryTypes.STRUCTURED_XML);
         runner.assertValid();
         runner.run();
@@ -349,20 +349,20 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
         runner.assertTransferCount(QueryMarkLogic.ORIGINAL, 1);
 
         runner.assertTransferCount(QueryMarkLogic.SUCCESS, expectedXmlCount);
-        runner.assertAllFlowFilesContainAttribute(QueryMarkLogic.SUCCESS,CoreAttributes.FILENAME.key());
+        runner.assertAllFlowFilesContainAttribute(QueryMarkLogic.SUCCESS, CoreAttributes.FILENAME.key());
 
         List<MockFlowFile> flowFiles = runner.getFlowFilesForRelationship(QueryMarkLogic.SUCCESS);
         assertEquals(flowFiles.size(), expectedXmlCount);
         byte[] actualByteArray = null;
-        for(MockFlowFile flowFile : flowFiles) {
-            if(flowFile.getAttribute(CoreAttributes.FILENAME.key()).endsWith("/"+ Integer.toString(xmlMod) +".xml")) {
+        for (MockFlowFile flowFile : flowFiles) {
+            if (flowFile.getAttribute(CoreAttributes.FILENAME.key()).endsWith("/" + Integer.toString(xmlMod) + ".xml")) {
                 actualByteArray = runner.getContentAsByteArray(flowFile);
                 break;
             }
         }
         byte[] expectedByteArray = documents.get(xmlMod).getContent().getBytes();
 
-        assertBytesAreEqualXMLDocs(expectedByteArray,actualByteArray);
+        assertBytesAreEqualXMLDocs(expectedByteArray, actualByteArray);
         runner.shutdown();
     }
 
@@ -374,19 +374,19 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
         runner.assertValid();
         runner.run();
         runner.assertTransferCount(QueryMarkLogic.SUCCESS, expectedXmlCount);
-        runner.assertAllFlowFilesContainAttribute(QueryMarkLogic.SUCCESS,CoreAttributes.FILENAME.key());
+        runner.assertAllFlowFilesContainAttribute(QueryMarkLogic.SUCCESS, CoreAttributes.FILENAME.key());
         List<MockFlowFile> flowFiles = runner.getFlowFilesForRelationship(QueryMarkLogic.SUCCESS);
         assertEquals(flowFiles.size(), expectedXmlCount);
         byte[] actualByteArray = null;
-        for(MockFlowFile flowFile : flowFiles) {
-            if(flowFile.getAttribute(CoreAttributes.FILENAME.key()).endsWith("/"+ Integer.toString(xmlMod) +".xml")) {
+        for (MockFlowFile flowFile : flowFiles) {
+            if (flowFile.getAttribute(CoreAttributes.FILENAME.key()).endsWith("/" + Integer.toString(xmlMod) + ".xml")) {
                 actualByteArray = runner.getContentAsByteArray(flowFile);
                 break;
             }
         }
         byte[] expectedByteArray = documents.get(xmlMod).getContent().getBytes();
 
-        assertBytesAreEqualXMLDocs(expectedByteArray,actualByteArray);
+        assertBytesAreEqualXMLDocs(expectedByteArray, actualByteArray);
         runner.shutdown();
     }
 
@@ -399,12 +399,12 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
         runner.assertValid();
         runner.run();
         runner.assertTransferCount(QueryMarkLogic.SUCCESS, expectedXmlCount);
-        runner.assertAllFlowFilesContainAttribute(QueryMarkLogic.SUCCESS,CoreAttributes.FILENAME.key());
+        runner.assertAllFlowFilesContainAttribute(QueryMarkLogic.SUCCESS, CoreAttributes.FILENAME.key());
         List<MockFlowFile> flowFiles = runner.getFlowFilesForRelationship(QueryMarkLogic.SUCCESS);
         assertEquals(flowFiles.size(), expectedXmlCount);
-        for(MockFlowFile flowFile : flowFiles) {
+        for (MockFlowFile flowFile : flowFiles) {
             byte[] actualByteArray = runner.getContentAsByteArray(flowFile);
-            assertEquals("Content should be empty since we only asked for URIs", actualByteArray.length,0);
+            assertEquals("Content should be empty since we only asked for URIs", actualByteArray.length, 0);
             String uri = flowFile.getAttribute("filename");
             assertTrue("Unexpected URI: " + uri, uri.startsWith("/PutMarkLogicTest/") && uri.endsWith(".xml"));
         }
@@ -435,11 +435,11 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
             assertEquals("0", flowFile.getAttribute("marklogic-quality"));
 
             Set<String> attributeNames = flowFile.getAttributes().keySet();
-            for (String name: attributeNames) {
+            for (String name : attributeNames) {
                 assertFalse("No meta: attributes should exist since the document doesn't have any metadata values",
-                        name.startsWith("meta:"));
+                    name.startsWith("meta:"));
                 assertFalse("No property: attributes should exist since the document doesn't have any properties",
-                        name.startsWith("property:"));
+                    name.startsWith("property:"));
             }
         } finally {
             getDatabaseClient().newJSONDocumentManager().delete(uri);
@@ -456,13 +456,13 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
         runner.run();
 
         runner.assertTransferCount(QueryMarkLogic.SUCCESS, expectedXmlCount);
-        runner.assertAllFlowFilesContainAttribute(QueryMarkLogic.SUCCESS,CoreAttributes.FILENAME.key());
+        runner.assertAllFlowFilesContainAttribute(QueryMarkLogic.SUCCESS, CoreAttributes.FILENAME.key());
 
         List<MockFlowFile> flowFiles = runner.getFlowFilesForRelationship(QueryMarkLogic.SUCCESS);
         assertEquals(flowFiles.size(), expectedXmlCount);
-        for(MockFlowFile flowFile : flowFiles) {
+        for (MockFlowFile flowFile : flowFiles) {
             byte[] actualByteArray = runner.getContentAsByteArray(flowFile);
-            assertEquals("Content should be empty since we only asked for metadata", actualByteArray.length,0);
+            assertEquals("Content should be empty since we only asked for metadata", actualByteArray.length, 0);
 
             // Verify metadata attributes exist
             assertEquals("world", flowFile.getAttribute("property:{org:example}hello"));
@@ -491,7 +491,7 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
         runner.setProperty(QueryMarkLogic.QUERY_TYPE, QueryMarkLogic.QueryTypes.COLLECTION);
         runner.run();
         Processor processor = runner.getProcessor();
-        if(processor instanceof QueryMarkLogic) {
+        if (processor instanceof QueryMarkLogic) {
             QueryBatcher queryBatcher = ((QueryMarkLogic) processor).getQueryBatcher();
             assertEquals(Integer.parseInt(batchSize), queryBatcher.getBatchSize());
             assertEquals(Integer.parseInt(threadCount), queryBatcher.getThreadCount());
@@ -543,7 +543,7 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
         runner.assertValid();
         runner.run();
         runner.assertTransferCount(QueryMarkLogic.SUCCESS, expectedCount);
-        runner.assertAllFlowFilesContainAttribute(QueryMarkLogic.SUCCESS,CoreAttributes.FILENAME.key());
+        runner.assertAllFlowFilesContainAttribute(QueryMarkLogic.SUCCESS, CoreAttributes.FILENAME.key());
         List<MockFlowFile> flowFiles = runner.getFlowFilesForRelationship(QueryMarkLogic.SUCCESS);
         assertEquals(flowFiles.size(), expectedCount);
         runner.clearTransferState();
@@ -551,7 +551,7 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
         runner.run();
         runner.assertTransferCount(QueryMarkLogic.SUCCESS, 0);
         runner.clearTransferState();
-        HashMap<String,String> state = new HashMap<String,String>();
+        HashMap<String, String> state = new HashMap<String, String>();
         state.put("queryState", "1999-01-01T00:00:00");
         runner.getStateManager().setState(state, Scope.CLUSTER);
         runner.run();
@@ -565,19 +565,19 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
         runner.run();
 
         runner.assertTransferCount(QueryMarkLogic.SUCCESS, expectedXmlCount);
-        runner.assertAllFlowFilesContainAttribute(QueryMarkLogic.SUCCESS,CoreAttributes.FILENAME.key());
+        runner.assertAllFlowFilesContainAttribute(QueryMarkLogic.SUCCESS, CoreAttributes.FILENAME.key());
         List<MockFlowFile> flowFiles = runner.getFlowFilesForRelationship(QueryMarkLogic.SUCCESS);
         assertEquals(flowFiles.size(), expectedXmlCount);
         byte[] actualByteArray = null;
-        for(MockFlowFile flowFile : flowFiles) {
-            if(flowFile.getAttribute(CoreAttributes.FILENAME.key()).endsWith("/"+ Integer.toString(xmlMod) +".xml")) {
+        for (MockFlowFile flowFile : flowFiles) {
+            if (flowFile.getAttribute(CoreAttributes.FILENAME.key()).endsWith("/" + Integer.toString(xmlMod) + ".xml")) {
                 actualByteArray = runner.getContentAsByteArray(flowFile);
                 break;
             }
         }
         byte[] expectedByteArray = documents.get(xmlMod).getContent().getBytes();
 
-        assertBytesAreEqualXMLDocs(expectedByteArray,actualByteArray);
+        assertBytesAreEqualXMLDocs(expectedByteArray, actualByteArray);
         runner.shutdown();
     }
 
@@ -585,12 +585,12 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
         runner.assertValid();
         runner.run();
         runner.assertTransferCount(QueryMarkLogic.SUCCESS, expectedJsonCount);
-        runner.assertAllFlowFilesContainAttribute(QueryMarkLogic.SUCCESS,CoreAttributes.FILENAME.key());
+        runner.assertAllFlowFilesContainAttribute(QueryMarkLogic.SUCCESS, CoreAttributes.FILENAME.key());
         List<MockFlowFile> flowFiles = runner.getFlowFilesForRelationship(QueryMarkLogic.SUCCESS);
         assertEquals(flowFiles.size(), expectedJsonCount);
         byte[] actualByteArray = null;
-        for(MockFlowFile flowFile : flowFiles) {
-            if(flowFile.getAttribute(CoreAttributes.FILENAME.key()).endsWith("/" + jsonMod + ".json")) {
+        for (MockFlowFile flowFile : flowFiles) {
+            if (flowFile.getAttribute(CoreAttributes.FILENAME.key()).endsWith("/" + jsonMod + ".json")) {
                 actualByteArray = runner.getContentAsByteArray(flowFile);
                 break;
             }

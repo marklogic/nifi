@@ -16,18 +16,16 @@
  */
 package org.apache.nifi.marklogic.processor.util;
 
-import java.util.Collection;
-import java.util.regex.Matcher;
-
-import javax.xml.namespace.QName;
-
-import org.apache.nifi.marklogic.processor.QueryMarkLogic.IndexTypes;
-import org.apache.nifi.util.EscapeUtils;
-
 import com.marklogic.client.io.Format;
 import com.marklogic.client.query.StructuredQueryBuilder;
 import com.marklogic.client.query.StructuredQueryBuilder.Operator;
 import com.marklogic.client.query.StructuredQueryBuilder.RangeIndex;
+import org.apache.nifi.marklogic.processor.QueryMarkLogic.IndexTypes;
+import org.apache.nifi.util.EscapeUtils;
+
+import javax.xml.namespace.QName;
+import java.util.Collection;
+import java.util.regex.Matcher;
 
 public class RangeIndexQuery {
     private String value;
@@ -38,7 +36,7 @@ public class RangeIndexQuery {
     private StructuredQueryBuilder queryBuilder;
 
     public RangeIndexQuery(StructuredQueryBuilder queryBuilder, String rangeIndexType, String rangeIndexValue,
-            String dataType, Operator operator, String value) {
+                           String dataType, Operator operator, String value) {
         this.rangeIndexType = rangeIndexType;
         this.rangeIndexValue = rangeIndexValue;
         this.queryBuilder = queryBuilder;
@@ -74,27 +72,27 @@ public class RangeIndexQuery {
     public String structuredOperatorToCtsOperator(String operator) {
         String ctsOperator;
         switch (operator) {
-        case "LT":
-            ctsOperator = "<";
-            break;
-        case "LE":
-            ctsOperator = "<=";
-            break;
-        case "GT":
-            ctsOperator = ">";
-            break;
-        case "GE":
-            ctsOperator = ">=";
-            break;
-        case "EQ":
-            ctsOperator = "=";
-            break;
-        case "NE":
-            ctsOperator = "!=";
-            break;
-        default:
-            ctsOperator = operator;
-            break;
+            case "LT":
+                ctsOperator = "<";
+                break;
+            case "LE":
+                ctsOperator = "<=";
+                break;
+            case "GT":
+                ctsOperator = ">";
+                break;
+            case "GE":
+                ctsOperator = ">=";
+                break;
+            case "EQ":
+                ctsOperator = "=";
+                break;
+            case "NE":
+                ctsOperator = "!=";
+                break;
+            default:
+                ctsOperator = operator;
+                break;
         }
         return ctsOperator;
     }
@@ -103,68 +101,68 @@ public class RangeIndexQuery {
         StringBuilder strBuilder = new StringBuilder();
         if (format == Format.XML) {
             strBuilder.append("<cts:range-query operator=\"")
-                    .append(EscapeUtils.escapeHtml(structuredOperatorToCtsOperator(operator.toString())))
-                    .append("\" xmlns:cts=\"http://marklogic.com/cts\">\n");
+                .append(EscapeUtils.escapeHtml(structuredOperatorToCtsOperator(operator.toString())))
+                .append("\" xmlns:cts=\"http://marklogic.com/cts\">\n");
             switch (rangeIndexType) {
-            case IndexTypes.ELEMENT_STR:
-                boolean hasNamespace = rangeIndexValue.contains(":");
-                String[] parts = rangeIndexValue.split(":", 2);
-                String name = (hasNamespace) ? parts[1] : rangeIndexValue;
-                String ns = (hasNamespace) ? queryBuilder.getNamespaces().getNamespaceURI(parts[0]) : "";
-                strBuilder.append("  <cts:element-reference><cts:localname>").append(name)
+                case IndexTypes.ELEMENT_STR:
+                    boolean hasNamespace = rangeIndexValue.contains(":");
+                    String[] parts = rangeIndexValue.split(":", 2);
+                    String name = (hasNamespace) ? parts[1] : rangeIndexValue;
+                    String ns = (hasNamespace) ? queryBuilder.getNamespaces().getNamespaceURI(parts[0]) : "";
+                    strBuilder.append("  <cts:element-reference><cts:localname>").append(name)
                         .append("</cts:localname><cts:scalar-type>")
                         .append(dataType.replace(Matcher.quoteReplacement("xs:"), ""))
                         .append("</cts:scalar-type><cts:namespace-uri>").append(ns)
                         .append("</cts:namespace-uri></cts:element-reference>");
-                break;
-            case IndexTypes.JSON_PROPERTY_STR:
-                strBuilder.append("  <cts:json-property-reference><cts:property>").append(rangeIndexValue)
+                    break;
+                case IndexTypes.JSON_PROPERTY_STR:
+                    strBuilder.append("  <cts:json-property-reference><cts:property>").append(rangeIndexValue)
                         .append("</cts:property><cts:scalar-type>")
                         .append(dataType.replace(Matcher.quoteReplacement("xs:"), "")).append("</cts:scalar-type>")
                         .append("</cts:json-property-reference>");
-                break;
-            case IndexTypes.PATH_STR:
-                strBuilder.append("<cts:path-reference ");
-                Collection<String> prefixes = queryBuilder.getNamespaces().getAllPrefixes();
-                for (String prefix : prefixes) {
-                    strBuilder.append(" xmlns:").append(prefix).append("=\"")
+                    break;
+                case IndexTypes.PATH_STR:
+                    strBuilder.append("<cts:path-reference ");
+                    Collection<String> prefixes = queryBuilder.getNamespaces().getAllPrefixes();
+                    for (String prefix : prefixes) {
+                        strBuilder.append(" xmlns:").append(prefix).append("=\"")
                             .append(queryBuilder.getNamespaces().getNamespaceURI(prefix)).append("\"");
-                }
-                strBuilder.append("><cts:path-expression>").append(rangeIndexValue)
+                    }
+                    strBuilder.append("><cts:path-expression>").append(rangeIndexValue)
                         .append("</cts:path-expression><cts:scalar-type>")
                         .append(dataType.replace(Matcher.quoteReplacement("xs:"), "")).append("</cts:scalar-type>")
                         .append("</cts:path-reference>");
-                break;
-            default:
-                break;
+                    break;
+                default:
+                    break;
             }
             strBuilder.append("<cts:value xsi:type=\"").append(dataType).append(
                     "\" xmlns:xs=\"http://www.w3.org/2001/XMLSchema\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">")
-                    .append(value).append("</cts:value></cts:range-query>");
+                .append(value).append("</cts:value></cts:range-query>");
         } else {
             strBuilder.append("{");
             switch (rangeIndexType) {
-            case IndexTypes.ELEMENT_STR:
-                boolean hasNamespace = rangeIndexValue.contains(":");
-                String[] parts = rangeIndexValue.split(":", 2);
-                String name = (hasNamespace) ? parts[1] : rangeIndexValue;
-                String ns = (hasNamespace) ? queryBuilder.getNamespaces().getNamespaceURI(parts[0]) : "";
-                strBuilder.append("\"elementRangeQuery\":{\"element\":[\"{").append(ns).append("}").append(name)
+                case IndexTypes.ELEMENT_STR:
+                    boolean hasNamespace = rangeIndexValue.contains(":");
+                    String[] parts = rangeIndexValue.split(":", 2);
+                    String name = (hasNamespace) ? parts[1] : rangeIndexValue;
+                    String ns = (hasNamespace) ? queryBuilder.getNamespaces().getNamespaceURI(parts[0]) : "";
+                    strBuilder.append("\"elementRangeQuery\":{\"element\":[\"{").append(ns).append("}").append(name)
                         .append("\"],");
-                break;
-            case IndexTypes.JSON_PROPERTY_STR:
-                strBuilder.append("\"jsonPropertyRangeQuery\":{\"property\":[\"").append(rangeIndexValue)
+                    break;
+                case IndexTypes.JSON_PROPERTY_STR:
+                    strBuilder.append("\"jsonPropertyRangeQuery\":{\"property\":[\"").append(rangeIndexValue)
                         .append("\"],");
-                break;
-            case IndexTypes.PATH_STR:
-                strBuilder.append("\"pathRangeQuery\":{\"pathExpression\":[\"").append(rangeIndexValue).append("\"],");
-                break;
-            default:
-                break;
+                    break;
+                case IndexTypes.PATH_STR:
+                    strBuilder.append("\"pathRangeQuery\":{\"pathExpression\":[\"").append(rangeIndexValue).append("\"],");
+                    break;
+                default:
+                    break;
             }
             strBuilder.append("\"operator\":\"").append(structuredOperatorToCtsOperator(operator.toString()))
-                    .append("\", \"value\":[{\"type\":\"").append(dataType.replace(Matcher.quoteReplacement("xs:"), ""))
-                    .append("\", \"val\":\"").append(value).append("\"}]}}");
+                .append("\", \"value\":[{\"type\":\"").append(dataType.replace(Matcher.quoteReplacement("xs:"), ""))
+                .append("\", \"val\":\"").append(value).append("\"}]}}");
         }
         return strBuilder.toString();
     }
@@ -173,59 +171,59 @@ public class RangeIndexQuery {
         if (format == Format.XML) {
             RangeIndex rangeIndex = null;
             switch (rangeIndexType) {
-            case IndexTypes.ELEMENT_STR:
-                boolean hasNamespace = rangeIndexValue.contains(":");
-                String[] parts = rangeIndexValue.split(":", 2);
-                String name = (hasNamespace) ? parts[1] : rangeIndexValue;
-                String ns = (hasNamespace) ? queryBuilder.getNamespaces().getNamespaceURI(parts[0]) : "";
-                rangeIndex = queryBuilder.element(new QName(ns, name));
-                break;
-            case IndexTypes.JSON_PROPERTY_STR:
-                rangeIndex = queryBuilder.jsonProperty(rangeIndexValue);
-                break;
-            case IndexTypes.PATH_STR:
-                rangeIndex = queryBuilder.pathIndex(rangeIndexValue);
-                break;
-            default:
-                break;
+                case IndexTypes.ELEMENT_STR:
+                    boolean hasNamespace = rangeIndexValue.contains(":");
+                    String[] parts = rangeIndexValue.split(":", 2);
+                    String name = (hasNamespace) ? parts[1] : rangeIndexValue;
+                    String ns = (hasNamespace) ? queryBuilder.getNamespaces().getNamespaceURI(parts[0]) : "";
+                    rangeIndex = queryBuilder.element(new QName(ns, name));
+                    break;
+                case IndexTypes.JSON_PROPERTY_STR:
+                    rangeIndex = queryBuilder.jsonProperty(rangeIndexValue);
+                    break;
+                case IndexTypes.PATH_STR:
+                    rangeIndex = queryBuilder.pathIndex(rangeIndexValue);
+                    break;
+                default:
+                    break;
             }
             return queryBuilder.range(rangeIndex, this.getDataType(), this.getOperator(), this.getValue()).serialize();
         } else {
             StringBuilder strBuilder = new StringBuilder();
             strBuilder.append("{ \"range-query\": { \"type\": \"").append(dataType).append("\",");
             switch (rangeIndexType) {
-            case IndexTypes.ELEMENT_STR:
-                boolean hasNamespace = rangeIndexValue.contains(":");
-                String[] parts = rangeIndexValue.split(":", 2);
-                String name = (hasNamespace) ? parts[1] : rangeIndexValue;
-                String ns = (hasNamespace) ? queryBuilder.getNamespaces().getNamespaceURI(parts[0]) : "";
-                strBuilder.append("\"element\": { \"name\": \"").append(name).append("\", \"ns\": \"").append(ns)
+                case IndexTypes.ELEMENT_STR:
+                    boolean hasNamespace = rangeIndexValue.contains(":");
+                    String[] parts = rangeIndexValue.split(":", 2);
+                    String name = (hasNamespace) ? parts[1] : rangeIndexValue;
+                    String ns = (hasNamespace) ? queryBuilder.getNamespaces().getNamespaceURI(parts[0]) : "";
+                    strBuilder.append("\"element\": { \"name\": \"").append(name).append("\", \"ns\": \"").append(ns)
                         .append("\"}");
-                break;
-            case IndexTypes.JSON_PROPERTY_STR:
-                strBuilder.append("\"json-property\": \"").append(rangeIndexValue).append("\"");
-                break;
-            case IndexTypes.PATH_STR:
-                strBuilder.append("\"path-index\": { \"text\": \"").append(rangeIndexValue).append("\",")
+                    break;
+                case IndexTypes.JSON_PROPERTY_STR:
+                    strBuilder.append("\"json-property\": \"").append(rangeIndexValue).append("\"");
+                    break;
+                case IndexTypes.PATH_STR:
+                    strBuilder.append("\"path-index\": { \"text\": \"").append(rangeIndexValue).append("\",")
                         .append("\"namespaces\": {");
-                Collection<String> prefixes = queryBuilder.getNamespaces().getAllPrefixes();
-                int prefixIndex = 0;
-                int prefixCount = prefixes.size();
-                for (String prefix : prefixes) {
-                    prefixIndex++;
-                    strBuilder.append("\"").append(prefix).append("\": \"")
+                    Collection<String> prefixes = queryBuilder.getNamespaces().getAllPrefixes();
+                    int prefixIndex = 0;
+                    int prefixCount = prefixes.size();
+                    for (String prefix : prefixes) {
+                        prefixIndex++;
+                        strBuilder.append("\"").append(prefix).append("\": \"")
                             .append(queryBuilder.getNamespaces().getNamespaceURI(prefix)).append("\"");
-                    if (prefixIndex != prefixCount) {
-                        strBuilder.append(",");
+                        if (prefixIndex != prefixCount) {
+                            strBuilder.append(",");
+                        }
                     }
-                }
-                strBuilder.append("}}");
-                break;
-            default:
-                break;
+                    strBuilder.append("}}");
+                    break;
+                default:
+                    break;
             }
             strBuilder.append(", \"value\": \"").append(value).append("\", \"range-operator\": \"").append(operator)
-                    .append("\" }}");
+                .append("\" }}");
             return strBuilder.toString();
         }
     }

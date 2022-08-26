@@ -44,8 +44,8 @@ public class DeleteMarkLogicIT extends AbstractMarkLogicIT {
 
     private void loadDocumentsIntoCollection(String collection, List<IngestDoc> documents) {
         WriteBatcher writeBatcher = dataMovementManager.newWriteBatcher()
-                .withBatchSize(3)
-                .withThreadCount(3);
+            .withBatchSize(3)
+            .withThreadCount(3);
         dataMovementManager.startJob(writeBatcher);
         for (IngestDoc document : documents) {
             DocumentMetadataHandle handle = new DocumentMetadataHandle();
@@ -71,7 +71,7 @@ public class DeleteMarkLogicIT extends AbstractMarkLogicIT {
         runner.assertTransferCount(QueryMarkLogic.ORIGINAL, 1);
         MockFlowFile originalFlowFile = runner.getFlowFilesForRelationship(QueryMarkLogic.ORIGINAL).get(0);
         assertEquals("If a FlowFile is passed to DeleteML/QueryML, it is expected to be sent to the " +
-                "ORIGINAL relationship before the job completes", 12345, originalFlowFile.getId());
+            "ORIGINAL relationship before the job completes", 12345, originalFlowFile.getId());
 
         DocumentPage page = getDatabaseClient().newDocumentManager().search(new StructuredQueryBuilder().collection(collection), 1);
         assertEquals(0, page.getTotalSize());

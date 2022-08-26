@@ -16,9 +16,6 @@
  */
 package org.apache.nifi.marklogic.processor;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import org.apache.nifi.marklogic.controller.DefaultMarkLogicDatabaseClientService;
 import org.apache.nifi.processor.ProcessContext;
 import org.apache.nifi.processor.ProcessSessionFactory;
@@ -27,6 +24,9 @@ import org.apache.nifi.reporting.InitializationException;
 import org.apache.nifi.ssl.StandardSSLContextService;
 import org.junit.Before;
 import org.junit.Test;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class SSLConnectionTest extends AbstractMarkLogicProcessorTest {
 

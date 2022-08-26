@@ -27,8 +27,8 @@ public class CallRestExtensionMarkLogicIT extends AbstractMarkLogicIT {
 
         assertEquals(0, runner.getFlowFilesForRelationship(CallRestExtensionMarkLogic.FAILURE).size());
         assertEquals(1, runner.getFlowFilesForRelationship(CallRestExtensionMarkLogic.ORIGINAL).size(),
-                "The just-created FlowFile should be sent to Original, although a user likely won't care " +
-                        "about it");
+            "The just-created FlowFile should be sent to Original, although a user likely won't care " +
+                "about it");
 
         List<MockFlowFile> results = runner.getFlowFilesForRelationship(CallRestExtensionMarkLogic.RESULTS);
         assertEquals(2, results.size());

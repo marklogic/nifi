@@ -17,35 +17,35 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
-    <modelVersion>4.0.0</modelVersion>
+  <modelVersion>4.0.0</modelVersion>
 
-    <parent>
-        <groupId>org.apache.nifi</groupId>
-        <artifactId>nifi-marklogic-bundle</artifactId>
-        <version>1.16.3.1</version>
-    </parent>
+  <parent>
+    <groupId>org.apache.nifi</groupId>
+    <artifactId>nifi-marklogic-bundle</artifactId>
+    <version>1.16.3.1</version>
+  </parent>
 
-    <artifactId>nifi-marklogic-services-api</artifactId>
+  <artifactId>nifi-marklogic-services-api</artifactId>
 
-    <packaging>jar</packaging>
+  <packaging>jar</packaging>
 
-    <dependencies>
-        <dependency>
-            <groupId>org.apache.nifi</groupId>
-            <artifactId>nifi-api</artifactId>
-            <version>${nifi.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.marklogic</groupId>
-            <artifactId>marklogic-client-api</artifactId>
-            <version>${marklogicclientapi.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.marklogic</groupId>
-            <artifactId>ml-javaclient-util</artifactId>
-            <version>4.3.3</version>
-        </dependency>
-    </dependencies>
+  <dependencies>
+    <dependency>
+      <groupId>org.apache.nifi</groupId>
+      <artifactId>nifi-api</artifactId>
+      <version>${nifi.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.marklogic</groupId>
+      <artifactId>marklogic-client-api</artifactId>
+      <version>${marklogicclientapi.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.marklogic</groupId>
+      <artifactId>ml-javaclient-util</artifactId>
+      <version>4.3.3</version>
+    </dependency>
+  </dependencies>
 
 </project>

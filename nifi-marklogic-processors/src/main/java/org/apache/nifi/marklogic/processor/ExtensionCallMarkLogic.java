@@ -47,83 +47,83 @@ import java.util.regex.Pattern;
 @Tags({"MarkLogic", "REST", "Extension", "Deprecated"})
 @InputRequirement(Requirement.INPUT_ALLOWED)
 @CapabilityDescription("DEPRECATED as of 1.16.3.1; allows MarkLogic REST extensions to be called. Deprecated due to the " +
-        "output from the call to MarkLogic being appended to the incoming FlowFile which is unlikely to be desirable " +
-        "behavior. CallRestExtensionMarkLogic should be used instead.")
+    "output from the call to MarkLogic being appended to the incoming FlowFile which is unlikely to be desirable " +
+    "behavior. CallRestExtensionMarkLogic should be used instead.")
 @SystemResourceConsideration(resource = SystemResource.MEMORY)
 @DynamicProperty(name = "param: URL parameter, separator: separator to split values for a parameter.",
-        value = "param: URL parameter, separator: separator to split values for a parameter.",
-        description = "Depending on the property prefix, routes data to parameter, or splits parameter.",
-        expressionLanguageScope = ExpressionLanguageScope.FLOWFILE_ATTRIBUTES)
+    value = "param: URL parameter, separator: separator to split values for a parameter.",
+    description = "Depending on the property prefix, routes data to parameter, or splits parameter.",
+    expressionLanguageScope = ExpressionLanguageScope.FLOWFILE_ATTRIBUTES)
 @Deprecated
 public class ExtensionCallMarkLogic extends AbstractMarkLogicProcessor {
 
     public static final PropertyDescriptor EXTENSION_NAME = new PropertyDescriptor.Builder()
-            .name("Extension Name")
-            .displayName("Extension Name")
-            .required(true)
-            .description("Name of MarkLogic REST extension.")
-            .expressionLanguageSupported(ExpressionLanguageScope.VARIABLE_REGISTRY)
-            .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
-            .build();
+        .name("Extension Name")
+        .displayName("Extension Name")
+        .required(true)
+        .description("Name of MarkLogic REST extension.")
+        .expressionLanguageSupported(ExpressionLanguageScope.VARIABLE_REGISTRY)
+        .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
+        .build();
     public static final PropertyDescriptor REQUIRES_INPUT = new PropertyDescriptor.Builder()
-            .name("Requires Input")
-            .displayName("Requires Input")
-            .required(true)
-            .allowableValues("true", "false")
-            .description("Whether an incoming FlowFile is required to run; should only be 'false' if the processor " +
-                    "has no incoming connections")
-            .expressionLanguageSupported(ExpressionLanguageScope.NONE)
-            .addValidator(StandardValidators.BOOLEAN_VALIDATOR)
-            .defaultValue("true")
-            .build();
+        .name("Requires Input")
+        .displayName("Requires Input")
+        .required(true)
+        .allowableValues("true", "false")
+        .description("Whether an incoming FlowFile is required to run; should only be 'false' if the processor " +
+            "has no incoming connections")
+        .expressionLanguageSupported(ExpressionLanguageScope.NONE)
+        .addValidator(StandardValidators.BOOLEAN_VALIDATOR)
+        .defaultValue("true")
+        .build();
     public static final PropertyDescriptor PAYLOAD_SOURCE = new PropertyDescriptor.Builder()
-            .name("Payload Source")
-            .displayName("Payload Source")
-            .required(true)
-            .description("Whether a payload body is passed and if so, from the FlowFile content or the Payload property.")
-            .expressionLanguageSupported(ExpressionLanguageScope.NONE)
-            .allowableValues(PayloadSources.allValues)
-            .defaultValue(PayloadSources.NONE_STR)
-            .addValidator(Validator.VALID)
-            .build();
+        .name("Payload Source")
+        .displayName("Payload Source")
+        .required(true)
+        .description("Whether a payload body is passed and if so, from the FlowFile content or the Payload property.")
+        .expressionLanguageSupported(ExpressionLanguageScope.NONE)
+        .allowableValues(PayloadSources.allValues)
+        .defaultValue(PayloadSources.NONE_STR)
+        .addValidator(Validator.VALID)
+        .build();
     public static final PropertyDescriptor PAYLOAD_FORMAT = new PropertyDescriptor.Builder()
-            .name("Payload Format")
-            .displayName("Payload Format")
-            .required(true)
-            .description("Format of request body payload.")
-            .expressionLanguageSupported(ExpressionLanguageScope.NONE)
-            .allowableValues(Format.JSON.name(), Format.XML.name(), Format.TEXT.name(), Format.BINARY.name(), Format.UNKNOWN.name())
-            .defaultValue(Format.TEXT.name())
-            .addValidator(Validator.VALID)
-            .build();
+        .name("Payload Format")
+        .displayName("Payload Format")
+        .required(true)
+        .description("Format of request body payload.")
+        .expressionLanguageSupported(ExpressionLanguageScope.NONE)
+        .allowableValues(Format.JSON.name(), Format.XML.name(), Format.TEXT.name(), Format.BINARY.name(), Format.UNKNOWN.name())
+        .defaultValue(Format.TEXT.name())
+        .addValidator(Validator.VALID)
+        .build();
     public static final PropertyDescriptor PAYLOAD = new PropertyDescriptor.Builder()
-            .name("Payload")
-            .displayName("Payload")
-            .required(false)
-            .description("Payload for request body if \"Payload Property\" is the selected Payload Type.")
-            .expressionLanguageSupported(ExpressionLanguageScope.FLOWFILE_ATTRIBUTES)
-            .addValidator(Validator.VALID)
-            .build();
+        .name("Payload")
+        .displayName("Payload")
+        .required(false)
+        .description("Payload for request body if \"Payload Property\" is the selected Payload Type.")
+        .expressionLanguageSupported(ExpressionLanguageScope.FLOWFILE_ATTRIBUTES)
+        .addValidator(Validator.VALID)
+        .build();
     public static final PropertyDescriptor METHOD_TYPE = new PropertyDescriptor.Builder()
-            .name("Method Type")
-            .displayName("Method Type")
-            .required(false)
-            .defaultValue(MethodTypes.POST_STR)
-            .description("HTTP method to call the REST extension with.")
-            .expressionLanguageSupported(ExpressionLanguageScope.NONE)
-            .allowableValues(MethodTypes.allValues)
-            .addValidator(Validator.VALID)
-            .build();
+        .name("Method Type")
+        .displayName("Method Type")
+        .required(false)
+        .defaultValue(MethodTypes.POST_STR)
+        .description("HTTP method to call the REST extension with.")
+        .expressionLanguageSupported(ExpressionLanguageScope.NONE)
+        .allowableValues(MethodTypes.allValues)
+        .addValidator(Validator.VALID)
+        .build();
 
     private volatile ExtensionResourceManager resourceManager;
 
     protected static final Relationship SUCCESS = new Relationship.Builder().name("success")
-            .description("All items returned by the extension call to MarkLogic are appended to the content of the " +
-                    "incoming FlowFile and sent to this relationship.")
-            .build();
+        .description("All items returned by the extension call to MarkLogic are appended to the content of the " +
+            "incoming FlowFile and sent to this relationship.")
+        .build();
 
     protected static final Relationship FAILURE = new Relationship.Builder().name("failure")
-            .description("All FlowFiles that failed to produce a valid query.").build();
+        .description("All FlowFiles that failed to produce a valid query.").build();
 
     @Override
     public void init(ProcessorInitializationContext context) {
@@ -289,13 +289,13 @@ public class ExtensionCallMarkLogic extends AbstractMarkLogicProcessor {
 
         public static final String NONE_STR = "None";
         public static final AllowableValue NONE = new AllowableValue(NONE_STR, NONE_STR,
-                "No paylod is passed to the request body.");
+            "No paylod is passed to the request body.");
         public static final String FLOWFILE_CONTENT_STR = "FlowFile Content";
         public static final AllowableValue FLOWFILE_CONTENT = new AllowableValue(FLOWFILE_CONTENT_STR, FLOWFILE_CONTENT_STR,
-                "The FlowFile content is passed as a payload to the request body.");
+            "The FlowFile content is passed as a payload to the request body.");
         public static final String PAYLOAD_PROPERTY_STR = "Payload Property";
         public static final AllowableValue PAYLOAD_PROPERTY = new AllowableValue(PAYLOAD_PROPERTY_STR, PAYLOAD_PROPERTY_STR,
-                "The Payload property is passed as a payload to the request body.");
+            "The Payload property is passed as a payload to the request body.");
 
         public static final AllowableValue[] allValues = new AllowableValue[]{NONE, FLOWFILE_CONTENT, PAYLOAD_PROPERTY};
     }
@@ -304,16 +304,16 @@ public class ExtensionCallMarkLogic extends AbstractMarkLogicProcessor {
 
         public static final String POST_STR = "POST";
         public static final AllowableValue POST = new AllowableValue(POST_STR, POST_STR,
-                "POST to REST extension");
+            "POST to REST extension");
         public static final String PUT_STR = "PUT";
         public static final AllowableValue PUT = new AllowableValue(PUT_STR, PUT_STR,
-                "PUT to REST extension");
+            "PUT to REST extension");
         public static final String GET_STR = "GET";
         public static final AllowableValue GET = new AllowableValue(GET_STR, GET_STR,
-                "GET to REST extension");
+            "GET to REST extension");
         public static final String DELETE_STR = "DELETE";
         public static final AllowableValue DELETE = new AllowableValue(DELETE_STR, DELETE_STR,
-                "DELETE to REST extension");
+            "DELETE to REST extension");
 
         public static final AllowableValue[] allValues = new AllowableValue[]{POST, PUT, GET, DELETE};
     }

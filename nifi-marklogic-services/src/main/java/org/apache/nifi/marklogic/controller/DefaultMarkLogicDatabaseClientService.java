@@ -40,8 +40,6 @@ import org.apache.nifi.ssl.SSLContextService;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509TrustManager;
-import java.io.FileInputStream;
-import java.io.InputStream;
 import java.security.KeyStore;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -199,7 +197,7 @@ public class DefaultMarkLogicDatabaseClientService extends AbstractControllerSer
         }
 
         final SSLContextService sslService = context.getProperty(SSL_CONTEXT_SERVICE).asControllerService(SSLContextService.class);
-        if(sslService != null) {
+        if (sslService != null) {
             final ClientAuth clientAuth = determineClientAuth(context);
             getLogger().info("Configuring SSL connection; client authentication: " + clientAuth);
             try {
@@ -207,9 +205,9 @@ public class DefaultMarkLogicDatabaseClientService extends AbstractControllerSer
                     getLogger().info("Configuring TrustManager based on trust store found in SSLService");
                     final TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
                     final KeyStore trustStore = KeyStoreUtils.loadTrustStore(
-                            sslService.getTrustStoreFile(),
-                            sslService.getTrustStorePassword().toCharArray(),
-                            sslService.getTrustStoreType()
+                        sslService.getTrustStoreFile(),
+                        sslService.getTrustStorePassword().toCharArray(),
+                        sslService.getTrustStoreType()
                     );
                     trustManagerFactory.init(trustStore);
                     config.setTrustManager((X509TrustManager) trustManagerFactory.getTrustManagers()[0]);
@@ -218,7 +216,7 @@ public class DefaultMarkLogicDatabaseClientService extends AbstractControllerSer
                 config.setSslContext(sslContext);
                 config.setSslHostnameVerifier(DatabaseClientFactory.SSLHostnameVerifier.ANY);
             } catch (Exception e) {
-                getLogger().error("Failed to create SSLContext due to {}", new Object[]{e} );
+                getLogger().error("Failed to create SSLContext due to {}", new Object[]{e});
                 throw new ProcessException(e);
             }
         }
@@ -229,14 +227,14 @@ public class DefaultMarkLogicDatabaseClientService extends AbstractControllerSer
     protected ClientAuth determineClientAuth(ConfigurationContext context) {
         try {
             return context.getProperty(CLIENT_AUTH).getValue() == null ? ClientAuth.REQUIRED :
-                    ClientAuth.valueOf(context.getProperty(CLIENT_AUTH).evaluateAttributeExpressions().getValue());
+                ClientAuth.valueOf(context.getProperty(CLIENT_AUTH).evaluateAttributeExpressions().getValue());
         } catch (IllegalArgumentException exception) {
             throw new ProviderCreationException("Client Authentication should be one of the following values : "
                 + Arrays.toString(ClientAuth.values()));
         }
     }
 
-	@Override
+    @Override
     public DatabaseClient getDatabaseClient() {
         return databaseClient;
     }

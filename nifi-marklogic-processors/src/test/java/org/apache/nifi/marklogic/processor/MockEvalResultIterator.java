@@ -8,28 +8,28 @@ import java.util.List;
 
 public class MockEvalResultIterator implements EvalResultIterator {
 
-	Iterator<EvalResult> iterator;
+    Iterator<EvalResult> iterator;
 
-	public MockEvalResultIterator(List<EvalResult> results) {
-		this.iterator = results.iterator();
-	}
+    public MockEvalResultIterator(List<EvalResult> results) {
+        this.iterator = results.iterator();
+    }
 
-	@Override
-	public Iterator<EvalResult> iterator() {
-		return iterator;
-	}
+    @Override
+    public Iterator<EvalResult> iterator() {
+        return iterator;
+    }
 
-	@Override
-	public boolean hasNext() {
-		return iterator.hasNext();
-	}
+    @Override
+    public boolean hasNext() {
+        return iterator.hasNext();
+    }
 
-	@Override
-	public EvalResult next() {
-		return iterator.next();
-	}
+    @Override
+    public EvalResult next() {
+        return iterator.next();
+    }
 
-	@Override
-	public void close() {
-	}
+    @Override
+    public void close() {
+    }
 }

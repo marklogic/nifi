@@ -22,18 +22,16 @@ import com.marklogic.client.datamovement.ExportListener;
 import com.marklogic.client.datamovement.QueryBatcher;
 import com.marklogic.client.io.StringHandle;
 import com.marklogic.client.query.StructuredQueryBuilder;
-import org.apache.nifi.reporting.InitializationException;
 import org.apache.nifi.util.TestRunner;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
 
-public class PutMarkLogicIT extends AbstractMarkLogicIT{
+public class PutMarkLogicIT extends AbstractMarkLogicIT {
 
     @BeforeEach
     public void setup() {
@@ -51,8 +49,8 @@ public class PutMarkLogicIT extends AbstractMarkLogicIT{
         String collection = "PutMarkLogicTest";
         String absolutePath = "/dummyPath/PutMarkLogicTest";
         TestRunner runner = getNewTestRunner(PutMarkLogic.class);
-        runner.setProperty(PutMarkLogic.COLLECTIONS, collection+",${absolutePath}");
-        for(IngestDoc document : documents) {
+        runner.setProperty(PutMarkLogic.COLLECTIONS, collection + ",${absolutePath}");
+        for (IngestDoc document : documents) {
             document.getAttributes().put("absolutePath", absolutePath);
             runner.enqueue(document.getContent(), document.getAttributes());
         }
@@ -63,8 +61,8 @@ public class PutMarkLogicIT extends AbstractMarkLogicIT{
         runner.enqueue("{sdsfsd}", attributesMap);
         runner.run(2);
         runner.assertQueueEmpty();
-        assertEquals(2,runner.getFlowFilesForRelationship(PutMarkLogic.FAILURE).size());
-        assertEquals(numDocs,runner.getFlowFilesForRelationship(PutMarkLogic.SUCCESS).size());
+        assertEquals(2, runner.getFlowFilesForRelationship(PutMarkLogic.FAILURE).size());
+        assertEquals(numDocs, runner.getFlowFilesForRelationship(PutMarkLogic.SUCCESS).size());
         assertEquals(numDocs, getNumDocumentsInCollection(collection));
         assertEquals(numDocs, getNumDocumentsInCollection(absolutePath));
     }
@@ -80,17 +78,17 @@ public class PutMarkLogicIT extends AbstractMarkLogicIT{
         runner.setProperty("trans:newValue", "new");
         StringHandle stringHandle = new StringHandle(
             "function transform_function(context, params, content) {\n" +
-            "  var document = content.toObject();\n" +
-            "  document.testProperty = params.newValue;\n" +
-            "  return document;\n" +
-            "};\n" +
-            "exports.transform = transform_function;");
+                "  var document = content.toObject();\n" +
+                "  document.testProperty = params.newValue;\n" +
+                "  return document;\n" +
+                "};\n" +
+                "exports.transform = transform_function;");
         service.getDatabaseClient().newServerConfigManager().newTransformExtensionsManager().writeJavascriptTransform(
             transform, stringHandle);
         String content = "{ \"testProperty\": \"oldValue\" }";
-        for(int i = 0; i < numDocs; i++) {
+        for (int i = 0; i < numDocs; i++) {
             Map<String, String> attributesMap = new HashMap<>();
-            attributesMap.put("filename", "/transform/"+i+".json");
+            attributesMap.put("filename", "/transform/" + i + ".json");
             runner.enqueue(content, attributesMap);
         }
         runner.run(numDocs);

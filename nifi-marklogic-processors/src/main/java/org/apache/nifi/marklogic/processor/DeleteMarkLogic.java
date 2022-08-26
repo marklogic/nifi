@@ -16,40 +16,30 @@
  */
 package org.apache.nifi.marklogic.processor;
 
-import java.util.*;
-
-import org.apache.nifi.annotation.behavior.InputRequirement;
+import com.marklogic.client.datamovement.DeleteListener;
+import com.marklogic.client.datamovement.QueryBatch;
+import com.marklogic.client.datamovement.QueryBatchListener;
+import org.apache.nifi.annotation.behavior.*;
 import org.apache.nifi.annotation.behavior.InputRequirement.Requirement;
-import org.apache.nifi.annotation.behavior.Stateful;
-import org.apache.nifi.annotation.behavior.SystemResource;
-import org.apache.nifi.annotation.behavior.SystemResourceConsideration;
-import org.apache.nifi.annotation.behavior.WritesAttribute;
-import org.apache.nifi.annotation.behavior.WritesAttributes;
 import org.apache.nifi.annotation.documentation.CapabilityDescription;
 import org.apache.nifi.annotation.documentation.Tags;
 import org.apache.nifi.components.PropertyDescriptor;
 import org.apache.nifi.components.state.Scope;
 import org.apache.nifi.flowfile.FlowFile;
 import org.apache.nifi.flowfile.attributes.CoreAttributes;
-import org.apache.nifi.processor.ProcessContext;
-import org.apache.nifi.processor.ProcessSession;
-import org.apache.nifi.processor.ProcessSessionFactory;
-import org.apache.nifi.processor.ProcessorInitializationContext;
-import org.apache.nifi.processor.Relationship;
+import org.apache.nifi.processor.*;
 import org.apache.nifi.processor.exception.ProcessException;
 
-import com.marklogic.client.datamovement.DeleteListener;
-import com.marklogic.client.datamovement.QueryBatch;
-import com.marklogic.client.datamovement.QueryBatchListener;
+import java.util.*;
 
-@Tags({ "MarkLogic", "Delete" })
+@Tags({"MarkLogic", "Delete"})
 @InputRequirement(Requirement.INPUT_ALLOWED)
 @SystemResourceConsideration(resource = SystemResource.MEMORY)
 @CapabilityDescription("Creates FlowFiles from batches of documents, matching the given criteria,"
-        + " deleted from a MarkLogic server using the MarkLogic Data Movement SDK (DMSDK)")
+    + " deleted from a MarkLogic server using the MarkLogic Data Movement SDK (DMSDK)")
 @WritesAttributes({
-        @WritesAttribute(attribute = "filename", description = "The filename is set to the uri of the document deleted from MarkLogic") })
-@Stateful(description = "Can keep state of a range index value to restrict future queries.", scopes = { Scope.CLUSTER })
+    @WritesAttribute(attribute = "filename", description = "The filename is set to the uri of the document deleted from MarkLogic")})
+@Stateful(description = "Can keep state of a range index value to restrict future queries.", scopes = {Scope.CLUSTER})
 public class DeleteMarkLogic extends QueryMarkLogic {
 
     @Override
@@ -79,14 +69,14 @@ public class DeleteMarkLogic extends QueryMarkLogic {
 
     @Override
     public void onTrigger(final ProcessContext context, final ProcessSessionFactory sessionFactory)
-            throws ProcessException {
+        throws ProcessException {
         super.onTrigger(context, sessionFactory);
     }
 
     @Override
     protected QueryBatchListener buildQueryBatchListener(final ProcessContext context, final ProcessSession session, final boolean consistentSnapshot) {
         return new NiFiDeleteListener(session).onFailure((batch, throwable) -> {
-            synchronized(session) {
+            synchronized (session) {
                 getLogger().error("Error deleting batch", throwable);
                 for (String uri : batch.getItems()) {
                     FlowFile flowFile = session.create();
@@ -110,7 +100,7 @@ public class DeleteMarkLogic extends QueryMarkLogic {
         @Override
         public void processEvent(QueryBatch batch) {
             super.processEvent(batch);
-            synchronized(session) {
+            synchronized (session) {
                 for (String uri : batch.getItems()) {
                     FlowFile flowFile = session.create();
                     session.putAttribute(flowFile, CoreAttributes.FILENAME.key(), uri);

@@ -45,8 +45,8 @@ public class ExtensionCallMarkLogicIT extends AbstractMarkLogicIT {
         runner.run();
         assertEquals(0, runner.getFlowFilesForRelationship(ExtensionCallMarkLogic.FAILURE).size());
         assertEquals(0, runner.getFlowFilesForRelationship(ExtensionCallMarkLogic.SUCCESS).size(),
-                "Expecting no FlowFiles; the processor should not have run since requiresInput=true and no " +
-                        "FlowFile was enqueued");
+            "Expecting no FlowFiles; the processor should not have run since requiresInput=true and no " +
+                "FlowFile was enqueued");
 
         MockFlowFile mockFlowFile = new MockFlowFile(1);
         Map<String, String> attributes = new HashMap<>();
@@ -66,10 +66,10 @@ public class ExtensionCallMarkLogicIT extends AbstractMarkLogicIT {
         MockFlowFile result = results.get(0);
         String resultValue = new String(runner.getContentAsByteArray(result));
         assertEquals("dynamicValue", resultValue,
-                "The test 'replay' extension is expected to return the value of the 'replay' parameter, " +
-                        "which is sent via the replay:param property. That property then has an expression, " +
-                        "which is expected to be evaluated against the flowfile attributes, producing the " +
-                        "value 'dynamicvalue'");
+            "The test 'replay' extension is expected to return the value of the 'replay' parameter, " +
+                "which is sent via the replay:param property. That property then has an expression, " +
+                "which is expected to be evaluated against the flowfile attributes, producing the " +
+                "value 'dynamicvalue'");
     }
 
     @Test
@@ -113,16 +113,16 @@ public class ExtensionCallMarkLogicIT extends AbstractMarkLogicIT {
         runner.assertQueueEmpty();
 
         assertEquals(1, runner.getFlowFilesForRelationship(ExtensionCallMarkLogic.FAILURE).size(),
-                "One FlowFile should exist due to the REST extension throwing an error; the FlowFile should " +
-                        "have been created since requiresInput=false");
+            "One FlowFile should exist due to the REST extension throwing an error; the FlowFile should " +
+                "have been created since requiresInput=false");
         assertEquals(0, runner.getFlowFilesForRelationship(ExtensionCallMarkLogic.SUCCESS).size());
 
         MockFlowFile flowFile = runner.getFlowFilesForRelationship(ExtensionCallMarkLogic.FAILURE).get(0);
         assertTrue(flowFile.getAttributes().containsKey("markLogicErrorMessage"), "The root cause error message " +
-                "should be added to the flowfile attributes so that a downstream processor can easily access it");
+            "should be added to the flowfile attributes so that a downstream processor can easily access it");
         String message = flowFile.getAttributes().get("markLogicErrorMessage");
         assertTrue(message.contains("Server Message: GetError Description (GetErrorQName): 500 GetError message"),
-                "The error message should contain the error details from the REST extension");
+            "The error message should contain the error details from the REST extension");
     }
 
     @Test
@@ -148,7 +148,7 @@ public class ExtensionCallMarkLogicIT extends AbstractMarkLogicIT {
         runner.assertQueueEmpty();
 
         assertEquals(1, runner.getFlowFilesForRelationship(ExtensionCallMarkLogic.SUCCESS).size(),
-                "Verifies that an empty byte array is fine; the Java Client only complains if the byte array is null");
+            "Verifies that an empty byte array is fine; the Java Client only complains if the byte array is null");
     }
 
     @Test

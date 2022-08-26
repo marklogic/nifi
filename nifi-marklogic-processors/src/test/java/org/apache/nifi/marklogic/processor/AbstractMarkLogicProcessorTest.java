@@ -16,8 +16,6 @@
  */
 package org.apache.nifi.marklogic.processor;
 
-import org.apache.nifi.components.PropertyDescriptor;
-import org.apache.nifi.components.PropertyValue;
 import org.apache.nifi.marklogic.controller.DefaultMarkLogicDatabaseClientService;
 import org.apache.nifi.marklogic.controller.MarkLogicDatabaseClientService;
 import org.apache.nifi.processor.ProcessSession;
@@ -61,7 +59,7 @@ public abstract class AbstractMarkLogicProcessorTest extends Assert {
 
         try {
             runner.addControllerService(databaseClientServiceIdentifier, service);
-            
+
         } catch (InitializationException e) {
             throw new RuntimeException(e);
         }
@@ -80,6 +78,7 @@ public abstract class AbstractMarkLogicProcessorTest extends Assert {
         runner.enableControllerService(service);
         runner.assertValid(service);
     }
+
     protected MockFlowFile addTestFlowFile() {
         return addFlowFile("<test/>");
     }
@@ -98,10 +97,12 @@ public abstract class AbstractMarkLogicProcessorTest extends Assert {
 class MockProcessSessionFactory implements ProcessSessionFactory {
     SharedSessionState sharedSessionState;
     Processor processor;
+
     MockProcessSessionFactory(SharedSessionState sharedSessionState, Processor processor) {
         this.sharedSessionState = sharedSessionState;
         this.processor = processor;
     }
+
     @Override
     public ProcessSession createSession() {
         return new MockProcessSession(sharedSessionState, processor);
