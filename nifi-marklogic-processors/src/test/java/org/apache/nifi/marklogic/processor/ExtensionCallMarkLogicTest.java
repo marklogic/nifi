@@ -26,6 +26,7 @@ import org.apache.nifi.reporting.InitializationException;
 import org.junit.Before;
 import org.junit.Test;
 
+@Deprecated
 public class ExtensionCallMarkLogicTest extends AbstractMarkLogicProcessorTest {
     private TestExtensionCallMarkLogic processor;
 
