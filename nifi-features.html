@@ -724,6 +724,36 @@
   <dd>A dynamic parameter with the prefix of <code class="highlighter-rouge">trans:</code> that will be passed to the transform. <strong>Expression Language Enabled: Variable Scope</strong></dd>
 </dl>
 
+          <h2 id="executescriptmarklogic-processor">RunFlowMarkLogic Processor</h2>
+
+          <p>Run a MarkLogic Data Hub 5 flow via the Data Hub Java API. This is expected to be run on non-ingestion steps, where data has already been ingested into MarkLogic.
+            Ingestion steps depend on access to local files, which isn't a common use case for NiFi in production.</p>
+
+          <h3 id="relationships-2">Relationships</h3>
+
+          <h4 id="results">finished</h4>
+
+          <p>If the flow finishes, then regardless of its outcome, the JSON response will be sent to this relationship. If an exception is thrown when running the flow, then a NiFi ProcessException will be thrown instead.</p>
+
+          <h3 id="properties-3">Properties</h3>
+
+          <dl>
+            <dt>DatabaseClient Service</dt>
+            <dd>The DatabaseClient Controller Service that provides the MarkLogic connection. Note that if "SSL Context Service" is
+            configured on this service, the DHF staging and jobs app servers must be configured to require SSL.</dd>
+            <dt>Final Server Port</dt>
+            <dd>The port on which the Final REST server is hosted</dd>
+            <dt>Job Server Port</dt>
+            <dd>The port on which the Job REST server is hosted</dd>
+            <dt>Flow Name</dt>
+            <dd>Name of the Data Hub flow to run</dd>
+            <dt>Steps</dt>
+            <dd>Comma-delimited string of step numbers to run</dd>
+            <dt>Job ID</dt>
+            <dd>ID for the Data Hub job</dd>
+            <dt>Options JSON</dt>
+            <dd>JSON object defining options for running the flow</dd>
+          </dl>
 
         </div>
       </div>
