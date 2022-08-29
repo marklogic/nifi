@@ -83,6 +83,7 @@ public class DeleteMarkLogic extends QueryMarkLogic {
         super.onTrigger(context, sessionFactory);
     }
 
+    @Override
     protected QueryBatchListener buildQueryBatchListener(final ProcessContext context, final ProcessSession session, final boolean consistentSnapshot) {
         return new NiFiDeleteListener(session).onFailure((batch, throwable) -> {
             synchronized(session) {

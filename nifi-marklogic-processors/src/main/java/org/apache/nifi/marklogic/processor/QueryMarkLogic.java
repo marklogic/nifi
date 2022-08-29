@@ -325,7 +325,15 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
         return rootObject.toString();
     }
 
-    private QueryBatchListener buildQueryBatchListener(final ProcessContext context, final ProcessSession session,
+    /**
+     * Protected so that subclasses can override it.
+     *
+     * @param context
+     * @param session
+     * @param consistentSnapshot
+     * @return
+     */
+    protected QueryBatchListener buildQueryBatchListener(final ProcessContext context, final ProcessSession session,
             final boolean consistentSnapshot) {
         final boolean retrieveFullDocument;
         if (context.getProperty(RETURN_TYPE) != null

@@ -98,6 +98,7 @@ public class ApplyTransformMarkLogic extends QueryMarkLogic {
         relationships = Collections.unmodifiableSet(set);
     }
 
+    @Override
     protected QueryBatchListener buildQueryBatchListener(final ProcessContext context, final ProcessSession session, final boolean consistentSnapshot) {
         ApplyTransformListener applyTransform = new ApplyTransformListener()
             .withApplyResult(

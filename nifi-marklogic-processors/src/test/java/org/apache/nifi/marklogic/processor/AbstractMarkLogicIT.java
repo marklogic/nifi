@@ -17,7 +17,6 @@
 package org.apache.nifi.marklogic.processor;
 
 import com.marklogic.client.datamovement.DataMovementManager;
-import com.marklogic.client.datamovement.DeleteListener;
 import com.marklogic.client.datamovement.QueryBatcher;
 import com.marklogic.client.query.StructuredQueryBuilder;
 import com.marklogic.client.query.StructuredQueryDefinition;
@@ -157,15 +156,5 @@ public abstract class AbstractMarkLogicIT extends AbstractSpringMarkLogicTest {
         queryBatcher.awaitCompletion();
         dataMovementManager.stopJob(queryBatcher);
         return actualNumberOfDocs.get();
-    }
-
-    protected void deleteDocumentsInCollection(String collection) {
-        StructuredQueryDefinition collectionQuery = new StructuredQueryBuilder().collection(collection);
-        QueryBatcher queryBatcher = dataMovementManager.newQueryBatcher(collectionQuery)
-          .withConsistentSnapshot()
-          .onUrisReady(new DeleteListener());
-        dataMovementManager.startJob(queryBatcher);
-        queryBatcher.awaitCompletion();
-        dataMovementManager.stopJob(queryBatcher);
     }
 }

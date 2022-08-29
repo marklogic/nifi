@@ -24,7 +24,6 @@ import com.marklogic.client.query.StructuredQueryBuilder;
 import org.apache.nifi.flowfile.attributes.CoreAttributes;
 import org.apache.nifi.util.MockFlowFile;
 import org.apache.nifi.util.TestRunner;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -45,10 +44,10 @@ public class DeleteMarkLogicIT extends AbstractMarkLogicIT {
 
     private void loadDocumentsIntoCollection(String collection, List<IngestDoc> documents) {
         WriteBatcher writeBatcher = dataMovementManager.newWriteBatcher()
-            .withBatchSize(3)
-            .withThreadCount(3);
+                .withBatchSize(3)
+                .withThreadCount(3);
         dataMovementManager.startJob(writeBatcher);
-        for(IngestDoc document : documents) {
+        for (IngestDoc document : documents) {
             DocumentMetadataHandle handle = new DocumentMetadataHandle();
             handle.withCollections(collection);
             writeBatcher.add(document.getFileName(), handle, new StringHandle(document.getContent()));
@@ -76,10 +75,5 @@ public class DeleteMarkLogicIT extends AbstractMarkLogicIT {
 
         DocumentPage page = getDatabaseClient().newDocumentManager().search(new StructuredQueryBuilder().collection(collection), 1);
         assertEquals(0, page.getTotalSize());
-    }
-
-    @AfterEach
-    public void teardown() {
-        deleteDocumentsInCollection(collection);
     }
 }
