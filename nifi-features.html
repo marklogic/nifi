@@ -394,23 +394,23 @@
 
 <h4 id="results">results</h4>
 
-<p>FlowFiles are generated for each script result.</p>
+<p>Receives a FlowFile for each result returned by the executed script. Will not receive a FlowFile for the first result if 'Skip First Result' is true</p>
 
 <h4 id="first-result">first result</h4>
 
-<p>FlowFile is generated for first script result.</p>
+<p>Receives a FlowFile for the first result returned by the executed script</p>
 
 <h4 id="last-result">last result</h4>
 
-<p>FlowFile is generated for last script result.</p>
+<p>Receives a FlowFile for the last result returned by the executed script if it returns at least two results.</p>
 
 <h4 id="original">original</h4>
 
-<p>Input FlowFile is passed to this relationship.</p>
+<p>Receives the original FlowFile that this processor received</p>
 
 <h4 id="failure-2">failure</h4>
 
-<p>Input FlowFile is passed to this relationship, if failure occurs.</p>
+<p>Receives the original FlowFile if the call to MarkLogic fails for any reason</p>
 
 <h3 id="properties-3">Properties</h3>
 
@@ -445,15 +445,41 @@
   <dd>A dynamic parameter that will be passed as an external variable. <strong>Expression Language Enabled: Variable Scope</strong></dd>
 </dl>
 
-<h2 id="extensioncallmarklogic-processor">ExtensionCallMarkLogic Processor</h2>
+          <h2>CallRestExtensionMarkLogic Processor</h2>
+          <p>Allows for MarkLogic REST extensions to be called with results being sent to new FlowFiles.
+            This is intended to replace ExtensionCallMarkLogic, which is now deprecated.</p>
 
-<p>Allows MarkLogic REST extensions to be called.</p>
+          <h3>Relationships</h3>
+
+          <h4>original</h4>
+
+          <p>The original FlowFile - either the incoming one or a new one if 'Requires Input' is false - will be sent here after the extension call to MarkLogic is completed.</p>
+
+          <h4>results</h4>
+
+          <p>Each item returned by the extension call to MarkLogic results in a new
+            FlowFile being sent to this relationship. Each FlowFile retains all the
+            attributes from the incoming FlowFile if one exists.</p>
+
+          <h4>failure</h4>
+
+          <p>If a REST call fails, a FlowFile goes to the failure relationship.</p>
+
+          <h3 id="properties-4">Properties</h3>
+
+          <p>CallRestExtensionMarkLogic has the same set of properties as ExtensionCallMarkLogic.</p>
+
+          <h2 id="extensioncallmarklogic-processor">ExtensionCallMarkLogic Processor</h2>
+
+<p>DEPRECATED as of 1.16.3.1; allows MarkLogic REST extensions to be called. Deprecated due to the
+  output from the call to MarkLogic being appended to the incoming FlowFile which is unlikely to be desirable
+  behavior. CallRestExtensionMarkLogic should be used instead.</p>
 
 <h3 id="relationships-3">Relationships</h3>
 
 <h4 id="success-2">success</h4>
 
-<p>FlowFiles are generated for each document URI read out of MarkLogic.</p>
+<p>All items returned by the extension call to MarkLogic are appended to the content of the incoming FlowFile and sent to this relationship.</p>
 
 <h4 id="failure-3">failure</h4>
 
@@ -467,7 +493,7 @@
   <dt>Extension Name</dt>
   <dd>Name of MarkLogic REST extension.</dd>
   <dt>Requires Input</dt>
-  <dd>Whether a FlowFile is required to run.</dd>
+  <dd>Whether an incoming FlowFile is required to run; should only be 'false' if the processor has no incoming connections</dd>
   <dt>Payload Source</dt>
   <dd>Whether a payload body is passed and if so, from the FlowFile content or the Payload property.
     <ul>
