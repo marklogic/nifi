@@ -28,6 +28,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 import org.apache.nifi.annotation.behavior.DynamicProperty;
 import org.apache.nifi.annotation.behavior.InputRequirement;
@@ -195,10 +196,6 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
     public void onTrigger(final ProcessContext context, final ProcessSessionFactory sessionFactory)
             throws ProcessException {
         final ProcessSession session = sessionFactory.createSession();
-        onTrigger(context, session);
-    }
-
-    public void onTrigger(final ProcessContext context, final ProcessSession session) throws ProcessException {
         super.populatePropertiesByPrefix(context);
         try {
             final FlowFile incomingFlowFile = context.hasIncomingConnection() ? session.get() : null;
@@ -298,37 +295,37 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
         String stateIndexTypeValue = context.getProperty(STATE_INDEX_TYPE).getValue();
         String stateIndexValue = context.getProperty(STATE_INDEX).evaluateAttributeExpressions(flowFile).getValue();
         switch (stateIndexTypeValue) {
-        case IndexTypes.ELEMENT_STR:
-            JsonObject elementObject = new JsonObject();
-            boolean hasNamespace = stateIndexValue.contains(":");
-            String[] parts = stateIndexValue.split(":", 2);
-            String name = (hasNamespace) ? parts[1] : stateIndexValue;
-            String ns = (hasNamespace) ? context.getProperty("ns:" + parts[0]).evaluateAttributeExpressions(flowFile).getValue() : "";
-            elementObject.addProperty("name", name);
-            elementObject.addProperty("ns", ns);
-            rangeObject.add("element", elementObject);
-            break;
-        case IndexTypes.JSON_PROPERTY_STR:
-            rangeObject.addProperty("json-property", stateIndexValue);
-            break;
-        case IndexTypes.PATH_STR:
-            JsonObject pathObject = new JsonObject();
-            pathObject.addProperty("text", stateIndexValue);
-            JsonObject namespacesObject = new JsonObject();
-            for (PropertyDescriptor propertyDesc : propertiesByPrefix.get("ns")) {
-                namespacesObject.addProperty(propertyDesc.getName().substring(3),
-                        context.getProperty(propertyDesc).evaluateAttributeExpressions(flowFile).getValue());
-            }
-            pathObject.add("namespaces", namespacesObject);
-            rangeObject.add("path-index", pathObject);
-            break;
-        default:
-            break;
+            case IndexTypes.ELEMENT_STR:
+                JsonObject elementObject = new JsonObject();
+                boolean hasNamespace = stateIndexValue.contains(":");
+                String[] parts = stateIndexValue.split(":", 2);
+                String name = (hasNamespace) ? parts[1] : stateIndexValue;
+                String ns = (hasNamespace) ? context.getProperty("ns:" + parts[0]).evaluateAttributeExpressions(flowFile).getValue() : "";
+                elementObject.addProperty("name", name);
+                elementObject.addProperty("ns", ns);
+                rangeObject.add("element", elementObject);
+                break;
+            case IndexTypes.JSON_PROPERTY_STR:
+                rangeObject.addProperty("json-property", stateIndexValue);
+                break;
+            case IndexTypes.PATH_STR:
+                JsonObject pathObject = new JsonObject();
+                pathObject.addProperty("text", stateIndexValue);
+                JsonObject namespacesObject = new JsonObject();
+                for (PropertyDescriptor propertyDesc : propertiesByPrefix.get("ns")) {
+                    namespacesObject.addProperty(propertyDesc.getName().substring(3),
+                            context.getProperty(propertyDesc).evaluateAttributeExpressions(flowFile).getValue());
+                }
+                pathObject.add("namespaces", namespacesObject);
+                rangeObject.add("path-index", pathObject);
+                break;
+            default:
+                break;
         }
         return rootObject.toString();
     }
 
-    protected QueryBatchListener buildQueryBatchListener(final ProcessContext context, final ProcessSession session,
+    private QueryBatchListener buildQueryBatchListener(final ProcessContext context, final ProcessSession session,
             final boolean consistentSnapshot) {
         final boolean retrieveFullDocument;
         if (context.getProperty(RETURN_TYPE) != null
@@ -355,13 +352,7 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
                     final FlowFile flowFile = session.write(session.create(),
                             out -> out.write(doc.getContent(new BytesHandle()).get()));
                     if (retrieveMetadata) {
-                        DocumentMetadataHandle metaHandle = doc.getMetadata(new DocumentMetadataHandle());
-                        metaHandle.getMetadataValues().forEach((metaKey, metaValue) -> {
-                            session.putAttribute(flowFile, "meta:" + metaKey, metaValue);
-                        });
-                        metaHandle.getProperties().forEach((qname, propertyValue) -> {
-                            session.putAttribute(flowFile, "property:" + qname.toString(), propertyValue.toString());
-                        });
+                        addDocumentMetadata(session, flowFile, doc.getMetadata(new DocumentMetadataHandle()));
                     }
                     session.putAttribute(flowFile, CoreAttributes.FILENAME.key(), doc.getUri());
                     session.transfer(flowFile, SUCCESS);
@@ -390,18 +381,12 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
                             FlowFile flowFile = session.create();
                             session.putAttribute(flowFile, CoreAttributes.FILENAME.key(), uri);
                             if (retrieveMetadata) {
-                                DocumentMetadataHandle metaHandle = new DocumentMetadataHandle();
+                                DocumentMetadataHandle metadata = new DocumentMetadataHandle();
                                 if (consistentSnapshot) {
-                                    metaHandle.setServerTimestamp(batch.getServerTimestamp());
+                                    metadata.setServerTimestamp(batch.getServerTimestamp());
                                 }
-                                batch.getClient().newDocumentManager().readMetadata(uri, metaHandle);
-                                metaHandle.getMetadataValues().forEach((metaKey, metaValue) -> {
-                                    session.putAttribute(flowFile, "meta:" + metaKey, metaValue);
-                                });
-                                metaHandle.getProperties().forEach((qname, propertyValue) -> {
-                                    session.putAttribute(flowFile, "property:" + qname.toString(),
-                                            propertyValue.toString());
-                                });
+                                batch.getClient().newDocumentManager().readMetadata(uri, metadata);
+                                addDocumentMetadata(session, flowFile, metadata);
                             }
                             session.transfer(flowFile, SUCCESS);
                             if (getLogger().isDebugEnabled()) {
@@ -414,6 +399,32 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
             };
         }
         return batchListener;
+    }
+
+    private void addDocumentMetadata(ProcessSession session, FlowFile flowFile, DocumentMetadataHandle metadata) {
+        // For attributes added in 1.16.3.1, we're using a "marklogic-" prefix to avoid collisions with attributes
+        // added by other processors.
+        session.putAttribute(flowFile, "marklogic-collections", String.join(",", metadata.getCollections()));
+
+        session.putAttribute(flowFile, "marklogic-quality", metadata.getQuality() + "");
+
+        List<String> permissions = new ArrayList<>();
+        DocumentMetadataHandle.DocumentPermissions docPerms = metadata.getPermissions();
+        for (String role : docPerms.keySet()) {
+            for (DocumentMetadataHandle.Capability capability : docPerms.get(role)) {
+                permissions.add(role);
+                // Lowercase is used to mirror how MLCP expects permissions to be defined
+                permissions.add(capability.name().toLowerCase());
+            }
+        }
+        session.putAttribute(flowFile, "marklogic-permissions", String.join(",", permissions));
+
+        metadata.getMetadataValues().forEach((metaKey, metaValue) -> {
+            session.putAttribute(flowFile, "meta:" + metaKey, metaValue);
+        });
+        metadata.getProperties().forEach((qname, propertyValue) -> {
+            session.putAttribute(flowFile, "property:" + qname.toString(), propertyValue.toString());
+        });
     }
 
     private QueryBatcher createQueryBatcherWithQueryCriteria(ProcessContext context, ProcessSession session,
