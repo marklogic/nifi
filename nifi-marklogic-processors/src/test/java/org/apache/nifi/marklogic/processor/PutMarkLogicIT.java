@@ -67,7 +67,6 @@ public class PutMarkLogicIT extends AbstractMarkLogicIT{
         assertEquals(numDocs,runner.getFlowFilesForRelationship(PutMarkLogic.SUCCESS).size());
         assertEquals(numDocs, getNumDocumentsInCollection(collection));
         assertEquals(numDocs, getNumDocumentsInCollection(absolutePath));
-        deleteDocumentsInCollection(collection);
     }
 
     @Test
@@ -104,6 +103,5 @@ public class PutMarkLogicIT extends AbstractMarkLogicIT{
         dataMovementManager.startJob(queryBatcher);
         queryBatcher.awaitCompletion();
         dataMovementManager.stopJob(queryBatcher);
-        deleteDocumentsInCollection(collection);
     }
 }
