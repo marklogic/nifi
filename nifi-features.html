@@ -726,9 +726,12 @@
 
           <h2 id="executescriptmarklogic-processor">RunFlowMarkLogic Processor</h2>
 
-          <p>Run a MarkLogic Data Hub 5 flow via the Data Hub Java API. This is expected to be run on non-ingestion steps, where data has already been ingested into MarkLogic.
+          <p>Run a MarkLogic Data Hub 5 flow via the Data Hub Framework (DHF) client.
+            This is expected to be run on non-ingestion steps, where data has already been ingested into MarkLogic.
             Ingestion steps depend on access to local files, which isn't a common use case for NiFi in production.</p>
 
+          <p>The 1.16.3.1 release of the connector uses version 5.7.2 of the DHF client.</p>
+          
           <h3 id="relationships-2">Relationships</h3>
 
           <h4 id="results">finished</h4>
