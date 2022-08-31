@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.marklogic.client.DatabaseClientFactory;
 import com.marklogic.client.ext.DatabaseClientConfig;
+import com.marklogic.client.ext.modulesloader.ssl.SimpleX509TrustManager;
 import com.marklogic.hub.DatabaseKind;
 import com.marklogic.hub.flow.FlowInputs;
 import com.marklogic.hub.flow.FlowRunner;
@@ -25,6 +26,7 @@ import org.apache.nifi.processor.util.StandardValidators;
 import org.apache.nifi.util.StringUtils;
 
 import javax.net.ssl.SSLContext;
+import javax.net.ssl.X509TrustManager;
 import java.io.IOException;
 import java.util.*;
 
@@ -191,6 +193,15 @@ public class RunFlowMarkLogic extends AbstractMarkLogicProcessor {
 				hubConfig.setSslHostnameVerifier(DatabaseKind.FINAL, verifier);
 				hubConfig.setSslHostnameVerifier(DatabaseKind.JOB, verifier);
 			}
+
+			X509TrustManager trustManager = clientConfig.getTrustManager();
+			if (trustManager == null) {
+				getLogger().info("No X509TrustManager found; using 'trust everything' X509TrustManager implementation");
+				trustManager = new SimpleX509TrustManager();
+			}
+			hubConfig.setTrustManager(DatabaseKind.STAGING, trustManager);
+			hubConfig.setTrustManager(DatabaseKind.FINAL, trustManager);
+			hubConfig.setTrustManager(DatabaseKind.JOB, trustManager);
 		}
 
 		String externalName = clientConfig.getExternalName();
