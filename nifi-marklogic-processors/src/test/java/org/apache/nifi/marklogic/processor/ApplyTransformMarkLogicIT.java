@@ -50,9 +50,9 @@ public class ApplyTransformMarkLogicIT extends AbstractMarkLogicIT {
         TestRunner runner = getNewTestRunner(ApplyTransformMarkLogic.class);
         runner.setValidateExpressionUsage(false);
         String queryStr = "<cts:element-value-query xmlns:cts=\"http://marklogic.com/cts\">\n" +
-                "  <cts:element>sample</cts:element>\n" +
-                "  <cts:text xml:lang=\"en\">xmlcontent</cts:text>\n" +
-                "</cts:element-value-query>";
+            "  <cts:element>sample</cts:element>\n" +
+            "  <cts:text xml:lang=\"en\">xmlcontent</cts:text>\n" +
+            "</cts:element-value-query>";
         runner.setProperty(QueryMarkLogic.QUERY, queryStr);
         runner.setProperty(QueryMarkLogic.QUERY_TYPE, QueryMarkLogic.QueryTypes.COMBINED_XML);
         runner.setProperty(QueryMarkLogic.TRANSFORM, "AddAttribute");
@@ -73,8 +73,8 @@ public class ApplyTransformMarkLogicIT extends AbstractMarkLogicIT {
 
     private void loadDocumentsIntoCollection(String collection, List<IngestDoc> documents) {
         WriteBatcher writeBatcher = dataMovementManager.newWriteBatcher()
-                .withBatchSize(3)
-                .withThreadCount(3);
+            .withBatchSize(3)
+            .withThreadCount(3);
         dataMovementManager.startJob(writeBatcher);
         for (IngestDoc document : documents) {
             DocumentMetadataHandle handle = new DocumentMetadataHandle();

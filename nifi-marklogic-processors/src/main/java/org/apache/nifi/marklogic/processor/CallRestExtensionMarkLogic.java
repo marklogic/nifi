@@ -29,17 +29,17 @@ import java.util.HashSet;
 import java.util.Set;
 
 @CapabilityDescription("Allows for MarkLogic REST extensions to be called with results being sent to new FlowFiles. " +
-        "This is intended to replace ExtensionCallMarkLogic, which is now deprecated.")
+    "This is intended to replace ExtensionCallMarkLogic, which is now deprecated.")
 public class CallRestExtensionMarkLogic extends ExtensionCallMarkLogic {
 
     protected static final Relationship RESULTS = new Relationship.Builder().name("results")
-            .description("Each item returned by the extension call to MarkLogic results in a new " +
-                    "FlowFile being sent to this relationship. Each FlowFile retains all of the " +
-                    "attributes from the incoming FlowFile if one exists.").build();
+        .description("Each item returned by the extension call to MarkLogic results in a new " +
+            "FlowFile being sent to this relationship. Each FlowFile retains all of the " +
+            "attributes from the incoming FlowFile if one exists.").build();
 
     protected static final Relationship ORIGINAL = new Relationship.Builder().name("original")
-            .description("The original FlowFile - either the incoming one or a new one if 'Requires Input' is false - " +
-                    "will be sent here after the extension call to MarkLogic is completed.").build();
+        .description("The original FlowFile - either the incoming one or a new one if 'Requires Input' is false - " +
+            "will be sent here after the extension call to MarkLogic is completed.").build();
 
 
     /**

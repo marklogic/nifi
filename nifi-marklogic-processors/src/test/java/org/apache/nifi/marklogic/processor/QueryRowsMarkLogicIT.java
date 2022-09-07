@@ -50,36 +50,36 @@ public class QueryRowsMarkLogicIT extends AbstractMarkLogicIT {
     @Test
     public void noRowsFound() {
         final String serializedPlan = "{\n" +
-                "  \"$optic\": {\n" +
-                "    \"ns\": \"op\",\n" +
-                "    \"fn\": \"operators\",\n" +
-                "    \"args\": [\n" +
-                "      {\n" +
-                "        \"ns\": \"op\",\n" +
-                "        \"fn\": \"from-view\",\n" +
-                "        \"args\": [\n" +
-                "          \"Example\",\n" +
-                "          \"default\",\n" +
-                "          null,\n" +
-                "          null\n" +
-                "        ]\n" +
-                "      },\n" +
-                "      {\n" +
-                "        \"ns\": \"op\",\n" +
-                "        \"fn\": \"where\",\n" +
-                "        \"args\": [\n" +
-                "          {\n" +
-                "            \"ns\": \"op\",\n" +
-                "            \"fn\": \"sql-condition\",\n" +
-                "            \"args\": [\n" +
-                "              \"Id > 5\"\n" +
-                "            ]\n" +
-                "          }\n" +
-                "        ]\n" +
-                "      }\n" +
-                "    ]\n" +
-                "  }\n" +
-                "}";
+            "  \"$optic\": {\n" +
+            "    \"ns\": \"op\",\n" +
+            "    \"fn\": \"operators\",\n" +
+            "    \"args\": [\n" +
+            "      {\n" +
+            "        \"ns\": \"op\",\n" +
+            "        \"fn\": \"from-view\",\n" +
+            "        \"args\": [\n" +
+            "          \"Example\",\n" +
+            "          \"default\",\n" +
+            "          null,\n" +
+            "          null\n" +
+            "        ]\n" +
+            "      },\n" +
+            "      {\n" +
+            "        \"ns\": \"op\",\n" +
+            "        \"fn\": \"where\",\n" +
+            "        \"args\": [\n" +
+            "          {\n" +
+            "            \"ns\": \"op\",\n" +
+            "            \"fn\": \"sql-condition\",\n" +
+            "            \"args\": [\n" +
+            "              \"Id > 5\"\n" +
+            "            ]\n" +
+            "          }\n" +
+            "        ]\n" +
+            "      }\n" +
+            "    ]\n" +
+            "  }\n" +
+            "}";
 
         TestRunner runner = getNewTestRunner(QueryRowsMarkLogic.class);
         runner.setProperty(QueryRowsMarkLogic.PLAN, serializedPlan);
@@ -90,6 +90,6 @@ public class QueryRowsMarkLogicIT extends AbstractMarkLogicIT {
 
         final String response = new String(list.get(0).toByteArray());
         assertEquals("", response, "The response should be empty since the 'where' clause resulted in no rows being " +
-                "found; no error should be thrown either, as the serialized plan is valid; it just doesn't match anything");
+            "found; no error should be thrown either, as the serialized plan is valid; it just doesn't match anything");
     }
 }

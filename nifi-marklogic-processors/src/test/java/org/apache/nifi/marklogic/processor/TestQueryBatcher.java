@@ -17,14 +17,7 @@
 package org.apache.nifi.marklogic.processor;
 
 import com.marklogic.client.DatabaseClient;
-import com.marklogic.client.datamovement.ForestConfiguration;
-import com.marklogic.client.datamovement.JobTicket;
-import com.marklogic.client.datamovement.QueryBatch;
-import com.marklogic.client.datamovement.QueryBatchListener;
-import com.marklogic.client.datamovement.QueryBatcher;
-import com.marklogic.client.datamovement.QueryBatcherListener;
-import com.marklogic.client.datamovement.QueryEvent;
-import com.marklogic.client.datamovement.QueryFailureListener;
+import com.marklogic.client.datamovement.*;
 import com.marklogic.client.query.SearchQueryDefinition;
 
 import java.util.Calendar;
@@ -94,6 +87,7 @@ class TestQueryBatcher implements QueryBatcher {
     }
 
     @Override
+    @Deprecated
     public QueryBatchListener[] getQuerySuccessListeners() {
         return null;
     }
@@ -231,19 +225,19 @@ class TestQueryBatcher implements QueryBatcher {
         return queryDef;
     }
 
-	@Override
-	public Calendar getJobStartTime() {
-		return null;
-	}
+    @Override
+    public Calendar getJobStartTime() {
+        return null;
+    }
 
-	@Override
-	public Calendar getJobEndTime() {
-		return null;
-	}
+    @Override
+    public Calendar getJobEndTime() {
+        return null;
+    }
 
     @Override
     public void setMaxBatches(long l) {
-        
+
     }
 
     @Override

@@ -16,10 +16,6 @@
  */
 package org.apache.nifi.marklogic.processor;
 
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
-
 import com.marklogic.client.FailedRequestException;
 import com.marklogic.client.ForbiddenUserException;
 import com.marklogic.client.Transaction;
@@ -31,11 +27,16 @@ import com.marklogic.client.io.marker.AbstractWriteHandle;
 import com.marklogic.client.io.marker.TextWriteHandle;
 import com.marklogic.client.util.EditableNamespaceContext;
 
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+
 public class TestServerEvaluationCall implements ServerEvaluationCall {
     public int xqueryCalls = 0;
     public int javascriptCalls = 0;
     public int modulePathCalls = 0;
     public Map<String, Object> variables = new HashMap<String, Object>();
+
     @Override
     public ServerEvaluationCall xquery(String xquery) {
         xqueryCalls++;
@@ -68,7 +69,7 @@ public class TestServerEvaluationCall implements ServerEvaluationCall {
 
     @Override
     public ServerEvaluationCall addVariable(String name, String value) {
-        return addVariableAs(name, (Object) value) ;
+        return addVariableAs(name, (Object) value);
     }
 
     @Override
@@ -114,7 +115,7 @@ public class TestServerEvaluationCall implements ServerEvaluationCall {
 
     @Override
     public <H extends AbstractReadHandle> H eval(H responseHandle)
-            throws ForbiddenUserException, FailedRequestException {
+        throws ForbiddenUserException, FailedRequestException {
         return responseHandle;
     }
 

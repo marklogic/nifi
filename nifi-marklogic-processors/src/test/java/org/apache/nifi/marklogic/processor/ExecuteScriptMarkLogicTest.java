@@ -16,12 +16,11 @@
  */
 package org.apache.nifi.marklogic.processor;
 
+import com.marklogic.client.DatabaseClient;
 import org.apache.nifi.processor.ProcessContext;
 import org.apache.nifi.reporting.InitializationException;
 import org.junit.Before;
 import org.junit.Test;
-
-import com.marklogic.client.DatabaseClient;
 
 public class ExecuteScriptMarkLogicTest extends AbstractMarkLogicProcessorTest {
 
@@ -63,6 +62,7 @@ public class ExecuteScriptMarkLogicTest extends AbstractMarkLogicProcessorTest {
 
     class TestExecuteScriptMarkLogic extends ExecuteScriptMarkLogic {
         TestMLDatabaseClient testClient = new TestMLDatabaseClient();
+
         @Override
         public DatabaseClient getDatabaseClient(ProcessContext context) {
             return testClient;

@@ -16,13 +16,9 @@
  */
 package org.apache.nifi.marklogic.processor;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Stream;
-
+import com.marklogic.client.datamovement.WriteBatcher;
+import com.marklogic.client.datamovement.WriteEvent;
+import com.marklogic.client.io.Format;
 import org.apache.nifi.controller.AbstractControllerService;
 import org.apache.nifi.controller.ControllerService;
 import org.apache.nifi.flowfile.FlowFile;
@@ -34,15 +30,22 @@ import org.apache.nifi.serialization.MalformedRecordException;
 import org.apache.nifi.serialization.RecordReader;
 import org.apache.nifi.serialization.RecordReaderFactory;
 import org.apache.nifi.serialization.SimpleRecordSchema;
-import org.apache.nifi.serialization.record.*;
+import org.apache.nifi.serialization.record.MockRecordParser;
+import org.apache.nifi.serialization.record.MockRecordWriter;
+import org.apache.nifi.serialization.record.Record;
+import org.apache.nifi.serialization.record.RecordFieldType;
+import org.apache.nifi.serialization.record.RecordSchema;
 import org.apache.nifi.util.MockFlowFile;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.marklogic.client.datamovement.WriteBatcher;
-import com.marklogic.client.datamovement.WriteEvent;
-import com.marklogic.client.io.Format;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Stream;
 
 public class PutMarkLogicRecordTest extends AbstractMarkLogicProcessorTest {
 
@@ -112,9 +115,9 @@ public class PutMarkLogicRecordTest extends AbstractMarkLogicProcessorTest {
         runner.setProperty(PutMarkLogicRecord.URI_FIELD_NAME, "docID");
         runner.setProperty(PutMarkLogicRecord.URI_PREFIX, "/prefix/");
         runner.setProperty(PutMarkLogicRecord.URI_SUFFIX, "/suffix.txt");
-        String[] expectedUris = new String[] {
-           "/prefix/123/suffix.txt",
-           "/prefix/456/suffix.txt"
+        String[] expectedUris = new String[]{
+            "/prefix/123/suffix.txt",
+            "/prefix/456/suffix.txt"
         };
 
         recordReader.addRecord("123");
@@ -125,7 +128,7 @@ public class PutMarkLogicRecordTest extends AbstractMarkLogicProcessorTest {
         runner.run();
 
         assertEquals(processor.writeEvents.size(), 2);
-        for (String expectedUri:expectedUris) {
+        for (String expectedUri : expectedUris) {
             Stream<WriteEvent> writeEventStream = processor.writeEvents.parallelStream();
             assertTrue(writeEventStream.anyMatch(writeEvent -> writeEvent.getTargetUri().equals(expectedUri)));
         }
@@ -139,7 +142,7 @@ public class PutMarkLogicRecordTest extends AbstractMarkLogicProcessorTest {
 
         MockFlowFile mockFile = runner.getFlowFilesForRelationship("batch_success").get(0);
         assertEquals("The FF sent to batch_success is expected to contain each of the URIs in that batch",
-                "/prefix/123/suffix.txt,/prefix/456/suffix.txt", mockFile.getAttribute("URIs"));
+            "/prefix/123/suffix.txt,/prefix/456/suffix.txt", mockFile.getAttribute("URIs"));
     }
 
     private void configureRecordReaderFactory(ControllerService recordReaderFactory) {

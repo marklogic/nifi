@@ -78,15 +78,15 @@ public abstract class AbstractMarkLogicProcessor extends AbstractSessionFactoryP
 
     // Patterns for more friendly error messages.
     private Pattern unauthorizedPattern =
-            Pattern.compile("(?i)unauthorized", Pattern.CASE_INSENSITIVE);
+        Pattern.compile("(?i)unauthorized", Pattern.CASE_INSENSITIVE);
     private Pattern forbiddenPattern =
-            Pattern.compile("(?i)forbidden", Pattern.CASE_INSENSITIVE);
+        Pattern.compile("(?i)forbidden", Pattern.CASE_INSENSITIVE);
     private Pattern resourceNotFoundPattern =
-            Pattern.compile("(?i)resource not found", Pattern.CASE_INSENSITIVE);
+        Pattern.compile("(?i)resource not found", Pattern.CASE_INSENSITIVE);
     private Pattern invalidXMLPattern =
-            Pattern.compile("(?i)XDMP-DOC.*:\\s+xdmp:get-request-body(\"xml\")", Pattern.CASE_INSENSITIVE);
+        Pattern.compile("(?i)XDMP-DOC.*:\\s+xdmp:get-request-body(\"xml\")", Pattern.CASE_INSENSITIVE);
     private Pattern invalidJSONPattern =
-            Pattern.compile("(?i)XDMP-DOC.*:\\s+xdmp:get-request-body(\"json\")", Pattern.CASE_INSENSITIVE);
+        Pattern.compile("(?i)XDMP-DOC.*:\\s+xdmp:get-request-body(\"json\")", Pattern.CASE_INSENSITIVE);
 
     @Override
     public void init(final ProcessorInitializationContext context) {
@@ -99,7 +99,7 @@ public abstract class AbstractMarkLogicProcessor extends AbstractSessionFactoryP
 
     public void populatePropertiesByPrefix(ProcessContext context) {
         propertiesByPrefix.clear();
-        for (PropertyDescriptor propertyDesc: context.getProperties().keySet()) {
+        for (PropertyDescriptor propertyDesc : context.getProperties().keySet()) {
             if (propertyDesc.isDynamic() && propertyDesc.getName().contains(":")) {
                 String[] parts = propertyDesc.getName().split(":", 2);
                 String prefix = parts[0];
@@ -122,7 +122,7 @@ public abstract class AbstractMarkLogicProcessor extends AbstractSessionFactoryP
     protected String[] getArrayFromCommaSeparatedString(String stringValue) {
         String[] stringArray = null;
 
-        if (stringValue != null && !stringValue.isEmpty()){
+        if (stringValue != null && !stringValue.isEmpty()) {
             stringValue = stringValue.trim();
 
             if (!stringValue.isEmpty()) {
@@ -141,7 +141,7 @@ public abstract class AbstractMarkLogicProcessor extends AbstractSessionFactoryP
         String description;
         ExpressionLanguageScope scope = ExpressionLanguageScope.VARIABLE_REGISTRY;
 
-        switch(prefix) {
+        switch (prefix) {
             case "trans":
                 description = "Defines a parameter named '" + postfix + "' that will be passed to a REST transform";
                 break;
@@ -183,7 +183,7 @@ public abstract class AbstractMarkLogicProcessor extends AbstractSessionFactoryP
                     serverTransform.addParameter(
                         descriptor.getName().substring(transformPrefix.length() + 1),
                         context.getProperty(descriptor).evaluateAttributeExpressions(context.getAllProperties()).getValue()
-                     );
+                    );
                 }
             }
         }
@@ -241,7 +241,7 @@ public abstract class AbstractMarkLogicProcessor extends AbstractSessionFactoryP
             getLogger().error("Verify your user has ample privileges; error: " + errorMessage, t);
         } else if (t instanceof ResourceNotFoundException || errorMessage.matches(resourceNotFoundPattern.pattern())) {
             getLogger().error("Failed due to 'Resource Not Found'; " +
-                    "verify you're pointing a MarkLogic REST instance and referenced extensions/transforms are installed; error: " + errorMessage, t);
+                "verify you're pointing a MarkLogic REST instance and referenced extensions/transforms are installed; error: " + errorMessage, t);
         } else if (errorMessage.matches(invalidXMLPattern.pattern())) {
             getLogger().error("Expected valid XML payload; error: " + errorMessage, t);
         } else if (errorMessage.matches(invalidJSONPattern.pattern())) {

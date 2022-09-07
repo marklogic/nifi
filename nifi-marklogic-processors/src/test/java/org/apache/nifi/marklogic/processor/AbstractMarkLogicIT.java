@@ -39,10 +39,10 @@ import static junit.framework.TestCase.assertTrue;
 
 /**
  * Utilizes the JUnit5 test support provided by marklogic-junit - https://github.com/rjrudin/marklogic-junit .
- *
+ * <p>
  * A DatabaseClient is constructed based on the properties loaded by the TestConfig class, which conveniently reads
  * from the Gradle properties files that are used to deploy the test application.
- *
+ * <p>
  * The test database is cleared before every test is run so that no "residue" is left behind.
  */
 @ContextConfiguration(classes = {TestConfig.class})
@@ -76,13 +76,14 @@ public abstract class AbstractMarkLogicIT extends AbstractSpringMarkLogicTest {
             this.attributes = new HashMap<>();
             this.content = content;
         }
+
         IngestDoc(String fileName, String content) {
             this(content);
             addAttribute("filename", fileName);
         }
 
         public String getFileName() {
-            return attributes.getOrDefault("filename","uuid");
+            return attributes.getOrDefault("filename", "uuid");
         }
 
         public String getContent() {
@@ -93,22 +94,23 @@ public abstract class AbstractMarkLogicIT extends AbstractSpringMarkLogicTest {
             attributes.put(key, value);
         }
 
-        public Map<String,String> getAttributes() {
+        public Map<String, String> getAttributes() {
             return this.attributes;
         }
     }
+
     protected List<IngestDoc> documents;
 
     protected void setup() {
         documents = new ArrayList<>(numDocs);
         dataMovementManager = getDatabaseClient().newDataMovementManager();
-        for(int i = 0; i < numDocs; i++) {
+        for (int i = 0; i < numDocs; i++) {
             String fileName = "/PutMarkLogicTest/";
             String content = "";
-            if(i % xmlMod == 0) {
+            if (i % xmlMod == 0) {
                 fileName += i + ".xml";
                 content = "<root><sample>xmlcontent</sample><dateTime xmlns=\"namespace-test\">2000-01-01T00:00:00.000000</dateTime></root>";
-            } else if ( i % jsonMod == 0) {
+            } else if (i % jsonMod == 0) {
                 fileName += i + ".json";
                 content = "{\"sample\":\"jsoncontent\", \"dateTime\":\"2000-01-01T00:00:00.000000\"}";
             } else if (i % txtMod == 0) {
@@ -151,7 +153,7 @@ public abstract class AbstractMarkLogicIT extends AbstractSpringMarkLogicTest {
         StructuredQueryDefinition collectionQuery = new StructuredQueryBuilder().collection(collection);
         AtomicInteger actualNumberOfDocs = new AtomicInteger(0);
         QueryBatcher queryBatcher = dataMovementManager.newQueryBatcher(collectionQuery)
-                .onUrisReady(queryBatch -> actualNumberOfDocs.addAndGet(queryBatch.getItems().length));
+            .onUrisReady(queryBatch -> actualNumberOfDocs.addAndGet(queryBatch.getItems().length));
         dataMovementManager.startJob(queryBatcher);
         queryBatcher.awaitCompletion();
         dataMovementManager.stopJob(queryBatcher);

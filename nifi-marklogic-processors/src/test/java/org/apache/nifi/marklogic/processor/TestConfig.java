@@ -11,16 +11,16 @@ import org.springframework.context.annotation.PropertySource;
  */
 @Configuration
 @PropertySource(
-	value = {"file:gradle.properties", "file:gradle-local.properties"},
-	ignoreResourceNotFound = true
+    value = {"file:gradle.properties", "file:gradle-local.properties"},
+    ignoreResourceNotFound = true
 )
 public class TestConfig extends SimpleTestConfig {
 
-	@Value("${mlRestPort:0}")
-	private Integer restPort;
+    @Value("${mlRestPort:0}")
+    private Integer restPort;
 
-	@Override
-	public Integer getRestPort() {
-		return restPort;
-	}
+    @Override
+    public Integer getRestPort() {
+        return restPort;
+    }
 }
