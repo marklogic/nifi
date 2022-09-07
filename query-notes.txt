@@ -1,0 +1,86 @@
+ApplyTransformML
+- Success = each doc is sent here as a new FlowFile
+- Failure = a failed batch results in a new FlowFile sent here for every URI in the batch
+
+CallRestExtensionML
+- Results = each item returned by ML is sent here as a cloned FlowFile
+- Original = the original FlowFile (which may be new) is sent here
+- Failure = if any error occurs when calling ML or handling the results, the original FlowFile is sent here with the
+error message added to it
+
+DeleteML
+- Success = each deleted URI results in a new FlowFile being sent here
+- Original = the original FlowFile, if not null, is sent here
+- Failure = if a batch fails to be deleted, a new FlowFile for every URI in the batch is sent here
+
+ExecuteScriptML (requires incoming FF to exist)
+- Results = gets a cloned FlowFile for each item returned by the script; does not get a FlowFile for the first item if the
+'Skip First Result' property is true
+- First Result = gets a cloned FlowFile for the first item returned by the script
+- Last result = gets a cloned FlowFile for the last item returned by the script if it returns at least two items
+- Original = the original FlowFile is sent here, with a new attribute containing the count of items returned
+- Failure = if any error occurs when the processor is triggered, the original FlowFile is sent here with an error message
+in it
+
+ExtensionCallML (DEPRECATED)
+- Success = gets the original FlowFile (new if doesn't exist) with all items returned by ML appended to its boduy
+- Failure = if any error occurs, original FlowFile (if exists) is sent here with error message
+
+QueryML
+- Success = each item returned by the query results in a new FlowFile being sent here
+- Original = if the original FlowFile exists, it's sent here, unmodified
+- Failure = if a failure occurs for a particular query batch, the original FlowFile (or a new one if one doesn't exist)
+is sent here (this doesn't seem to make sense since multiple batches can fail in a given job)
+
+QueryRowsML
+- Success = the original FlowFile (or a new one if one doesn't exist) is sent here with the
+- Failure = unused (the questionable "log and rollback" approach is used if any error occurs)
+
+
+
+
+So we have multiple inconsistent things for all query-related processors:
+
+1. Whether or not an incoming FlowFile is required
+2. What happens if anything fails (sometimes log/rollback occurs, sometimes FlowFile is sent to Failure relationship)
+3. What happens to the incoming FlowFile if it exists
+4. How FlowFiles are created for each item returned by ML (new, or cloned off incoming FlowFile)
+
+
+
+
+CallRestExtensionML implements the preferred approach for these things:
+
+1. An incoming FlowFile is conditionally required via a "Requires Input" property
+2. If any failure occurs when the processor is triggered, the incoming FlowFile is sent to Failure with an error message
+3. If the incoming FlowFile exists, it's sent to the Original relationship
+4. A cloned FlowFile is created for each item returned by ML, with its body set to the item
+
+Changes to make based on what's above:
+
+ApplyTransform
+- Clone new FlowFiles from original, if it exists
+- Send original to Original
+- Requires Input
+
+
+
+
+With backwards compatibility in mind for a minor release, here's what we can do:
+
+1. Make all of them have a "Requires Input" field like CallRestExtensionMarkLogic
+
+2. For processors that use a QueryBatcher (i.e. make multiple calls to ML), if a batch fails, send one new FlowFile to a
+Failure relationship that contains info from the failed batch
+- TBD on scope
+
+3. For processors that make a single call to ML (CallRestExtension, ExecuteScript, QueryRows), if a failure occurs anywhere,
+send the incoming FF (or create a new one) to Failure with an error message on it
+- can consider this a bug fix for QueryRows
+
+4. Always send incoming FF (if it exists) to Original relationship (can add attributes if desired)
+- TBD on scope
+
+5. Make sure new FlowFiles for items returned by ML are created based off incoming FlowFile if it exists
+- could consider this a bug fix
+

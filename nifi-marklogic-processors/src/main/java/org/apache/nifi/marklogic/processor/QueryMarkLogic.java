@@ -23,9 +23,11 @@ import com.marklogic.client.datamovement.*;
 import com.marklogic.client.datamovement.impl.JobReportImpl;
 import com.marklogic.client.document.DocumentManager.Metadata;
 import com.marklogic.client.document.ServerTransform;
+import com.marklogic.client.expression.PlanBuilder;
 import com.marklogic.client.io.*;
 import com.marklogic.client.query.*;
 import com.marklogic.client.query.StructuredQueryBuilder.Operator;
+import com.marklogic.client.row.RowManager;
 import com.marklogic.client.util.EditableNamespaceContext;
 import org.apache.nifi.annotation.behavior.*;
 import org.apache.nifi.annotation.behavior.InputRequirement.Requirement;
@@ -151,12 +153,31 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
     }
 
     @Override
-    public void onTrigger(final ProcessContext context, final ProcessSessionFactory sessionFactory)
-        throws ProcessException {
+    public void onTrigger(final ProcessContext context, final ProcessSessionFactory sessionFactory) throws ProcessException {
+        getLogger().warn("QUERY TRIGGERED!!!!");
         final ProcessSession session = sessionFactory.createSession();
         super.populatePropertiesByPrefix(context);
+        FlowFile robFlow = null;
+        if (context.hasIncomingConnection()) {
+            robFlow = session.get();
+            getLogger().warn("INCOMING FF: " + robFlow);
+        } else {
+            getLogger().warn("NO INCOMING CONNECTION, so FF IS NULL!");
+        }
+        final FlowFile incomingFlowFile = robFlow;
+
+//        final FlowFile incomingFlowFile = context.hasIncomingConnection() ? session.get() : null;
         try {
-            final FlowFile incomingFlowFile = context.hasIncomingConnection() ? session.get() : null;
+            /**
+             * Huh - so do we even need Requires Input? This seems to do the same thing. If there's an upstream
+             * connection, then don't do anything unless there's a FlowFile. Otherwise, use null, only creating a new
+             * one if a failure occurs.
+             *
+             * If this is the first processor, the user is expected to schedule it to whatever they want.
+             *
+             * If this has a processor before it... then does this only get triggered if there is a FlowFile, which
+             * means we need to do stuff?
+             */
 
             StateMap stateMap = context.getStateManager().getState(Scope.CLUSTER);
             DatabaseClient client = getDatabaseClient(context);
@@ -232,7 +253,11 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
             session.commitAsync();
         } catch (final Throwable t) {
             context.yield();
-            this.logErrorAndRollbackSession(t, session);
+            if (incomingFlowFile != null) {
+                this.logErrorAndTransfer(t, incomingFlowFile, session, FAILURE);
+            } else {
+                this.logErrorAndTransfer(t, session.create(), session, FAILURE);
+            }
         }
     }
 

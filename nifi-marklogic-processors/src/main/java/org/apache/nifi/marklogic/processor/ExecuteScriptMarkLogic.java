@@ -193,13 +193,12 @@ public class ExecuteScriptMarkLogic extends AbstractMarkLogicProcessor {
     public final void onTrigger(final ProcessContext context, final ProcessSessionFactory sessionFactory)
         throws ProcessException {
         final ProcessSession session = sessionFactory.createSession();
-        FlowFile originalFF = null;
-        try {
-            originalFF = session.get();
-            if (originalFF == null) {
-                return;
-            }
+        FlowFile originalFF = session.get();
+        if (originalFF == null) {
+            return;
+        }
 
+        try {
             final String resultsDest = context.getProperty(RESULTS_DESTINATION).getValue();
             final String contentVariable = context.getProperty(CONTENT_VARIABLE).evaluateAttributeExpressions(originalFF).getValue();
             final boolean skipFirst = context.getProperty(SKIP_FIRST).getValue().equals("true");

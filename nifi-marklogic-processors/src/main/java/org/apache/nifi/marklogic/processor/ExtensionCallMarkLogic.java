@@ -157,11 +157,32 @@ public class ExtensionCallMarkLogic extends AbstractMarkLogicProcessor {
         final ProcessSession session = sessionFactory.createSession();
 
         final String requiresInput = context.getProperty(REQUIRES_INPUT).getValue();
+        /**
+         * This is saying - if Requires Input is true, then we need to have an incoming FlowFile. Otherwise, we yield.
+         * If it's false, then we're making a new one.
+         *
+         * So if it's true - the default value -
+         */
         FlowFile originalFlowFile = session.get();
         if ("true".equals(requiresInput) && originalFlowFile == null) {
             context.yield();
             return;
         } else if ("false".equals(requiresInput)) {
+            // This is fine because either it was just scheduled, or it has an incoming connection in which case
+            /**
+             * Well let's think about this.
+             *
+             * If I have an incoming connection, I've almost certainly set this to "true". In which case neither conditional
+             * happens here because originalFlowFile will never be null.
+             *
+             * If I don't have an incoming connection, I've almost certainly set this to "false". In which case this will
+             * create a meaningless empty FlowFile, which a user is free to terminate in CallRestExtensionML.
+             *
+             * If I don't have an incoming connection, there's no way I've set this to "true" as it will never run.
+             *
+             * If I have an incoming connection, and I set this to "false" - then I'm getting buggy behavior because
+             * this will only get triggered when there's an incoming FlowFile, in which case I'm trashing it. 
+             */
             originalFlowFile = session.create();
         }
 
