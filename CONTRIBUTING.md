@@ -25,10 +25,11 @@ Next, clone this repository (if you haven't already) and run the following comma
 
     mvn clean install -DskipTests
 
-It is recommended to use "-DskipTests" when building the NARs for the purpose of testing them in NiFi. The tests are
-typically run separately while developing the connector and often via an IDE. 
+It is recommended to use "-DskipTests" when building the NARs for the purpose of testing them in NiFi. The tests should
+certainly be run throughout the development process and before submitting a pull request. But for manually testing the 
+connector via NiFi, it's usually acceptable to skip running the tests to avoid the delay associated with running them. 
 
-After "install" completes, the below NARs will have been created:
+After `install` completes, the below NARs will have been created:
 
 - ./nifi-marklogic-nar/target/nifi-marklogic-nar-(version).nar
 - ./nifi-marklogic-services-api-nar/target/nifi-marklogic-services-api-nar-(version).nar
@@ -84,37 +85,38 @@ work if you've installed NiFi homebrew, but otherwise, you likely will need `$NI
 
 ## Running the tests
 
-Please note that the instructions right below this only run the JUnit 4 tests within this project. The project
-also contains JUnit 5 tests, but the necessary Maven config has not been determined yet to allow for both sets of tests
-to be run when running the Maven "test" task. If you would like to run the tests - which is important when
-developing the connector - please use an IDE such as IntelliJ that is able to run both the JUnit 4 and JUnit 5 tests
-at the same time.
-
-After cloning this repository locally and installing Maven, you can run the tests for the connector by performing the
-following steps (as noted above, be sure to use Java 8):
+This project contains both unit and integration tests. The integration tests depend on a small MarkLogic application
+that must first be deployed to MarkLogic via [ml-gradle](https://github.com/marklogic-community/ml-gradle). The 
+application is deployed via the following steps:
 
 1. `cd nifi-marklogic-processors`
-1. Put your ML admin username/password in gradle-local.properties (a gitignored file, so you'll need to create it)
-1. Run `./gradlew -i mldeploy` (uses Gradle to deploy a small test application to ML)
-1. `cd ..`
-1. Run `mvn clean test`
+2. Put your ML admin username/password in gradle-local.properties (a gitignored file, so you'll need to create it)
+3. Run `./gradlew -i mldeploy`
 
-You should have output like this:
+You can then run all tests in the project via the following:
+
+    mvn verify
+
+Or run `mvn clean verify` to first perform a clean build.
+
+You should see logging from all the Maven phases, including logging from tests, which then concludes with a summary
+like the one below:
 
 ```
-[INFO] ------------------------------------------------------------------------
-[INFO] Reactor Summary for nifi-marklogic-bundle 1.15.3:
+[INFO] Reactor Summary for nifi-marklogic-bundle 1.16.3.1:
 [INFO] 
-[INFO] nifi-marklogic-bundle .............................. SUCCESS [  1.062 s]
-[INFO] nifi-marklogic-services-api ........................ SUCCESS [  1.032 s]
-[INFO] nifi-marklogic-services-api-nar .................... SUCCESS [  0.366 s]
-[INFO] nifi-marklogic-services ............................ SUCCESS [  2.692 s]
-[INFO] nifi-marklogic-processors .......................... SUCCESS [  5.757 s]
-[INFO] nifi-marklogic-nar ................................. SUCCESS [  1.235 s]
-[INFO] nifi-marklogic-services-nar ........................ SUCCESS [  0.506 s]
-[INFO] ------------------------------------------------------------------------
-[INFO] BUILD SUCCESS
+[INFO] nifi-marklogic-bundle .............................. SUCCESS [  1.179 s]
+[INFO] nifi-marklogic-services-api ........................ SUCCESS [  1.208 s]
+[INFO] nifi-marklogic-services-api-nar .................... SUCCESS [  1.175 s]
+[INFO] nifi-marklogic-services ............................ SUCCESS [  1.752 s]
+[INFO] nifi-marklogic-processors .......................... SUCCESS [01:10 min]
+[INFO] nifi-marklogic-nar ................................. SUCCESS [  2.861 s]
+[INFO] nifi-marklogic-services-nar ........................ SUCCESS [  1.752 s]
 ```
+
+You can also only run the unit tests, which do not make any calls to the MarkLogic application installed above:
+
+    mvn test
 
 # Submitting a pull request
 

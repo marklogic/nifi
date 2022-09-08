@@ -149,4 +149,26 @@
 
   </dependencies>
 
+  <!--
+  Integration tests - those ending in "IT" instead of "Test" - are surprisingly not run by default via the 'verify'
+  goal. https://maven.apache.org/surefire/maven-failsafe-plugin/usage.html shows how to address this.
+  -->
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-failsafe-plugin</artifactId>
+        <version>3.0.0-M5</version>
+        <executions>
+          <execution>
+            <goals>
+              <goal>integration-test</goal>
+              <goal>verify</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+
 </project>
