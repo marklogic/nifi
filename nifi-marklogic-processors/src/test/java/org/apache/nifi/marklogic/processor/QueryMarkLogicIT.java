@@ -18,12 +18,15 @@ package org.apache.nifi.marklogic.processor;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.marklogic.client.DatabaseClient;
+import com.marklogic.client.datamovement.DataMovementManager;
 import com.marklogic.client.datamovement.QueryBatcher;
 import com.marklogic.client.document.DocumentWriteSet;
 import com.marklogic.client.document.GenericDocumentManager;
 import com.marklogic.client.io.DocumentMetadataHandle;
 import com.marklogic.client.io.JacksonHandle;
 import com.marklogic.client.io.StringHandle;
+import com.marklogic.client.query.StructuredQueryDefinition;
 import org.apache.nifi.components.state.Scope;
 import org.apache.nifi.flowfile.attributes.CoreAttributes;
 import org.apache.nifi.processor.Processor;
@@ -66,6 +69,30 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
             writeSet.add(document.getFileName(), metadata, new StringHandle(document.getContent()));
         }
         mgr.write(writeSet);
+    }
+
+    @Test
+    void test() {
+        DatabaseClient client = getDatabaseClient();
+        DataMovementManager dmm = client.newDataMovementManager();
+        StructuredQueryDefinition query = client.newQueryManager().newStructuredQueryBuilder().collection(TEST_COLLECTION);
+        QueryBatcher qb = dmm.newQueryBatcher(query);
+        qb.withBatchSize(10);
+        qb.withThreadCount(2);
+        qb.onUrisReady(batch -> {
+            // So really, we need a try/catch in the success listener
+            logger.info("ITEMS: " + Arrays.asList(batch.getItems()));
+            if (batch.getJobBatchNumber() == 2) {
+                throw new RuntimeException("Boom! Batch 2");
+            }
+        });
+        qb.onQueryFailure(failure -> {
+            logger.error("FAILURE: " + failure.getMessage());
+        });
+        dmm.startJob(qb);
+        qb.awaitCompletion();
+        dmm.stopJob(qb);
+        logger.info("DONE!");
     }
 
     @Override

@@ -231,26 +231,26 @@ public class ExecuteScriptMarkLogic extends AbstractMarkLogicProcessor {
                 count++;
                 final String resultStr = result.getString();
                 last = resultStr;
-                if (count == 1) {
-                    FlowFile firstFF = session.create(originalFF);
-                    resultToFlowFile(session, resultStr, firstFF, resultsDest);
-                    session.transfer(firstFF, FIRST_RESULT);
-                }
-                if (count > 1 || !skipFirst) {
+//                if (count == 1) {
+//                    FlowFile firstFF = session.create(originalFF);
+//                    resultToFlowFile(session, resultStr, firstFF, resultsDest);
+//                    session.transfer(firstFF, FIRST_RESULT);
+//                }
+//                if (count > 1 || !skipFirst) {
                     FlowFile resultFF = session.create(originalFF);
                     resultToFlowFile(session, resultStr, resultFF, resultsDest);
                     session.transfer(resultFF, RESULTS);
-                }
+//                }
             }
 
             originalFF = session.putAttribute(originalFF, MARKLOGIC_RESULTS_COUNT, Integer.toString(count));
             session.transfer(originalFF, ORIGINAL);
 
-            if (last != null && (count > 1 || !skipFirst)) {
-                FlowFile lastFF = session.create(originalFF);
-                resultToFlowFile(session, last, lastFF, resultsDest);
-                session.transfer(lastFF, LAST_RESULT);
-            }
+//            if (last != null && (count > 1 || !skipFirst)) {
+//                FlowFile lastFF = session.create(originalFF);
+//                resultToFlowFile(session, last, lastFF, resultsDest);
+//                session.transfer(lastFF, LAST_RESULT);
+//            }
 
             session.commitAsync();
         } catch (final Throwable t) {

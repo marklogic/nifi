@@ -84,3 +84,91 @@ send the incoming FF (or create a new one) to Failure with an error message on i
 5. Make sure new FlowFiles for items returned by ML are created based off incoming FlowFile if it exists
 - could consider this a bug fix
 
+
+WHAT TO DO FOR EACH PROCESSOR
+
+In general - when an FF isn't required but we can produce multiple outgoing FFs, the benefit of creating a new FF and
+cloning from that is that it allows for all the outgoing FF's to be traced back to that one FF and thus associated
+together. That's because they'll all have the same "filename"... hmm wait, doesn't that get overridden?? Well, it doesn't
+for ExecuteScript because that doesn't modify the "filename". But the QueryML hierarchy does override that. In which
+case I don't think there's any way to tie them together.
+
+Now, for ExecuteScript, it seems useful for the Original to have info about the script - e.g. the script body or
+module path, possibly any variables added too. This seems true for the QueryML processors too - they can include useful
+bits about the query that was executed and the transform that was used. They can capture the query and the state query
+as well.
+
+So yes - we should create a new FlowFile if one doesn't exist for the following reasons:
+1. If we don't modify the filename, all FF's coming from it can be tied together
+2. Maybe NiFi Provenance lets them all be tied together too?
+3. Each processor likely has useful stuff it can stash onto the new FF
+
+
+
+QueryML; has success/failure/original
+- This uses hasIncomingConnection, which is good
+- This correctly sends the incoming to Original
+- Good: if any error occurs outside of a batch, send the incoming or new FF to Failure with error message
+- FIX: new FlowFiles are not cloned from incoming if it exists
+- FIX: If a batch fails to be queried, the incoming FlowFile can be transferred multiple times to Failure. I think we
+always want a new FlowFile (created from the original), plus the error message and other relevant details in the QueryFailure.
+ This seems like it would only happen for a bug in DMSDK. THe best we can do is create a new
+FlowFile and add as much info from the QueryBatchException as possible. We certainly don't expect this to happen though
+because it really seems like it would require a bug in DMSDK.
+Note that if the query fails, that'll blow up before any batches are returned - e.g. if a directory query doesn't end
+with "/". This won't be invoked when that happens.
+- FIX: If an error occurs when processing a retrieved batch, create a new FlowFile for the failed batch (we don't have
+access to the items). ExportListener has support for this already, just need to take advantage of it. The anonymous
+QueryBatchListener then needs a try/catch in it.
+
+ApplyTransformML (extends QueryML); has success/failure, incorrectly ignoring original
+- FIX: Modify to inherit the "forward original" behavior from QueryML (what this means today is that if there is an
+incoming FF for this, the processor is failing)
+- FIX: Clone incoming FlowFile if it exists
+- It looks like there's no real chance of an error when processing each item after the batch has been transformed
+- There's an onFailure method for when the transform fails on a batch; this generates a new FlowFile for each item
+in the batch, which seems reasonable. Just need to FIX: Clone incoming FlowFile if it exists.
+- Will inherit the onQueryFailure behavior
+
+DeleteML (extends QueryML); has success/failure/original
+- For each item in a batch (item = deleted URI), a FF is sent to Success
+- FIX: Clone incoming FlowFile if it exists for each deleted URI
+- FIX: Clone incoming FlowFile if it exists when a batch fails
+- Will inherit the onQueryFailure behavior
+
+ExtensionCallML (deprecated); has success/failure
+- If anything goes wrong, we send original FF to Failure with error message = good
+- Success is all screwed up, with the append = not going to fix because it's deprecated
+
+CallRestExtensionML; has results/original/failure
+- Bummer that it's "results" and not "success", but that train has sailed; ExecuteScript is the same way
+- Original correctly goes to original
+- Results are cloned from original
+- Failure is good
+- So no changes, except the same "Deprecate Requires Input" bit
+
+QueryRowsML; has success and ignored failure
+- Doesn't need to use hasIncomingConnection; it needs to have a new FlowFile to write all the content to, since it's
+a single output. So no change needed here.
+- Should send original if it exists to new Original relationship (will need to make this terminate by default?)
+- Should send new output to Success - treat this as a bug fix
+- Has a big try/catch, but uses logErrorAndRollback; switch this to transferring to Failure
+- TODO Support an Optic Query DSL processor
+
+ExecuteScriptML; has results / first result / last result / original / failure
+- Let's ignore the first/last result stuff, that's a separate matter
+- This doesn't support being the first processor in a flow, which seems silly. It requires an original FF.
+- FIX: use hasIncomingConnection and if it's false, just use a new original FlowFile
+- A new original FLowFile is required so that an attribute can be added to it with the result count
+- TODO Does it matter if each cloned FF is from a new FF or not? Is there some linkage that matters?
+- The firstResult and lastResult FF is created from the original, so that's good
+- Each result is created from the original, so that's good
+- Has a big try/catch and uses logErrorAndTransfer, so that's good
+
+
+
+
+
+Let's deprecate Requires Input separately, in favor of hasIncomingConnection
+
+

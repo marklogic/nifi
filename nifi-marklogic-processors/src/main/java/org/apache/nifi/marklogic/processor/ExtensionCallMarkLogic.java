@@ -131,7 +131,7 @@ public class ExtensionCallMarkLogic extends AbstractMarkLogicProcessor {
         List<PropertyDescriptor> list = new ArrayList<>();
         list.add(DATABASE_CLIENT_SERVICE);
         list.add(EXTENSION_NAME);
-        list.add(REQUIRES_INPUT);
+//        list.add(REQUIRES_INPUT);
         list.add(METHOD_TYPE);
         list.add(PAYLOAD_SOURCE);
         list.add(PAYLOAD_FORMAT);
@@ -156,18 +156,38 @@ public class ExtensionCallMarkLogic extends AbstractMarkLogicProcessor {
     public void onTrigger(ProcessContext context, ProcessSessionFactory sessionFactory) throws ProcessException {
         final ProcessSession session = sessionFactory.createSession();
 
-        final String requiresInput = context.getProperty(REQUIRES_INPUT).getValue();
+//        final String requiresInput = context.getProperty(REQUIRES_INPUT).getValue();
         /**
          * This is saying - if Requires Input is true, then we need to have an incoming FlowFile. Otherwise, we yield.
          * If it's false, then we're making a new one.
          *
-         * So if it's true - the default value -
+         * So if it's true - the default value - it's equivalent to requiring an upstream connector.
+         * If it's false, it's equivalent to not having any upstream connector.
+         *
+         * The other 2 scenarios are weird/pointless:
+         *
+         * If it's true but does not have an upstream connector - well that will never work
+         * If it's false an has an upstream connector - it'll still only ever be invoked when there's stuff awaiting
+         * since it doesn't have TriggerWhenEmpty.
+         *
+         * TODO Can we get rid of it without breaking stuff?
          */
-        FlowFile originalFlowFile = session.get();
-        if ("true".equals(requiresInput) && originalFlowFile == null) {
-            context.yield();
-            return;
-        } else if ("false".equals(requiresInput)) {
+        FlowFile originalFlowFile = null;
+        if (context.hasIncomingConnection()) {
+            // This is expected to always be non-null, as NiFi guarantees that if the processor has an incoming
+            // connection, it will only be triggered if there's work to be done - i.e. a FlowFile exists
+            originalFlowFile = session.get();
+            getLogger().info("GOT ORIGINAL FF: " + originalFlowFile);
+        }
+        if (originalFlowFile == null) {
+            getLogger().info("CREATING ORIGINAL FF");
+            originalFlowFile = session.create();
+        }
+
+//        if ("true".equals(requiresInput) && originalFlowFile == null) {
+//            context.yield();
+//            return;
+//        } else if ("false".equals(requiresInput)) {
             // This is fine because either it was just scheduled, or it has an incoming connection in which case
             /**
              * Well let's think about this.
@@ -181,10 +201,10 @@ public class ExtensionCallMarkLogic extends AbstractMarkLogicProcessor {
              * If I don't have an incoming connection, there's no way I've set this to "true" as it will never run.
              *
              * If I have an incoming connection, and I set this to "false" - then I'm getting buggy behavior because
-             * this will only get triggered when there's an incoming FlowFile, in which case I'm trashing it. 
+             * this will only get triggered when there's an incoming FlowFile, in which case I'm trashing it.
              */
-            originalFlowFile = session.create();
-        }
+//            originalFlowFile = session.create();
+//        }
 
         try {
             ServiceResultIterator results = callExtension(context, session, originalFlowFile);

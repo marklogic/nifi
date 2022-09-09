@@ -369,19 +369,32 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
                 public void processEvent(QueryBatch batch) {
                     synchronized (session) {
                         Arrays.stream(batch.getItems()).forEach((uri) -> {
-                            FlowFile flowFile = session.create();
-                            session.putAttribute(flowFile, CoreAttributes.FILENAME.key(), uri);
-                            if (retrieveMetadata) {
-                                DocumentMetadataHandle metadata = new DocumentMetadataHandle();
-                                if (consistentSnapshot) {
-                                    metadata.setServerTimestamp(batch.getServerTimestamp());
+                            try {
+                                if (true) {
+                                    throw new RuntimeException("BOOM! " + uri);
                                 }
-                                batch.getClient().newDocumentManager().readMetadata(uri, metadata);
-                                addDocumentMetadata(session, flowFile, metadata);
-                            }
-                            session.transfer(flowFile, SUCCESS);
-                            if (getLogger().isDebugEnabled()) {
-                                getLogger().debug("Routing " + uri + " to " + SUCCESS.getName());
+                                FlowFile flowFile = session.create();
+                                session.putAttribute(flowFile, CoreAttributes.FILENAME.key(), uri);
+                                if (retrieveMetadata) {
+                                    DocumentMetadataHandle metadata = new DocumentMetadataHandle();
+                                    if (consistentSnapshot) {
+                                        metadata.setServerTimestamp(batch.getServerTimestamp());
+                                    }
+                                    batch.getClient().newDocumentManager().readMetadata(uri, metadata);
+                                    addDocumentMetadata(session, flowFile, metadata);
+                                }
+                                session.transfer(flowFile, SUCCESS);
+                                if (getLogger().isDebugEnabled()) {
+                                    getLogger().debug("Routing " + uri + " to " + SUCCESS.getName());
+                                }
+                            } catch (Throwable t) {
+                                logError(t);
+                                FlowFile ff = session.create();
+                                session.putAttribute(ff, CoreAttributes.FILENAME.key(), uri);
+                                if (t.getMessage() != null) {
+                                    session.putAttribute(ff, "markLogicErrorMessage", t.getMessage());
+                                }
+                                session.transfer(ff, FAILURE);
                             }
                         });
                         session.commitAsync();
@@ -413,6 +426,11 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
         metadata.getMetadataValues().forEach((metaKey, metaValue) -> {
             session.putAttribute(flowFile, "meta:" + metaKey, metaValue);
         });
+        /**
+         * So a user may want to:
+         * - not include any properties
+         * - only include certain properties
+         */
         metadata.getProperties().forEach((qname, propertyValue) -> {
             session.putAttribute(flowFile, "property:" + qname.toString(), propertyValue.toString());
         });
@@ -546,8 +564,8 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
         if (queryBatcher == null) {
             throw new IllegalStateException("No valid Query criteria specified!");
         }
-        queryBatcher.onQueryFailure(exception -> {
-            getLogger().error("Query failure: " + exception.getMessage());
+        queryBatcher.onQueryFailure(failure -> {
+            getLogger().error("Query failure: " + failure.getMessage());
             FlowFile failureFlowFile = incomingFlowFile != null ? session.penalize(incomingFlowFile) : session.create();
             session.transfer(failureFlowFile, FAILURE);
             session.commitAsync();
