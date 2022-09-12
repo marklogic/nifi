@@ -24,6 +24,7 @@ import com.marklogic.client.io.StringHandle;
 import com.marklogic.client.query.QueryManager;
 import com.marklogic.client.query.RawCombinedQueryDefinition;
 import org.apache.nifi.flowfile.attributes.CoreAttributes;
+import org.apache.nifi.marklogic.processor.util.QueryTypes;
 import org.apache.nifi.util.TestRunner;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -54,7 +55,7 @@ public class ApplyTransformMarkLogicIT extends AbstractMarkLogicIT {
             "  <cts:text xml:lang=\"en\">xmlcontent</cts:text>\n" +
             "</cts:element-value-query>";
         runner.setProperty(QueryMarkLogic.QUERY, queryStr);
-        runner.setProperty(QueryMarkLogic.QUERY_TYPE, QueryMarkLogic.QueryTypes.COMBINED_XML);
+        runner.setProperty(QueryMarkLogic.QUERY_TYPE, QueryTypes.COMBINED_XML);
         runner.setProperty(QueryMarkLogic.TRANSFORM, "AddAttribute");
         runner.setProperty("trans:name", "myAttr");
         runner.setProperty("trans:value", "myVal");

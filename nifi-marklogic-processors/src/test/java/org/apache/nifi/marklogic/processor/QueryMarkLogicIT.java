@@ -26,6 +26,7 @@ import com.marklogic.client.io.JacksonHandle;
 import com.marklogic.client.io.StringHandle;
 import org.apache.nifi.components.state.Scope;
 import org.apache.nifi.flowfile.attributes.CoreAttributes;
+import org.apache.nifi.marklogic.processor.util.QueryTypes;
 import org.apache.nifi.processor.Processor;
 import org.apache.nifi.reporting.InitializationException;
 import org.apache.nifi.util.MockFlowFile;
@@ -80,7 +81,7 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
     public void testSimpleCollectionQuery() {
         TestRunner runner = getNewTestRunner(QueryMarkLogic.class);
         runner.setProperty(QueryMarkLogic.QUERY, TEST_COLLECTION);
-        runner.setProperty(QueryMarkLogic.QUERY_TYPE, QueryMarkLogic.QueryTypes.COLLECTION);
+        runner.setProperty(QueryMarkLogic.QUERY_TYPE, QueryTypes.COLLECTION);
         runner.enqueue(new MockFlowFile(12345));
         runner.assertValid();
         runner.run();
@@ -148,7 +149,7 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
             "    }\n" +
             "  }\n" +
             "}");
-        runner.setProperty(QueryMarkLogic.QUERY_TYPE, QueryMarkLogic.QueryTypes.COMBINED_JSON);
+        runner.setProperty(QueryMarkLogic.QUERY_TYPE, QueryTypes.COMBINED_JSON);
 
         verifyCombinedJSONQueryResults(runner);
     }
@@ -164,7 +165,7 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
             "      } \n" +
             "  }\n" +
             "} }");
-        runner.setProperty(QueryMarkLogic.QUERY_TYPE, QueryMarkLogic.QueryTypes.COMBINED_JSON);
+        runner.setProperty(QueryMarkLogic.QUERY_TYPE, QueryTypes.COMBINED_JSON);
 
         verifyCombinedJSONQueryResults(runner);
     }
@@ -181,7 +182,7 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
             "  }\n" +
             "} }");
         runner.setProperty(QueryMarkLogic.RETURN_TYPE, QueryMarkLogic.ReturnTypes.DOCUMENTS_AND_META);
-        runner.setProperty(QueryMarkLogic.QUERY_TYPE, QueryMarkLogic.QueryTypes.COMBINED_JSON);
+        runner.setProperty(QueryMarkLogic.QUERY_TYPE, QueryTypes.COMBINED_JSON);
         testStateManagerJSON(runner, expectedJsonCount);
         runner.shutdown();
     }
@@ -201,7 +202,7 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
             "  <cts:element>sample</cts:element>\n" +
             "  <cts:text xml:lang=\"en\">xmlcontent</cts:text>\n" +
             "</cts:element-value-query>");
-        runner.setProperty(QueryMarkLogic.QUERY_TYPE, QueryMarkLogic.QueryTypes.COMBINED_XML);
+        runner.setProperty(QueryMarkLogic.QUERY_TYPE, QueryTypes.COMBINED_XML);
         testStateManagerXML(runner, expectedXmlCount);
         runner.shutdown();
     }
@@ -222,7 +223,7 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
             "    ]\n" +
             "  }\n" +
             "}");
-        runner.setProperty(QueryMarkLogic.QUERY_TYPE, QueryMarkLogic.QueryTypes.STRUCTURED_JSON);
+        runner.setProperty(QueryMarkLogic.QUERY_TYPE, QueryTypes.STRUCTURED_JSON);
         testStateManagerJSON(runner, expectedJsonCount);
         runner.shutdown();
     }
@@ -237,7 +238,7 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
             "    <text>xmlcontent</text>\n" +
             "  </word-query>\n" +
             "</query>");
-        runner.setProperty(QueryMarkLogic.QUERY_TYPE, QueryMarkLogic.QueryTypes.STRUCTURED_XML);
+        runner.setProperty(QueryMarkLogic.QUERY_TYPE, QueryTypes.STRUCTURED_XML);
         testStateManagerXML(runner, expectedXmlCount);
         runner.shutdown();
     }
@@ -246,7 +247,7 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
     public void testStateManagerWithJSONStringQuery() throws IOException {
         TestRunner runner = getNewTestRunner(QueryMarkLogic.class);
         runner.setProperty(QueryMarkLogic.QUERY, "jsoncontent");
-        runner.setProperty(QueryMarkLogic.QUERY_TYPE, QueryMarkLogic.QueryTypes.STRING);
+        runner.setProperty(QueryMarkLogic.QUERY_TYPE, QueryTypes.STRING);
         testStateManagerJSON(runner, expectedJsonCount);
         runner.shutdown();
     }
@@ -256,7 +257,7 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
     public void testStateManagerWithXMLStringQuery() throws IOException {
         TestRunner runner = getNewTestRunner(QueryMarkLogic.class);
         runner.setProperty(QueryMarkLogic.QUERY, "xmlcontent");
-        runner.setProperty(QueryMarkLogic.QUERY_TYPE, QueryMarkLogic.QueryTypes.STRING);
+        runner.setProperty(QueryMarkLogic.QUERY_TYPE, QueryTypes.STRING);
         testStateManagerXML(runner, expectedXmlCount);
         runner.shutdown();
     }
@@ -271,7 +272,7 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
             "  <cts:element>sample</cts:element>\n" +
             "  <cts:text xml:lang=\"en\">xmlcontent</cts:text>\n" +
             "</cts:element-value-query>");
-        runner.setProperty(QueryMarkLogic.QUERY_TYPE, QueryMarkLogic.QueryTypes.COMBINED_XML);
+        runner.setProperty(QueryMarkLogic.QUERY_TYPE, QueryTypes.COMBINED_XML);
 
         verifyCombinedXMLQueryResults(runner);
     }
@@ -288,7 +289,7 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
             "  </search:query>" +
             "</search:search>";
         runner.setProperty(QueryMarkLogic.QUERY, combinedQuery);
-        runner.setProperty(QueryMarkLogic.QUERY_TYPE, QueryMarkLogic.QueryTypes.COMBINED_XML);
+        runner.setProperty(QueryMarkLogic.QUERY_TYPE, QueryTypes.COMBINED_XML);
 
         verifyCombinedXMLQueryResults(runner);
     }
@@ -309,7 +310,7 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
             "    ]\n" +
             "  }\n" +
             "}");
-        runner.setProperty(QueryMarkLogic.QUERY_TYPE, QueryMarkLogic.QueryTypes.STRUCTURED_JSON);
+        runner.setProperty(QueryMarkLogic.QUERY_TYPE, QueryTypes.STRUCTURED_JSON);
         runner.assertValid();
         runner.run();
         runner.assertTransferCount(QueryMarkLogic.SUCCESS, expectedJsonCount);
@@ -341,7 +342,7 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
             "    <text>${word}</text>\n" +
             "  </word-query>\n" +
             "</query>");
-        runner.setProperty(QueryMarkLogic.QUERY_TYPE, QueryMarkLogic.QueryTypes.STRUCTURED_XML);
+        runner.setProperty(QueryMarkLogic.QUERY_TYPE, QueryTypes.STRUCTURED_XML);
         runner.assertValid();
         runner.run();
 
@@ -370,7 +371,7 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
     public void testStringQuery() {
         TestRunner runner = getNewTestRunner(QueryMarkLogic.class);
         runner.setProperty(QueryMarkLogic.QUERY, "xmlcontent");
-        runner.setProperty(QueryMarkLogic.QUERY_TYPE, QueryMarkLogic.QueryTypes.STRING);
+        runner.setProperty(QueryMarkLogic.QUERY_TYPE, QueryTypes.STRING);
         runner.assertValid();
         runner.run();
         runner.assertTransferCount(QueryMarkLogic.SUCCESS, expectedXmlCount);
@@ -395,7 +396,7 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
         TestRunner runner = getNewTestRunner(QueryMarkLogic.class);
         runner.setProperty(QueryMarkLogic.RETURN_TYPE, QueryMarkLogic.ReturnTypes.URIS_ONLY);
         runner.setProperty(QueryMarkLogic.QUERY, "xmlcontent");
-        runner.setProperty(QueryMarkLogic.QUERY_TYPE, QueryMarkLogic.QueryTypes.STRING);
+        runner.setProperty(QueryMarkLogic.QUERY_TYPE, QueryTypes.STRING);
         runner.assertValid();
         runner.run();
         runner.assertTransferCount(QueryMarkLogic.SUCCESS, expectedXmlCount);
@@ -422,7 +423,7 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
             TestRunner runner = getNewTestRunner(QueryMarkLogic.class);
             runner.setProperty(QueryMarkLogic.RETURN_TYPE, QueryMarkLogic.ReturnTypes.META);
             runner.setProperty(QueryMarkLogic.QUERY, uniqueString);
-            runner.setProperty(QueryMarkLogic.QUERY_TYPE, QueryMarkLogic.QueryTypes.STRING);
+            runner.setProperty(QueryMarkLogic.QUERY_TYPE, QueryTypes.STRING);
             runner.assertValid();
             runner.run();
 
@@ -451,7 +452,7 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
         TestRunner runner = getNewTestRunner(QueryMarkLogic.class);
         runner.setProperty(QueryMarkLogic.RETURN_TYPE, QueryMarkLogic.ReturnTypes.META);
         runner.setProperty(QueryMarkLogic.QUERY, "xmlcontent");
-        runner.setProperty(QueryMarkLogic.QUERY_TYPE, QueryMarkLogic.QueryTypes.STRING);
+        runner.setProperty(QueryMarkLogic.QUERY_TYPE, QueryTypes.STRING);
         runner.assertValid();
         runner.run();
 
@@ -488,11 +489,11 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
     public void testJobProperties() {
         TestRunner runner = getNewTestRunner(QueryMarkLogic.class);
         runner.setProperty(QueryMarkLogic.QUERY, TEST_COLLECTION);
-        runner.setProperty(QueryMarkLogic.QUERY_TYPE, QueryMarkLogic.QueryTypes.COLLECTION);
+        runner.setProperty(QueryMarkLogic.QUERY_TYPE, QueryTypes.COLLECTION);
         runner.run();
         Processor processor = runner.getProcessor();
         if (processor instanceof QueryMarkLogic) {
-            QueryBatcher queryBatcher = ((QueryMarkLogic) processor).getQueryBatcher();
+            QueryBatcher queryBatcher = ((QueryMarkLogic) processor).getQueryBatcherForTesting();
             assertEquals(Integer.parseInt(batchSize), queryBatcher.getBatchSize());
             assertEquals(Integer.parseInt(threadCount), queryBatcher.getThreadCount());
         } else {

@@ -74,7 +74,7 @@ public abstract class AbstractMarkLogicProcessor extends AbstractSessionFactoryP
         .required(false)
         .build();
 
-    protected final Map<String, List<PropertyDescriptor>> propertiesByPrefix = new ConcurrentHashMap<String, List<PropertyDescriptor>>();
+    protected final Map<String, List<PropertyDescriptor>> propertiesByPrefix = new ConcurrentHashMap<>();
 
     // Patterns for more friendly error messages.
     private Pattern unauthorizedPattern =
@@ -97,7 +97,15 @@ public abstract class AbstractMarkLogicProcessor extends AbstractSessionFactoryP
         properties = Collections.unmodifiableList(list);
     }
 
-    public void populatePropertiesByPrefix(ProcessContext context) {
+    /**
+     * Populates the {@code propertiesByPrefix} map based on all the properties in the given context that have a
+     * colon in their name. The text to the left of the colon is treated as a prefix, and every property starting with
+     * that prefix is tossed into a list in the {@code propertiesByPrefix} map. Subclasses can then easily find all
+     * properties that start with a particular (and usually known) prefix.
+     *
+     * @param context
+     */
+    protected void populatePropertiesByPrefix(ProcessContext context) {
         propertiesByPrefix.clear();
         for (PropertyDescriptor propertyDesc : context.getProperties().keySet()) {
             if (propertyDesc.isDynamic() && propertyDesc.getName().contains(":")) {
@@ -105,7 +113,7 @@ public abstract class AbstractMarkLogicProcessor extends AbstractSessionFactoryP
                 String prefix = parts[0];
                 List<PropertyDescriptor> propertyDescriptors = propertiesByPrefix.get(prefix);
                 if (propertyDescriptors == null) {
-                    propertyDescriptors = new CopyOnWriteArrayList<PropertyDescriptor>();
+                    propertyDescriptors = new CopyOnWriteArrayList<>();
                     propertiesByPrefix.put(prefix, propertyDescriptors);
                 }
                 propertyDescriptors.add(propertyDesc);

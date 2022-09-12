@@ -20,12 +20,16 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.marklogic.client.DatabaseClient;
 import com.marklogic.client.datamovement.*;
+import org.apache.nifi.marklogic.processor.util.QueryBatcherBuilder;
 import com.marklogic.client.datamovement.impl.JobReportImpl;
 import com.marklogic.client.document.DocumentManager.Metadata;
 import com.marklogic.client.document.ServerTransform;
 import com.marklogic.client.io.*;
-import com.marklogic.client.query.*;
+import com.marklogic.client.query.QueryManager;
+import com.marklogic.client.query.RawCombinedQueryDefinition;
+import com.marklogic.client.query.StructuredQueryBuilder;
 import com.marklogic.client.query.StructuredQueryBuilder.Operator;
+import com.marklogic.client.query.ValuesDefinition;
 import com.marklogic.client.util.EditableNamespaceContext;
 import org.apache.nifi.annotation.behavior.*;
 import org.apache.nifi.annotation.behavior.InputRequirement.Requirement;
@@ -37,17 +41,25 @@ import org.apache.nifi.components.state.StateMap;
 import org.apache.nifi.expression.ExpressionLanguageScope;
 import org.apache.nifi.flowfile.FlowFile;
 import org.apache.nifi.flowfile.attributes.CoreAttributes;
+import org.apache.nifi.marklogic.processor.util.QueryTypes;
 import org.apache.nifi.marklogic.processor.util.RangeIndexQuery;
 import org.apache.nifi.processor.*;
 import org.apache.nifi.processor.exception.ProcessException;
 import org.apache.nifi.processor.util.StandardValidators;
-import org.apache.nifi.util.EscapeUtils;
+import org.apache.nifi.util.StringUtils;
+import org.apache.nifi.util.Tuple;
 
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.regex.Pattern;
 
+/**
+ * Supports querying MarkLogic via the Data Movement SDK (DMSDK). More information on DMSDK can be found at
+ * https://docs.marklogic.com/guide/java/data-movement#id_46947 .
+ * <p>
+ * The general approach is to require the user to specify a type of query and then a textual representation of a query
+ * associated with that type.
+ */
 @Tags({"MarkLogic", "Get", "Query", "Read"})
 @InputRequirement(Requirement.INPUT_ALLOWED)
 @SystemResourceConsideration(resource = SystemResource.MEMORY)
@@ -109,10 +121,17 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
     protected static final Relationship ORIGINAL = new Relationship.Builder().name("original")
         .description("If this processor receives a FlowFile, it will be routed to this relationship").build();
 
-    protected QueryBatcher queryBatcher;
+    // Keeps track of the server timestamp at the point in time in which the query was issued. Only applies for when the
+    // user has configured the inputs for keeping track of the latest dateTime so that it can be used the next time
+    // the processor runs.
+    private volatile AtomicLong serverTimestamp = new AtomicLong(0);
 
-    protected volatile AtomicLong serverTimestamp = new AtomicLong(0);
-    protected volatile String queryState = null;
+    // This is only captured here to facilitate unit-testing
+    private QueryBatcher queryBatcher;
+
+    protected QueryBatcher getQueryBatcherForTesting() {
+        return this.queryBatcher;
+    }
 
     @Override
     public void init(ProcessorInitializationContext context) {
@@ -136,6 +155,14 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
         relationships = Collections.unmodifiableSet(set);
     }
 
+    /**
+     * Overrides the parent class method to provide a warning about the deprecated "Collections" property.
+     *
+     * @param validationContext provides a mechanism for obtaining externally
+     *                          managed values, such as property values and supplies convenience methods
+     *                          for operating on those values
+     * @return
+     */
     @Override
     protected Collection<ValidationResult> customValidate(final ValidationContext validationContext) {
         Set<ValidationResult> validationResultSet = new HashSet<>();
@@ -150,92 +177,369 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
         return validationResultSet;
     }
 
+    /**
+     * Constructs a DMSDK QueryBatcher based on the inputs provided by the user, and then runs and waits for the
+     * QueryBatcher to process the URIs matching the user's inputs.
+     *
+     * @param context        provides access to convenience methods for obtaining
+     *                       property values, delaying the scheduling of the processor, provides
+     *                       access to Controller Services, etc.
+     * @param sessionFactory provides access to a {@link ProcessSession}, which
+     *                       can be used for accessing FlowFiles, etc.
+     * @throws ProcessException
+     */
     @Override
-    public void onTrigger(final ProcessContext context, final ProcessSessionFactory sessionFactory)
-        throws ProcessException {
+    public void onTrigger(ProcessContext context, ProcessSessionFactory sessionFactory) throws ProcessException {
         final ProcessSession session = sessionFactory.createSession();
         super.populatePropertiesByPrefix(context);
         try {
             final FlowFile incomingFlowFile = context.hasIncomingConnection() ? session.get() : null;
 
-            StateMap stateMap = context.getStateManager().getState(Scope.CLUSTER);
-            DatabaseClient client = getDatabaseClient(context);
-            DataMovementManager dataMovementManager = client.newDataMovementManager();
-            queryBatcher = createQueryBatcherWithQueryCriteria(context, session, incomingFlowFile, getDatabaseClient(context),
-                dataMovementManager);
-            if (context.getProperty(BATCH_SIZE).asInteger() != null)
-                queryBatcher.withBatchSize(context.getProperty(BATCH_SIZE).asInteger());
-            if (context.getProperty(THREAD_COUNT).asInteger() != null)
-                queryBatcher.withThreadCount(context.getProperty(THREAD_COUNT).asInteger());
-            final boolean consistentSnapshot;
-            if (context.getProperty(CONSISTENT_SNAPSHOT).asBoolean() != null
-                && !context.getProperty(CONSISTENT_SNAPSHOT).asBoolean()) {
-                consistentSnapshot = false;
-            } else {
-                queryBatcher.withConsistentSnapshot();
-                consistentSnapshot = true;
-            }
-            QueryBatchListener batchListener = buildQueryBatchListener(context, session, consistentSnapshot);
-            queryBatcher.onJobCompletion((batcher) -> {
-                JobReport report = new JobReportImpl(batcher);
-                if (report.getSuccessEventsCount() == 0) {
-                    context.yield();
-                }
-                if (getLogger().isDebugEnabled()) {
-                    getLogger().debug("ML Query Job Complete [Success Count=" + report.getSuccessEventsCount()
-                        + "] [Failure Count=" + report.getFailureEventsCount() + "]");
-                }
-                if (report.getFailureBatchesCount() == 0 && context.getProperty(STATE_INDEX) != null
-                    && context.getProperty(STATE_INDEX).isSet()) {
-                    QueryManager queryMgr = client.newQueryManager();
-                    ValuesDefinition valuesDef = queryMgr.newValuesDefinition("state");
-                    RawCombinedQueryDefinition qDef = queryMgr.newRawCombinedQueryDefinition(
-                        handleForQuery(buildStateConstraintOptions(context, incomingFlowFile), Format.JSON));
-                    valuesDef.setQueryDefinition(qDef);
-                    valuesDef.setAggregate("max");
-                    ValuesHandle valuesResult = new ValuesHandle();
-                    valuesResult.setPointInTimeQueryTimestamp(serverTimestamp.get());
-                    valuesResult.setQueryCriteria(valuesDef);
-                    valuesResult = queryMgr.values(valuesDef, valuesResult);
-                    AggregateResult result = valuesResult.getAggregate("max");
-                    queryState = result.getValue();
-                    Map<String, String> alterMap = new HashMap<String, String>(stateMap.toMap());
-                    alterMap.put("queryState", queryState);
-                    try {
-                        context.getStateManager().setState(alterMap, Scope.CLUSTER);
-                    } catch (IOException e) {
-                        getLogger().error("{} Failed to store state", new Object[]{this});
-                    } finally {
-                        queryState = null;
-                    }
-                }
-            });
-            queryBatcher.onUrisReady(batchListener);
-            queryBatcher.onUrisReady((batch) -> {
-                if (batch.getJobBatchNumber() == 1) {
-                    serverTimestamp.set(batch.getServerTimestamp());
-                }
-            });
+            Tuple<DataMovementManager, QueryBatcher> tuple = newQueryBatcher(context, incomingFlowFile);
+            configureQueryBatcher(context, session, incomingFlowFile, tuple.getValue());
 
-            // Ensure that this FF has a destination so that session.commit() does not throw an error
+            // Save a reference to this solely to facilitate unit testing
+            this.queryBatcher = tuple.getValue();
+
+            // Can transfer the incoming FlowFile immediately
             if (incomingFlowFile != null) {
                 session.transfer(incomingFlowFile, ORIGINAL);
             }
-
-            getLogger().info("Starting job");
-            dataMovementManager.startJob(queryBatcher);
-            getLogger().info("Awaiting job completion");
-            queryBatcher.awaitCompletion();
-            getLogger().info("Stopping job");
-            dataMovementManager.stopJob(queryBatcher);
-            getLogger().info("Committing session");
-            session.commitAsync();
-        } catch (final Throwable t) {
+            runQueryBatcherAndCommit(session, tuple);
+        } catch (Throwable t) {
             context.yield();
             this.logErrorAndRollbackSession(t, session);
         }
     }
 
+    /**
+     * Constructs a new QueryBatcher based on inputs provided by the user.
+     *
+     * @param context
+     * @param incomingFlowFile
+     * @return A Tuple is returned to simplify the interface here so that this method can create and return both the
+     * DataMovementManager and QueryBatcher. Both objects are needed to run the QueryBatcher.
+     */
+    private Tuple<DataMovementManager, QueryBatcher> newQueryBatcher(ProcessContext context, FlowFile incomingFlowFile) {
+        DatabaseClient client = getDatabaseClient(context);
+        QueryBatcherBuilder.QueryTypeAndValue queryTypeAndValue = determineQueryTypeAndValue(context, incomingFlowFile);
+        RangeIndexQuery stateRangeIndexQuery = buildStateQuery(client, context, incomingFlowFile);
+        return new QueryBatcherBuilder(client).newQueryBatcher(queryTypeAndValue, stateRangeIndexQuery);
+    }
+
+    /**
+     * @param context
+     * @param incomingFlowFile
+     * @return a {@code QueryTypeAndValue} based on inputs provided by the user
+     */
+    private QueryBatcherBuilder.QueryTypeAndValue determineQueryTypeAndValue(ProcessContext context, FlowFile incomingFlowFile) {
+        // Migrate deprecated "Collections" property to the preferred "Collection" query type
+        final String collectionsValue = context.getProperty(COLLECTIONS).getValue();
+        if (StringUtils.isNotBlank(collectionsValue)) {
+            return new QueryBatcherBuilder.QueryTypeAndValue(QueryTypes.COLLECTION.getValue(), collectionsValue);
+        }
+        return new QueryBatcherBuilder.QueryTypeAndValue(
+            context.getProperty(QUERY_TYPE).getValue(),
+            context.getProperty(QUERY).evaluateAttributeExpressions(incomingFlowFile).getValue()
+        );
+    }
+
+    /**
+     * Configure a newly-constructed QueryBatcher.
+     *
+     * @param context
+     * @param session
+     * @param incomingFlowFile
+     * @param queryBatcher
+     */
+    private void configureQueryBatcher(ProcessContext context, ProcessSession session, FlowFile incomingFlowFile, QueryBatcher queryBatcher) {
+        if (context.getProperty(BATCH_SIZE).asInteger() != null) {
+            queryBatcher.withBatchSize(context.getProperty(BATCH_SIZE).asInteger());
+        }
+        if (context.getProperty(THREAD_COUNT).asInteger() != null) {
+            queryBatcher.withThreadCount(context.getProperty(THREAD_COUNT).asInteger());
+        }
+
+        QueryBatchListener batchListener = buildQueryBatchListener(context, session);
+        queryBatcher.onUrisReady(batchListener);
+
+        queryBatcher.onUrisReady(batch -> {
+            if (batch.getJobBatchNumber() == 1) {
+                serverTimestamp.set(batch.getServerTimestamp());
+            }
+        });
+
+        configureJobCompletionListener(context, incomingFlowFile, queryBatcher);
+
+        queryBatcher.onQueryFailure(exception -> {
+            getLogger().error("Query failure: " + exception.getMessage());
+            FlowFile failureFlowFile = incomingFlowFile != null ? session.penalize(incomingFlowFile) : session.create();
+            session.transfer(failureFlowFile, FAILURE);
+            session.commitAsync();
+            context.yield();
+        });
+    }
+
+    /**
+     * Protected so that subclasses can override it.
+     *
+     * @param context
+     * @param session
+     * @return
+     */
+    protected QueryBatchListener buildQueryBatchListener(final ProcessContext context, final ProcessSession session) {
+        final boolean retrieveFullDocument =
+            ReturnTypes.DOCUMENTS_STR.equals(context.getProperty(RETURN_TYPE).getValue()) ||
+                ReturnTypes.DOCUMENTS_AND_META_STR.equals(context.getProperty(RETURN_TYPE).getValue());
+
+        return retrieveFullDocument ? buildFullDocumentExporter(context, session) : buildNoDocumentExporter(context, session);
+    }
+
+    /**
+     * Used for when the users asks for documents and possibly metadata as well.
+     *
+     * @param context
+     * @param session
+     * @return
+     */
+    private ExportListener buildFullDocumentExporter(ProcessContext context, ProcessSession session) {
+        final boolean retrieveMetadata = shouldRetrieveMetadata(context);
+
+        ExportListener exportListener = new ExportListener().onDocumentReady(doc -> {
+            synchronized (session) {
+                final FlowFile flowFile = session.write(session.create(),
+                    out -> out.write(doc.getContent(new BytesHandle()).get()));
+                if (retrieveMetadata) {
+                    addDocumentMetadata(session, flowFile, doc.getMetadata(new DocumentMetadataHandle()));
+                }
+                session.putAttribute(flowFile, CoreAttributes.FILENAME.key(), doc.getUri());
+                session.transfer(flowFile, SUCCESS);
+                if (getLogger().isDebugEnabled()) {
+                    getLogger().debug("Routing " + doc.getUri() + " to " + SUCCESS.getName());
+                }
+            }
+        });
+        if (retrieveMetadata) {
+            exportListener.withMetadataCategory(Metadata.ALL);
+        }
+        if (Boolean.TRUE.equals(context.getProperty(CONSISTENT_SNAPSHOT).asBoolean())) {
+            exportListener.withConsistentSnapshot();
+        }
+        ServerTransform transform = this.buildServerTransform(context);
+        if (transform != null) {
+            exportListener.withTransform(transform);
+        }
+        return exportListener;
+    }
+
+    /**
+     * Used for when the user asks for URIs only or just URIs and document metadata.
+     *
+     * @param context
+     * @param session
+     * @return
+     */
+    private QueryBatchListener buildNoDocumentExporter(ProcessContext context, ProcessSession session) {
+        final boolean consistentSnapshot = Boolean.TRUE.equals(context.getProperty(CONSISTENT_SNAPSHOT).asBoolean());
+        return batch -> {
+            synchronized (session) {
+                Arrays.stream(batch.getItems()).forEach((uri) -> {
+                    FlowFile flowFile = session.create();
+                    session.putAttribute(flowFile, CoreAttributes.FILENAME.key(), uri);
+                    if (shouldRetrieveMetadata(context)) {
+                        DocumentMetadataHandle metadata = new DocumentMetadataHandle();
+                        if (consistentSnapshot) {
+                            metadata.setServerTimestamp(batch.getServerTimestamp());
+                        }
+                        batch.getClient().newDocumentManager().readMetadata(uri, metadata);
+                        addDocumentMetadata(session, flowFile, metadata);
+                    }
+                    session.transfer(flowFile, SUCCESS);
+                    if (getLogger().isDebugEnabled()) {
+                        getLogger().debug("Routing " + uri + " to " + SUCCESS.getName());
+                    }
+                });
+                session.commitAsync();
+            }
+        };
+    }
+
+    private boolean shouldRetrieveMetadata(ProcessContext context) {
+        String returnType = context.getProperty(RETURN_TYPE).getValue();
+        return ReturnTypes.META.getValue().equals(returnType) || ReturnTypes.DOCUMENTS_AND_META.getValue().equals(returnType);
+    }
+
+    private void addDocumentMetadata(ProcessSession session, FlowFile flowFile, DocumentMetadataHandle metadata) {
+        // For attributes added in 1.16.3.1, we're using a "marklogic-" prefix to avoid collisions with attributes
+        // added by other processors.
+        session.putAttribute(flowFile, "marklogic-collections", String.join(",", metadata.getCollections()));
+
+        session.putAttribute(flowFile, "marklogic-quality", metadata.getQuality() + "");
+
+        List<String> permissions = new ArrayList<>();
+        DocumentMetadataHandle.DocumentPermissions docPerms = metadata.getPermissions();
+        for (String role : docPerms.keySet()) {
+            for (DocumentMetadataHandle.Capability capability : docPerms.get(role)) {
+                permissions.add(role);
+                // Lowercase is used to mirror how MLCP expects permissions to be defined
+                permissions.add(capability.name().toLowerCase());
+            }
+        }
+        session.putAttribute(flowFile, "marklogic-permissions", String.join(",", permissions));
+
+        metadata.getMetadataValues().forEach((metaKey, metaValue) -> {
+            session.putAttribute(flowFile, "meta:" + metaKey, metaValue);
+        });
+        metadata.getProperties().forEach((qname, propertyValue) -> {
+            session.putAttribute(flowFile, "property:" + qname.toString(), propertyValue.toString());
+        });
+    }
+
+    /**
+     * Runs the {@code QueryBatcher} job and waits for it to complete, at which point it's safe to commit the
+     * NiFi session.
+     *
+     * @param session
+     * @param tuple
+     */
+    private void runQueryBatcherAndCommit(ProcessSession session, Tuple<DataMovementManager, QueryBatcher> tuple) {
+        getLogger().info("Starting job");
+        tuple.getKey().startJob(tuple.getValue());
+        getLogger().info("Awaiting job completion");
+        tuple.getValue().awaitCompletion();
+        getLogger().info("Stopping job");
+        tuple.getKey().stopJob(tuple.getValue());
+        getLogger().info("Committing session");
+        session.commitAsync();
+    }
+
+    /**
+     * Returns a RangeIndexQuery if the user has defined the STATE_INDEX property and a dateTime is found in the NiFi
+     * state map from a previous run of this processor. This query can then be combined with the query based on the
+     * user's inputs to only select URIs with a dateTime value greater than the value found in the NiFi state map.
+     * This effectively solves the problem of "Only process URIs newer than when the processor last ran".
+     *
+     * @param queryBuilder
+     * @param context
+     * @param incomingFlowFile
+     * @return
+     */
+    private RangeIndexQuery buildStateQuery(DatabaseClient client, ProcessContext context, FlowFile incomingFlowFile) {
+        if (!context.getProperty(STATE_INDEX).isSet()) {
+            return null;
+        }
+
+        String previousQueryDateTime = getPreviousDateTimeFromStateMap(context);
+        if (StringUtils.isEmpty(previousQueryDateTime)) {
+            return null;
+        }
+
+        String stateIndexValue = context.getProperty(STATE_INDEX).evaluateAttributeExpressions(incomingFlowFile).getValue();
+        String stateIndexTypeValue = context.getProperty(STATE_INDEX_TYPE).getValue();
+
+        EditableNamespaceContext namespaces = buildNamespacesForRangeIndexQuery(context, incomingFlowFile);
+        StructuredQueryBuilder queryBuilder = client.newQueryManager().newStructuredQueryBuilder();
+        queryBuilder.setNamespaces(namespaces);
+
+        return new RangeIndexQuery(queryBuilder, stateIndexTypeValue, stateIndexValue, "xs:dateTime", Operator.GT,
+            previousQueryDateTime);
+    }
+
+    /**
+     * The NiFi state map is used to keep track of values across processor runs. For this processor, the state map is
+     * used to keep track of the most recent dateTime value in the index specified by the user that was captured during
+     * the previous run of this processor.
+     *
+     * @param context
+     * @return
+     */
+    private String getPreviousDateTimeFromStateMap(ProcessContext context) {
+        StateMap stateMap;
+        try {
+            stateMap = context.getStateManager().getState(Scope.CLUSTER);
+        } catch (IOException e) {
+            getLogger().error("Unable to build range index query for previous dateTime; failed to get state map: " + e.getMessage(), e);
+            return null;
+        }
+
+        // "queryState" is not very descriptive, but it has to be preserved for backwards compatibility
+        return stateMap.get("queryState");
+    }
+
+    /**
+     * Returns a set of namespaces based on user-defined properties that begin with "ns". The namespaces can then be
+     * referenced by the range index query on the dateTime of the state index.
+     *
+     * @param context
+     * @param incomingFlowFile
+     * @return
+     */
+    private EditableNamespaceContext buildNamespacesForRangeIndexQuery(ProcessContext context, FlowFile incomingFlowFile) {
+        List<PropertyDescriptor> namespaceProperties = propertiesByPrefix.get("ns");
+        EditableNamespaceContext namespaces = new EditableNamespaceContext();
+        if (namespaceProperties != null) {
+            for (PropertyDescriptor propertyDesc : namespaceProperties) {
+                namespaces.put(propertyDesc.getName().substring(3),
+                    context.getProperty(propertyDesc).evaluateAttributeExpressions(incomingFlowFile).getValue());
+            }
+        }
+        return namespaces;
+    }
+
+    /**
+     * After the QueryBatcher job completes, gets the most recent value from the dateTime index specified by the user
+     * and stores it in the NiFi state map. This allows it to be used the next time this processor runs in a range
+     * index query to ensure that only URIs with a dateTime greater than the stored value are returned.
+     *
+     * @param context
+     * @param incomingFlowFile
+     * @param queryBatcher
+     */
+    private void configureJobCompletionListener(ProcessContext context, FlowFile incomingFlowFile, QueryBatcher queryBatcher) {
+        queryBatcher.onJobCompletion(batcher -> {
+            JobReport report = new JobReportImpl(batcher);
+            if (report.getSuccessEventsCount() == 0) {
+                context.yield();
+            }
+            if (getLogger().isDebugEnabled()) {
+                getLogger().debug("ML Query Job Complete [Success Count=" + report.getSuccessEventsCount()
+                    + "] [Failure Count=" + report.getFailureEventsCount() + "]");
+            }
+
+            boolean stateValueShouldBeUpdated = report.getFailureBatchesCount() == 0 &&
+                context.getProperty(STATE_INDEX).isSet();
+
+            if (stateValueShouldBeUpdated) {
+                QueryManager queryMgr = batcher.getPrimaryClient().newQueryManager();
+                ValuesDefinition valuesDef = queryMgr.newValuesDefinition("state");
+                RawCombinedQueryDefinition qDef = queryMgr.newRawCombinedQueryDefinition(
+                    new StringHandle(buildStateConstraintOptions(context, incomingFlowFile)).withFormat(Format.JSON));
+                valuesDef.setQueryDefinition(qDef);
+                valuesDef.setAggregate("max");
+                ValuesHandle valuesResult = new ValuesHandle();
+                valuesResult.setPointInTimeQueryTimestamp(serverTimestamp.get());
+                valuesResult.setQueryCriteria(valuesDef);
+                valuesResult = queryMgr.values(valuesDef, valuesResult);
+                String queryStateValue = valuesResult.getAggregate("max").getValue();
+                try {
+                    StateMap stateMap = context.getStateManager().getState(Scope.CLUSTER);
+                    Map<String, String> alterMap = new HashMap<>(stateMap.toMap());
+                    alterMap.put("queryState", queryStateValue);
+                    context.getStateManager().setState(alterMap, Scope.CLUSTER);
+                } catch (IOException e) {
+                    getLogger().error("{} Failed to store state", new Object[]{this});
+                }
+            }
+        });
+    }
+
+    /**
+     * Builds a set of search options for getting the most recent value from the index identified by the user.
+     *
+     * @param context
+     * @param flowFile
+     * @return
+     */
     private String buildStateConstraintOptions(final ProcessContext context, final FlowFile flowFile) {
         JsonObject rootObject = new JsonObject();
         JsonObject searchObject = new JsonObject();
@@ -281,318 +585,6 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
                 break;
         }
         return rootObject.toString();
-    }
-
-    /**
-     * Protected so that subclasses can override it.
-     *
-     * @param context
-     * @param session
-     * @param consistentSnapshot
-     * @return
-     */
-    protected QueryBatchListener buildQueryBatchListener(final ProcessContext context, final ProcessSession session,
-                                                         final boolean consistentSnapshot) {
-        final boolean retrieveFullDocument;
-        if (context.getProperty(RETURN_TYPE) != null
-            && (ReturnTypes.DOCUMENTS_STR.equals(context.getProperty(RETURN_TYPE).getValue())
-            || ReturnTypes.DOCUMENTS_AND_META_STR.equals(context.getProperty(RETURN_TYPE).getValue()))) {
-            retrieveFullDocument = true;
-        } else {
-            retrieveFullDocument = false;
-        }
-        final boolean retrieveMetadata;
-        if (context.getProperty(RETURN_TYPE) != null && (ReturnTypes.META.getValue()
-            .equals(context.getProperty(RETURN_TYPE).getValue())
-            || ReturnTypes.DOCUMENTS_AND_META.getValue().equals(context.getProperty(RETURN_TYPE).getValue()))) {
-            retrieveMetadata = true;
-        } else {
-            retrieveMetadata = false;
-        }
-
-        QueryBatchListener batchListener = null;
-
-        if (retrieveFullDocument) {
-            ExportListener exportListener = new ExportListener().onDocumentReady(doc -> {
-                synchronized (session) {
-                    final FlowFile flowFile = session.write(session.create(),
-                        out -> out.write(doc.getContent(new BytesHandle()).get()));
-                    if (retrieveMetadata) {
-                        addDocumentMetadata(session, flowFile, doc.getMetadata(new DocumentMetadataHandle()));
-                    }
-                    session.putAttribute(flowFile, CoreAttributes.FILENAME.key(), doc.getUri());
-                    session.transfer(flowFile, SUCCESS);
-                    if (getLogger().isDebugEnabled()) {
-                        getLogger().debug("Routing " + doc.getUri() + " to " + SUCCESS.getName());
-                    }
-                }
-            });
-            if (retrieveMetadata) {
-                exportListener.withMetadataCategory(Metadata.ALL);
-            }
-            if (consistentSnapshot) {
-                exportListener.withConsistentSnapshot();
-            }
-            ServerTransform transform = this.buildServerTransform(context);
-            if (transform != null) {
-                exportListener.withTransform(transform);
-            }
-            batchListener = exportListener;
-        } else {
-            batchListener = new QueryBatchListener() {
-                @Override
-                public void processEvent(QueryBatch batch) {
-                    synchronized (session) {
-                        Arrays.stream(batch.getItems()).forEach((uri) -> {
-                            FlowFile flowFile = session.create();
-                            session.putAttribute(flowFile, CoreAttributes.FILENAME.key(), uri);
-                            if (retrieveMetadata) {
-                                DocumentMetadataHandle metadata = new DocumentMetadataHandle();
-                                if (consistentSnapshot) {
-                                    metadata.setServerTimestamp(batch.getServerTimestamp());
-                                }
-                                batch.getClient().newDocumentManager().readMetadata(uri, metadata);
-                                addDocumentMetadata(session, flowFile, metadata);
-                            }
-                            session.transfer(flowFile, SUCCESS);
-                            if (getLogger().isDebugEnabled()) {
-                                getLogger().debug("Routing " + uri + " to " + SUCCESS.getName());
-                            }
-                        });
-                        session.commitAsync();
-                    }
-                }
-            };
-        }
-        return batchListener;
-    }
-
-    private void addDocumentMetadata(ProcessSession session, FlowFile flowFile, DocumentMetadataHandle metadata) {
-        // For attributes added in 1.16.3.1, we're using a "marklogic-" prefix to avoid collisions with attributes
-        // added by other processors.
-        session.putAttribute(flowFile, "marklogic-collections", String.join(",", metadata.getCollections()));
-
-        session.putAttribute(flowFile, "marklogic-quality", metadata.getQuality() + "");
-
-        List<String> permissions = new ArrayList<>();
-        DocumentMetadataHandle.DocumentPermissions docPerms = metadata.getPermissions();
-        for (String role : docPerms.keySet()) {
-            for (DocumentMetadataHandle.Capability capability : docPerms.get(role)) {
-                permissions.add(role);
-                // Lowercase is used to mirror how MLCP expects permissions to be defined
-                permissions.add(capability.name().toLowerCase());
-            }
-        }
-        session.putAttribute(flowFile, "marklogic-permissions", String.join(",", permissions));
-
-        metadata.getMetadataValues().forEach((metaKey, metaValue) -> {
-            session.putAttribute(flowFile, "meta:" + metaKey, metaValue);
-        });
-        metadata.getProperties().forEach((qname, propertyValue) -> {
-            session.putAttribute(flowFile, "property:" + qname.toString(), propertyValue.toString());
-        });
-    }
-
-    private QueryBatcher createQueryBatcherWithQueryCriteria(ProcessContext context, ProcessSession session,
-                                                             FlowFile incomingFlowFile, DatabaseClient databaseClient, DataMovementManager dataMovementManager) {
-        final PropertyValue queryProperty = context.getProperty(QUERY);
-        final String queryValue;
-        final String queryTypeValue;
-        QueryDefinition queryDef = null;
-
-        // Gracefully migrate old Collections templates
-        String collectionsValue = context.getProperty(COLLECTIONS).getValue();
-        if (!(collectionsValue == null || "".equals(collectionsValue))) {
-            queryValue = collectionsValue;
-            queryTypeValue = QueryTypes.COLLECTION.getValue();
-        } else {
-            queryValue = queryProperty.evaluateAttributeExpressions(incomingFlowFile).getValue();
-            queryTypeValue = context.getProperty(QUERY_TYPE).getValue();
-        }
-        final QueryManager queryManager = databaseClient.newQueryManager();
-        StructuredQueryBuilder queryBuilder = queryManager.newStructuredQueryBuilder();
-        RangeIndexQuery stateQuery = null;
-        StateMap stateMap = null;
-        try {
-            stateMap = context.getStateManager().getState(Scope.CLUSTER);
-        } catch (IOException e) {
-            getLogger().error("Failed to get state map", new Object[]{this}, e);
-        }
-        queryState = (stateMap != null) ? stateMap.get("queryState") : null;
-        if (!(queryState == null || "".equals(queryState)) && context.getProperty(STATE_INDEX) != null
-            && context.getProperty(STATE_INDEX).isSet()) {
-            stateQuery = buildStateQuery(queryBuilder, context, incomingFlowFile);
-        }
-        Format format = Format.XML;
-        if (queryValue != null) {
-            switch (queryTypeValue) {
-                case QueryTypes.COLLECTION_STR:
-                    String[] collections = getArrayFromCommaSeparatedString(queryValue);
-                    if (collections != null) {
-                        queryDef = queryBuilder.collection(collections);
-                    }
-                    format = Format.XML;
-                    break;
-                case QueryTypes.COMBINED_JSON_STR:
-                    queryDef = queryManager.newRawCombinedQueryDefinition(handleForQuery(queryValue, Format.JSON));
-                    format = Format.JSON;
-                    break;
-                case QueryTypes.COMBINED_XML_STR:
-                    queryDef = queryManager.newRawCombinedQueryDefinition(handleForQuery(queryValue, Format.XML));
-                    format = Format.XML;
-                    break;
-                case QueryTypes.STRING_STR:
-                    queryDef = queryManager.newStringDefinition().withCriteria(queryValue);
-                    format = Format.XML;
-                    break;
-                case QueryTypes.STRUCTURED_JSON_STR:
-                    queryDef = queryManager.newRawStructuredQueryDefinition(handleForQuery(queryValue, Format.JSON));
-                    format = Format.JSON;
-                    break;
-                case QueryTypes.STRUCTURED_XML_STR:
-                    queryDef = queryManager.newRawStructuredQueryDefinition(handleForQuery(queryValue, Format.XML));
-                    break;
-                default:
-                    throw new IllegalStateException("No valid Query type selected!");
-            }
-        }
-        if (stateQuery != null) {
-            StringBuilder rawCombinedQueryBuilder = new StringBuilder();
-            if (queryDef instanceof StructuredQueryDefinition || queryDef instanceof RawStructuredQueryDefinition) {
-                rawCombinedQueryBuilder.append((format == Format.JSON) ? "{ \"search\": { "
-                    : "<search xmlns=\"http://marklogic.com/appservices/search\">");
-                String queryBody;
-                if (queryDef instanceof StructuredQueryDefinition) {
-                    queryBody = ((StructuredQueryDefinition) queryDef).serialize();
-                } else {
-                    queryBody = queryValue;
-                }
-                if (format == Format.JSON) {
-                    rawCombinedQueryBuilder
-                        .append("\"query\": {\"queries\": [ ")
-                        .append(stateQuery.toStructuredQuery(format))
-                        .append(",")
-                        .append(queryBody)
-                        .append("]}");
-                } else {
-                    rawCombinedQueryBuilder
-                        .append("<query>")
-                        .append(stateQuery.toStructuredQuery(format))
-                        .append(queryBody)
-                        .append("</query>");
-                }
-                rawCombinedQueryBuilder.append((format == Format.JSON) ? "} }" : "</search>");
-            } else if (queryDef instanceof RawCombinedQueryDefinition) {
-                if (format == Format.XML) {
-                    rawCombinedQueryBuilder
-                        .append("<cts:and-query xmlns:cts=\"http://marklogic.com/cts\">")
-                        .append(queryValue)
-                        .append(stateQuery.toCtsQuery(format))
-                        .append("</cts:and-query>");
-                } else {
-                    rawCombinedQueryBuilder
-                        .append("{\"ctsquery\": { \"andQuery\": { \"queries\": [ ")
-                        .append(stateQuery.toCtsQuery(format))
-                        .append(",")
-                        .append(prepQueryToCombineJSON(queryValue))
-                        .append("]}}}");
-                }
-            } else if (queryDef instanceof StringQueryDefinition) {
-                rawCombinedQueryBuilder
-                    .append("<search  xmlns=\"http://marklogic.com/appservices/search\">")
-                    .append(stateQuery.toStructuredQuery(format))
-                    .append("<qtext>").append(EscapeUtils.escapeHtml(queryValue))
-                    .append("</qtext></search>");
-            }
-            RawCombinedQueryDefinition finalQuery = queryManager
-                .newRawCombinedQueryDefinition(handleForQuery(rawCombinedQueryBuilder.toString(), format));
-            queryBatcher = dataMovementManager.newQueryBatcher(finalQuery);
-        } else {
-            if (queryDef instanceof RawCombinedQueryDefinition) {
-                queryBatcher = dataMovementManager.newQueryBatcher((RawCombinedQueryDefinition) queryDef);
-            } else if (queryDef instanceof RawStructuredQueryDefinition) {
-                queryBatcher = dataMovementManager.newQueryBatcher((RawStructuredQueryDefinition) queryDef);
-            } else if (queryDef instanceof StructuredQueryDefinition) {
-                queryBatcher = dataMovementManager.newQueryBatcher((StructuredQueryDefinition) queryDef);
-            } else {
-                queryBatcher = dataMovementManager.newQueryBatcher((StringQueryDefinition) queryDef);
-            }
-        }
-        if (queryBatcher == null) {
-            throw new IllegalStateException("No valid Query criteria specified!");
-        }
-        queryBatcher.onQueryFailure(exception -> {
-            getLogger().error("Query failure: " + exception.getMessage());
-            FlowFile failureFlowFile = incomingFlowFile != null ? session.penalize(incomingFlowFile) : session.create();
-            session.transfer(failureFlowFile, FAILURE);
-            session.commitAsync();
-            context.yield();
-        });
-        return queryBatcher;
-    }
-
-    Pattern searchJson = Pattern.compile("^\\s*\\{\\s*\"(search|ctsquery)\"\\s*:\\s*");
-    Pattern searchJsonEnd = Pattern.compile("\\}\\s*$");
-
-    String prepQueryToCombineJSON(String json) {
-        if (searchJson.matcher(json).lookingAt()) {
-            String newJSON = searchJsonEnd.matcher(searchJson.matcher(json).replaceFirst("")).replaceFirst("");
-            return (newJSON.equals(json)) ? json : prepQueryToCombineJSON(newJSON);
-        } else {
-            return json;
-        }
-    }
-
-    RangeIndexQuery buildStateQuery(StructuredQueryBuilder queryBuilder, final ProcessContext context,
-                                    final FlowFile incomingFlowFile) {
-        String stateIndexValue = context.getProperty(STATE_INDEX).evaluateAttributeExpressions(incomingFlowFile).getValue();
-        String stateIndexTypeValue = context.getProperty(STATE_INDEX_TYPE).getValue();
-        List<PropertyDescriptor> namespaceProperties = propertiesByPrefix.get("ns");
-        EditableNamespaceContext namespaces = new EditableNamespaceContext();
-        if (namespaceProperties != null) {
-            for (PropertyDescriptor propertyDesc : namespaceProperties) {
-                namespaces.put(propertyDesc.getName().substring(3),
-                    context.getProperty(propertyDesc).evaluateAttributeExpressions(incomingFlowFile).getValue());
-            }
-        }
-        queryBuilder.setNamespaces(namespaces);
-        return new RangeIndexQuery(queryBuilder, stateIndexTypeValue, stateIndexValue, "xs:dateTime", Operator.GT,
-            queryState);
-    }
-
-    QueryBatcher getQueryBatcher() {
-        return this.queryBatcher;
-    }
-
-    StringHandle handleForQuery(String queryValue, Format format) {
-        StringHandle handle = new StringHandle().withFormat(format).with(queryValue);
-        return handle;
-    }
-
-    public static class QueryTypes {
-        public static final String COLLECTION_STR = "Collection Query";
-        public static final AllowableValue COLLECTION = new AllowableValue(COLLECTION_STR, COLLECTION_STR,
-            "Comma-separated list of collections to query from a MarkLogic server");
-        public static final String COMBINED_JSON_STR = "Combined Query (JSON)";
-        public static final AllowableValue COMBINED_JSON = new AllowableValue(COMBINED_JSON_STR, COMBINED_JSON_STR,
-            "Combine a string or structured query with dynamic query options; also supports JSON serialized CTS queries");
-        public static final String COMBINED_XML_STR = "Combined Query (XML)";
-        public static final AllowableValue COMBINED_XML = new AllowableValue(COMBINED_XML_STR, COMBINED_XML_STR,
-            "Combine a string or structured query with dynamic query options; also supports XML serialized CTS queries");
-        public static final String STRING_STR = "String Query";
-        public static final AllowableValue STRING = new AllowableValue(STRING_STR, STRING_STR,
-            "A Google-style query string to search documents and metadata.");
-        public static final String STRUCTURED_JSON_STR = "Structured Query (JSON)";
-        public static final AllowableValue STRUCTURED_JSON = new AllowableValue(STRUCTURED_JSON_STR,
-            STRUCTURED_JSON_STR,
-            "A simple and easy way to construct queries as a JSON structure, allowing you to manipulate complex queries");
-        public static final String STRUCTURED_XML_STR = "Structured Query (XML)";
-        public static final AllowableValue STRUCTURED_XML = new AllowableValue(STRUCTURED_XML_STR, STRUCTURED_XML_STR,
-            "A simple and easy way to construct queries as a XML structure, allowing you to manipulate complex queries");
-
-        public static final AllowableValue[] allValues = new AllowableValue[]{COLLECTION, COMBINED_JSON, COMBINED_XML,
-            STRING, STRUCTURED_JSON, STRUCTURED_XML};
-
     }
 
     public static class ReturnTypes {
