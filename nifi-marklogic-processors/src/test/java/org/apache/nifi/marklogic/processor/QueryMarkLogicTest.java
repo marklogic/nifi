@@ -22,6 +22,7 @@ import com.marklogic.client.io.StringHandle;
 import com.marklogic.client.query.RawCombinedQueryDefinition;
 import com.marklogic.client.query.RawStructuredQueryDefinition;
 import com.marklogic.client.query.StructuredQueryDefinition;
+import org.apache.nifi.marklogic.processor.util.QueryTypes;
 import org.apache.nifi.processor.ProcessContext;
 import org.apache.nifi.reporting.InitializationException;
 import org.junit.Before;
@@ -37,97 +38,79 @@ public class QueryMarkLogicTest extends AbstractMarkLogicProcessorTest {
         initialize(processor);
         processContext.setProperty(TestQueryMarkLogic.THREAD_COUNT.getName(), "5");
         processContext.setProperty(TestQueryMarkLogic.BATCH_SIZE, "15");
-        processContext.setProperty(TestQueryMarkLogic.QUERY_TYPE, QueryMarkLogic.QueryTypes.COLLECTION.getValue());
+        processContext.setProperty(TestQueryMarkLogic.QUERY_TYPE, QueryTypes.COLLECTION.getValue());
         processContext.setProperty(TestQueryMarkLogic.QUERY, "test");
         processContext.setProperty(TestQueryMarkLogic.DATABASE_CLIENT_SERVICE, databaseClientServiceIdentifier);
     }
 
+    private TestQueryBatcher runProcessorAndReturnQueryDefinition() {
+        processor.initialize(initializationContext);
+        processor.onTrigger(processContext, mockProcessSessionFactory);
+        return (TestQueryBatcher) processor.getQueryBatcherForTesting();
+    }
+
     @Test
-    public void testCollectionsQueryMarkLogic() throws Exception {
+    public void testCollectionsQueryMarkLogic() {
         runner.enableControllerService(service);
         runner.assertValid(service);
 
-        processContext.setProperty(TestQueryMarkLogic.QUERY_TYPE, QueryMarkLogic.QueryTypes.COLLECTION.getValue());
-        processor.initialize(initializationContext);
-        processor.onTrigger(processContext, mockProcessSessionFactory);
-        TestQueryBatcher queryBatcher = (TestQueryBatcher) processor.getQueryBatcher();
+        processContext.setProperty(TestQueryMarkLogic.QUERY_TYPE, QueryTypes.COLLECTION.getValue());
+
+        TestQueryBatcher queryBatcher = runProcessorAndReturnQueryDefinition();
         assertEquals(15, queryBatcher.getBatchSize());
         assertEquals(5, queryBatcher.getThreadCount());
         assertTrue(queryBatcher.getQueryDefinition() instanceof StructuredQueryDefinition);
     }
 
     @Test
-    public void testCombinedJsonQueryMarkLogic() throws Exception {
-        StringHandle handle;
-        TestQueryBatcher queryBatcher;
+    public void testCombinedJsonQueryMarkLogic() {
+        processContext.setProperty(TestQueryMarkLogic.QUERY_TYPE, QueryTypes.COMBINED_JSON.getValue());
 
-        processContext.setProperty(TestQueryMarkLogic.QUERY_TYPE, QueryMarkLogic.QueryTypes.COMBINED_JSON.getValue());
-        processor.initialize(initializationContext);
-        processor.onTrigger(processContext, mockProcessSessionFactory);
-        queryBatcher = (TestQueryBatcher) processor.getQueryBatcher();
+        TestQueryBatcher queryBatcher = runProcessorAndReturnQueryDefinition();
         assertTrue(queryBatcher.getQueryDefinition() instanceof RawCombinedQueryDefinition);
-        handle = (StringHandle) ((RawCombinedQueryDefinition) queryBatcher.getQueryDefinition()).getHandle();
+        StringHandle handle = (StringHandle) ((RawCombinedQueryDefinition) queryBatcher.getQueryDefinition()).getHandle();
         assertEquals(handle.getFormat(), Format.JSON);
     }
 
     @Test
-    public void testCombinedXmlQueryMarkLogic() throws Exception {
-        StringHandle handle;
-        TestQueryBatcher queryBatcher;
+    public void testCombinedXmlQueryMarkLogic() {
+        processContext.setProperty(TestQueryMarkLogic.QUERY_TYPE, QueryTypes.COMBINED_XML.getValue());
 
-        processContext.setProperty(TestQueryMarkLogic.QUERY_TYPE, QueryMarkLogic.QueryTypes.COMBINED_XML.getValue());
-        processor.initialize(initializationContext);
-        processor.onTrigger(processContext, mockProcessSessionFactory);
-        queryBatcher = (TestQueryBatcher) processor.getQueryBatcher();
+        TestQueryBatcher queryBatcher = runProcessorAndReturnQueryDefinition();
         assertTrue(queryBatcher.getQueryDefinition() instanceof RawCombinedQueryDefinition);
-        handle = (StringHandle) ((RawCombinedQueryDefinition) queryBatcher.getQueryDefinition()).getHandle();
+        StringHandle handle = (StringHandle) ((RawCombinedQueryDefinition) queryBatcher.getQueryDefinition()).getHandle();
         assertEquals(handle.getFormat(), Format.XML);
     }
 
     @Test
-
-    public void testStructuredJsonQueryMarkLogic() throws Exception {
-        StringHandle handle;
-        TestQueryBatcher queryBatcher;
-
+    public void testStructuredJsonQueryMarkLogic() {
         processContext.setProperty(TestQueryMarkLogic.CONSISTENT_SNAPSHOT, "false");
+        processContext.setProperty(TestQueryMarkLogic.QUERY_TYPE, QueryTypes.STRUCTURED_JSON.getValue());
 
-        processContext.setProperty(TestQueryMarkLogic.QUERY_TYPE, QueryMarkLogic.QueryTypes.STRUCTURED_JSON.getValue());
-        processor.initialize(initializationContext);
-        processor.onTrigger(processContext, mockProcessSessionFactory);
-        queryBatcher = (TestQueryBatcher) processor.getQueryBatcher();
+        TestQueryBatcher queryBatcher = runProcessorAndReturnQueryDefinition();
         assertTrue(queryBatcher.getQueryDefinition() instanceof RawStructuredQueryDefinition);
-        handle = (StringHandle) ((RawStructuredQueryDefinition) queryBatcher.getQueryDefinition()).getHandle();
+        StringHandle handle = (StringHandle) ((RawStructuredQueryDefinition) queryBatcher.getQueryDefinition()).getHandle();
         assertEquals(handle.getFormat(), Format.JSON);
     }
 
     @Test
-    public void testStructuredXmlQueryMarkLogic() throws Exception {
-        StringHandle handle;
-        TestQueryBatcher queryBatcher;
+    public void testStructuredXmlQueryMarkLogic() {
+        processContext.setProperty(TestQueryMarkLogic.QUERY_TYPE, QueryTypes.STRUCTURED_XML.getValue());
 
-        processContext.setProperty(TestQueryMarkLogic.QUERY_TYPE, QueryMarkLogic.QueryTypes.STRUCTURED_XML.getValue());
-        processor.initialize(initializationContext);
-        processor.onTrigger(processContext, mockProcessSessionFactory);
-        queryBatcher = (TestQueryBatcher) processor.getQueryBatcher();
+        TestQueryBatcher queryBatcher = runProcessorAndReturnQueryDefinition();
         assertTrue(queryBatcher.getQueryDefinition() instanceof RawStructuredQueryDefinition);
-        handle = (StringHandle) ((RawStructuredQueryDefinition) queryBatcher.getQueryDefinition()).getHandle();
+        StringHandle handle = (StringHandle) ((RawStructuredQueryDefinition) queryBatcher.getQueryDefinition()).getHandle();
         assertEquals(handle.getFormat(), Format.XML);
     }
 
     @Test
-    public void testRetrieveFullDocumentsFalse() throws Exception {
-        StringHandle handle;
-        TestQueryBatcher queryBatcher;
-
+    public void testRetrieveFullDocumentsFalse() {
         processContext.setProperty(TestQueryMarkLogic.RETURN_TYPE, QueryMarkLogic.ReturnTypes.URIS_ONLY_STR);
+        processContext.setProperty(TestQueryMarkLogic.QUERY_TYPE, QueryTypes.STRUCTURED_XML.getValue());
 
-        processContext.setProperty(TestQueryMarkLogic.QUERY_TYPE, QueryMarkLogic.QueryTypes.STRUCTURED_XML.getValue());
-        processor.initialize(initializationContext);
-        processor.onTrigger(processContext, mockProcessSessionFactory);
-        queryBatcher = (TestQueryBatcher) processor.getQueryBatcher();
+        TestQueryBatcher queryBatcher = runProcessorAndReturnQueryDefinition();
         assertTrue(queryBatcher.getQueryDefinition() instanceof RawStructuredQueryDefinition);
-        handle = (StringHandle) ((RawStructuredQueryDefinition) queryBatcher.getQueryDefinition()).getHandle();
+        StringHandle handle = (StringHandle) ((RawStructuredQueryDefinition) queryBatcher.getQueryDefinition()).getHandle();
         assertEquals(handle.getFormat(), Format.XML);
     }
 

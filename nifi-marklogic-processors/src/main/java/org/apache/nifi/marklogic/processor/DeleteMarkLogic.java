@@ -73,8 +73,15 @@ public class DeleteMarkLogic extends QueryMarkLogic {
         super.onTrigger(context, sessionFactory);
     }
 
+    /**
+     * Overrides the behavior in the parent class for how each batch of URIs should be processed.
+     *
+     * @param context
+     * @param session
+     * @return
+     */
     @Override
-    protected QueryBatchListener buildQueryBatchListener(final ProcessContext context, final ProcessSession session, final boolean consistentSnapshot) {
+    protected QueryBatchListener buildQueryBatchListener(final ProcessContext context, final ProcessSession session) {
         return new NiFiDeleteListener(session).onFailure((batch, throwable) -> {
             synchronized (session) {
                 getLogger().error("Error deleting batch", throwable);

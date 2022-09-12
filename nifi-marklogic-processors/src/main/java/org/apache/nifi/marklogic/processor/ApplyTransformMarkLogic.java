@@ -87,8 +87,15 @@ public class ApplyTransformMarkLogic extends QueryMarkLogic {
         relationships = Collections.unmodifiableSet(set);
     }
 
+    /**
+     * Overrides the behavior in the parent class for how each batch of URIs should be processed.
+     *
+     * @param context
+     * @param session
+     * @return
+     */
     @Override
-    protected QueryBatchListener buildQueryBatchListener(final ProcessContext context, final ProcessSession session, final boolean consistentSnapshot) {
+    protected QueryBatchListener buildQueryBatchListener(final ProcessContext context, final ProcessSession session) {
         ApplyTransformListener applyTransform = new ApplyTransformListener()
             .withApplyResult(
                 ApplyResultTypes.INGORE_STR.equals(context.getProperty(APPLY_RESULT_TYPE).getValue()) ? ApplyResult.IGNORE : ApplyResult.REPLACE

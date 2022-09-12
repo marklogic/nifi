@@ -22,6 +22,7 @@ import com.marklogic.client.io.DocumentMetadataHandle;
 import com.marklogic.client.io.StringHandle;
 import com.marklogic.client.query.StructuredQueryBuilder;
 import org.apache.nifi.flowfile.attributes.CoreAttributes;
+import org.apache.nifi.marklogic.processor.util.QueryTypes;
 import org.apache.nifi.util.MockFlowFile;
 import org.apache.nifi.util.TestRunner;
 import org.junit.jupiter.api.BeforeEach;
@@ -60,7 +61,7 @@ public class DeleteMarkLogicIT extends AbstractMarkLogicIT {
     public void testSimpleCollectionDelete() {
         TestRunner runner = getNewTestRunner(DeleteMarkLogic.class);
         runner.setProperty(QueryMarkLogic.QUERY, collection);
-        runner.setProperty(QueryMarkLogic.QUERY_TYPE, QueryMarkLogic.QueryTypes.COLLECTION);
+        runner.setProperty(QueryMarkLogic.QUERY_TYPE, QueryTypes.COLLECTION);
         runner.assertValid();
         runner.enqueue(new MockFlowFile(12345));
         runner.run();
