@@ -25,6 +25,7 @@ import com.marklogic.client.io.DocumentMetadataHandle;
 import com.marklogic.client.io.JacksonHandle;
 import com.marklogic.client.io.StringHandle;
 import org.apache.nifi.components.state.Scope;
+import org.apache.nifi.flowfile.FlowFile;
 import org.apache.nifi.flowfile.attributes.CoreAttributes;
 import org.apache.nifi.marklogic.processor.util.QueryTypes;
 import org.apache.nifi.processor.Processor;
@@ -464,25 +465,59 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
         for (MockFlowFile flowFile : flowFiles) {
             byte[] actualByteArray = runner.getContentAsByteArray(flowFile);
             assertEquals("Content should be empty since we only asked for metadata", actualByteArray.length, 0);
-
-            // Verify metadata attributes exist
             assertEquals("world", flowFile.getAttribute("property:{org:example}hello"));
-            String uri = flowFile.getAttribute("filename");
-            assertEquals(uri, flowFile.getAttribute("meta:my-uri"));
-
-            String permissions = flowFile.getAttribute("marklogic-permissions");
-            System.out.println(permissions);
-            assertTrue(permissions.contains("rest-reader,read"));
-            assertTrue(permissions.contains("rest-reader,execute"));
-            assertTrue(permissions.contains("rest-writer,update"));
-
-            List<String> collections = Arrays.asList(flowFile.getAttribute("marklogic-collections").split(","));
-            assertTrue(collections.contains(TEST_COLLECTION));
-            assertTrue(collections.contains(TEST_COLLECTION + "-2"));
-
-            assertEquals("12", flowFile.getAttribute("marklogic-quality"));
+            verifyDocumentMetadataButIgnoreProperties(flowFile);
         }
         runner.shutdown();
+    }
+
+    @Test
+    public void onlyMetadataExceptNoProperties() {
+        TestRunner runner = getNewTestRunner(QueryMarkLogic.class);
+        runner.setProperty(QueryMarkLogic.RETURN_TYPE, QueryMarkLogic.ReturnTypes.META);
+        runner.setProperty(QueryMarkLogic.QUERY, "xmlcontent");
+        runner.setProperty(QueryMarkLogic.QUERY_TYPE, QueryTypes.STRING);
+        runner.setProperty(QueryMarkLogic.INCLUDE_DOCUMENT_PROPERTIES, "false");
+        runner.assertValid();
+        runner.run();
+
+        runner.assertTransferCount(QueryMarkLogic.SUCCESS, expectedXmlCount);
+        runner.assertAllFlowFilesContainAttribute(QueryMarkLogic.SUCCESS, CoreAttributes.FILENAME.key());
+
+        List<MockFlowFile> flowFiles = runner.getFlowFilesForRelationship(QueryMarkLogic.SUCCESS);
+        assertEquals(flowFiles.size(), expectedXmlCount);
+        for (MockFlowFile flowFile : flowFiles) {
+            byte[] actualByteArray = runner.getContentAsByteArray(flowFile);
+            assertEquals("Content should be empty since we only asked for metadata", actualByteArray.length, 0);
+
+            assertNull("The user asked for metadata but no document properties, often because document properties " +
+                "can be very large and aren't worth including in every FlowFile",
+                flowFile.getAttribute("property:{org:example}hello"));
+            verifyDocumentMetadataButIgnoreProperties(flowFile);
+        }
+        runner.shutdown();
+    }
+
+    /**
+     * Verify everything except the existence of document properties, as that differs between the two tests that
+     * use this method.
+     * 
+     * @param flowFile
+     */
+    private void verifyDocumentMetadataButIgnoreProperties(FlowFile flowFile) {
+        String uri = flowFile.getAttribute("filename");
+        assertEquals(uri, flowFile.getAttribute("meta:my-uri"));
+
+        String permissions = flowFile.getAttribute("marklogic-permissions");
+        assertTrue(permissions.contains("rest-reader,read"));
+        assertTrue(permissions.contains("rest-reader,execute"));
+        assertTrue(permissions.contains("rest-writer,update"));
+
+        List<String> collections = Arrays.asList(flowFile.getAttribute("marklogic-collections").split(","));
+        assertTrue(collections.contains(TEST_COLLECTION));
+        assertTrue(collections.contains(TEST_COLLECTION + "-2"));
+
+        assertEquals("12", flowFile.getAttribute("marklogic-quality"));
     }
 
     @Test
