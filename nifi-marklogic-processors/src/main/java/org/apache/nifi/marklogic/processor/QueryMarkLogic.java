@@ -85,6 +85,14 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
         .description("Determines what gets retrieved by query").required(true)
         .allowableValues(ReturnTypes.allValues).addValidator(StandardValidators.NON_EMPTY_VALIDATOR).build();
 
+    public static final PropertyDescriptor INCLUDE_DOCUMENT_PROPERTIES = new PropertyDescriptor.Builder()
+        .allowableValues("true", "false")
+        .name("Include Document Properties").displayName("Include Document Properties").defaultValue("true")
+        .description("When the 'Return Type' selection results in metadata being included for each document, this can " +
+            "be set to 'false' to prevent document properties from being included. This may be desirable for when " +
+            "documents have large properties fragments that are not worth including in outgoing FlowFiles.")
+        .required(false).addValidator(StandardValidators.BOOLEAN_VALIDATOR).build();
+
     public static final PropertyDescriptor QUERY = new PropertyDescriptor.Builder().name("Query").displayName("Query")
         .description("Query text that corresponds with the selected Query Type").required(false)
         .expressionLanguageSupported(ExpressionLanguageScope.FLOWFILE_ATTRIBUTES).addValidator(Validator.VALID)
@@ -142,6 +150,7 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
         list.add(QUERY);
         list.add(QUERY_TYPE);
         list.add(RETURN_TYPE);
+        list.add(INCLUDE_DOCUMENT_PROPERTIES);
         list.add(TRANSFORM);
         list.add(STATE_INDEX);
         list.add(STATE_INDEX_TYPE);
@@ -310,7 +319,7 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
                 final FlowFile flowFile = session.write(session.create(),
                     out -> out.write(doc.getContent(new BytesHandle()).get()));
                 if (retrieveMetadata) {
-                    addDocumentMetadata(session, flowFile, doc.getMetadata(new DocumentMetadataHandle()));
+                    addDocumentMetadata(context, session, flowFile, doc.getMetadata(new DocumentMetadataHandle()));
                 }
                 session.putAttribute(flowFile, CoreAttributes.FILENAME.key(), doc.getUri());
                 session.transfer(flowFile, SUCCESS);
@@ -352,7 +361,7 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
                             metadata.setServerTimestamp(batch.getServerTimestamp());
                         }
                         batch.getClient().newDocumentManager().readMetadata(uri, metadata);
-                        addDocumentMetadata(session, flowFile, metadata);
+                        addDocumentMetadata(context, session, flowFile, metadata);
                     }
                     session.transfer(flowFile, SUCCESS);
                     if (getLogger().isDebugEnabled()) {
@@ -369,7 +378,7 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
         return ReturnTypes.META.getValue().equals(returnType) || ReturnTypes.DOCUMENTS_AND_META.getValue().equals(returnType);
     }
 
-    private void addDocumentMetadata(ProcessSession session, FlowFile flowFile, DocumentMetadataHandle metadata) {
+    private void addDocumentMetadata(ProcessContext context, ProcessSession session, FlowFile flowFile, DocumentMetadataHandle metadata) {
         // For attributes added in 1.16.3.1, we're using a "marklogic-" prefix to avoid collisions with attributes
         // added by other processors.
         session.putAttribute(flowFile, "marklogic-collections", String.join(",", metadata.getCollections()));
@@ -390,9 +399,13 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
         metadata.getMetadataValues().forEach((metaKey, metaValue) -> {
             session.putAttribute(flowFile, "meta:" + metaKey, metaValue);
         });
-        metadata.getProperties().forEach((qname, propertyValue) -> {
-            session.putAttribute(flowFile, "property:" + qname.toString(), propertyValue.toString());
-        });
+
+        final boolean includeProperties = Boolean.TRUE.equals(context.getProperty(INCLUDE_DOCUMENT_PROPERTIES).asBoolean());
+        if (includeProperties) {
+            metadata.getProperties().forEach((qname, propertyValue) -> {
+                session.putAttribute(flowFile, "property:" + qname.toString(), propertyValue.toString());
+            });
+        }
     }
 
     /**
