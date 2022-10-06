@@ -196,7 +196,6 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
         FlowFile incomingFlowFile = context.hasIncomingConnection() ? session.get() : null;
 
         try {
-            session.putAttribute(incomingFlowFile, "marklogic-query", null); // TODO: Add uri
 
             Tuple<DataMovementManager, QueryBatcher> tuple = newQueryBatcher(context, incomingFlowFile);
             configureQueryBatcher(context, session, incomingFlowFile, tuple.getValue());
@@ -206,6 +205,7 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
 
             // Can transfer the incoming FlowFile immediately
             if (incomingFlowFile != null) {
+                session.putAttribute(incomingFlowFile, "marklogic-query", null); // TODO: Add uri
                 session.transfer(incomingFlowFile, ORIGINAL);
             }
             else {
@@ -217,8 +217,9 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
             runQueryBatcherAndCommit(session, tuple);
         } catch (Throwable t) {
             context.yield();
-            session.putAttribute(incomingFlowFile, "markLogicErrorMessage", null); // TODO: Add uri
-            logErrorAndTransfer(t, incomingFlowFile, session, FAILURE);
+            FlowFile errorFlowFile = incomingFlowFile;
+            session.putAttribute(errorFlowFile, "markLogicErrorMessage", null); // TODO: Add uri
+            logErrorAndTransfer(t, errorFlowFile, session, FAILURE);
         }
     }
 
