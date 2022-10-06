@@ -192,8 +192,11 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
     public void onTrigger(ProcessContext context, ProcessSessionFactory sessionFactory) throws ProcessException {
         final ProcessSession session = sessionFactory.createSession();
         super.populatePropertiesByPrefix(context);
+
+        FlowFile incomingFlowFile = context.hasIncomingConnection() ? session.get() : null;
+
         try {
-            final FlowFile incomingFlowFile = context.hasIncomingConnection() ? session.get() : null;
+            session.putAttribute(incomingFlowFile, "marklogic-query", null); // TODO: Add uri
 
             Tuple<DataMovementManager, QueryBatcher> tuple = newQueryBatcher(context, incomingFlowFile);
             configureQueryBatcher(context, session, incomingFlowFile, tuple.getValue());
@@ -205,10 +208,17 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
             if (incomingFlowFile != null) {
                 session.transfer(incomingFlowFile, ORIGINAL);
             }
+            else {
+                // Create a new FF and send to ORIGINAL
+                FlowFile flowFile = session.get();
+                session.putAttribute(flowFile, "marklogic-query", null); // TODO: Add uri
+                session.transfer(flowFile, ORIGINAL);
+            }
             runQueryBatcherAndCommit(session, tuple);
         } catch (Throwable t) {
             context.yield();
-            this.logErrorAndRollbackSession(t, session);
+            session.putAttribute(incomingFlowFile, "markLogicErrorMessage", null); // TODO: Add uri
+            logErrorAndTransfer(t, incomingFlowFile, session, FAILURE);
         }
     }
 
