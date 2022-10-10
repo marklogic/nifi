@@ -37,16 +37,14 @@ public class ExtensionCallMarkLogicIT extends AbstractMarkLogicIT {
         runner.setValidateExpressionUsage(false);
         runner.setProperty(ExtensionCallMarkLogic.EXTENSION_NAME, "replay");
         runner.setProperty(ExtensionCallMarkLogic.METHOD_TYPE, ExtensionCallMarkLogic.MethodTypes.GET_STR);
-        runner.setProperty(ExtensionCallMarkLogic.REQUIRES_INPUT, "true");
         runner.setProperty(ExtensionCallMarkLogic.PAYLOAD_SOURCE, ExtensionCallMarkLogic.PayloadSources.NONE);
         runner.setProperty(ExtensionCallMarkLogic.PAYLOAD_FORMAT, Format.TEXT.name());
         runner.setProperty("param:replay", "${dynamicParam}");
 
         runner.run();
         assertEquals(0, runner.getFlowFilesForRelationship(ExtensionCallMarkLogic.FAILURE).size());
-        assertEquals(0, runner.getFlowFilesForRelationship(ExtensionCallMarkLogic.SUCCESS).size(),
-            "Expecting no FlowFiles; the processor should not have run since requiresInput=true and no " +
-                "FlowFile was enqueued");
+        assertEquals(1, runner.getFlowFilesForRelationship(ExtensionCallMarkLogic.SUCCESS).size(),
+            "Expecting 1 FlowFile; the processor should run once since a FlowFile was generated and enqueued");
 
         MockFlowFile mockFlowFile = new MockFlowFile(1);
         Map<String, String> attributes = new HashMap<>();
@@ -58,12 +56,12 @@ public class ExtensionCallMarkLogicIT extends AbstractMarkLogicIT {
 
         runner.assertQueueEmpty();
         assertEquals(0, runner.getFlowFilesForRelationship(ExtensionCallMarkLogic.FAILURE).size());
-        assertEquals(1, runner.getFlowFilesForRelationship(ExtensionCallMarkLogic.SUCCESS).size());
+        assertEquals(2, runner.getFlowFilesForRelationship(ExtensionCallMarkLogic.SUCCESS).size());
 
         List<MockFlowFile> results = runner.getFlowFilesForRelationship(ExtensionCallMarkLogic.SUCCESS);
-        assertEquals(1, results.size());
+        assertEquals(2, results.size());
 
-        MockFlowFile result = results.get(0);
+        MockFlowFile result = results.get(1);
         String resultValue = new String(runner.getContentAsByteArray(result));
         assertEquals("dynamicValue", resultValue,
             "The test 'replay' extension is expected to return the value of the 'replay' parameter, " +
@@ -78,7 +76,6 @@ public class ExtensionCallMarkLogicIT extends AbstractMarkLogicIT {
         runner.setValidateExpressionUsage(false);
         runner.setProperty(ExtensionCallMarkLogic.EXTENSION_NAME, "replay");
         runner.setProperty(ExtensionCallMarkLogic.METHOD_TYPE, ExtensionCallMarkLogic.MethodTypes.POST_STR);
-        runner.setProperty(ExtensionCallMarkLogic.REQUIRES_INPUT, "true");
         runner.setProperty(ExtensionCallMarkLogic.PAYLOAD_SOURCE, ExtensionCallMarkLogic.PayloadSources.FLOWFILE_CONTENT_STR);
         runner.setProperty(ExtensionCallMarkLogic.PAYLOAD_FORMAT, Format.TEXT.name());
 
@@ -105,7 +102,6 @@ public class ExtensionCallMarkLogicIT extends AbstractMarkLogicIT {
         runner.setValidateExpressionUsage(false);
         runner.setProperty(ExtensionCallMarkLogic.EXTENSION_NAME, "throwsError");
         runner.setProperty(ExtensionCallMarkLogic.METHOD_TYPE, ExtensionCallMarkLogic.MethodTypes.GET_STR);
-        runner.setProperty(ExtensionCallMarkLogic.REQUIRES_INPUT, "false");
         runner.setProperty(ExtensionCallMarkLogic.PAYLOAD_SOURCE, ExtensionCallMarkLogic.PayloadSources.NONE);
 
         runner.enqueue();
@@ -170,7 +166,6 @@ public class ExtensionCallMarkLogicIT extends AbstractMarkLogicIT {
         runner.setValidateExpressionUsage(false);
         runner.setProperty(ExtensionCallMarkLogic.EXTENSION_NAME, "emptyEndpoints");
         runner.setProperty(ExtensionCallMarkLogic.METHOD_TYPE, methodType);
-        runner.setProperty(ExtensionCallMarkLogic.REQUIRES_INPUT, "true");
         runner.setProperty(ExtensionCallMarkLogic.PAYLOAD_SOURCE, ExtensionCallMarkLogic.PayloadSources.NONE);
         return runner;
     }

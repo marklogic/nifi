@@ -18,6 +18,7 @@ package org.apache.nifi.marklogic.processor;
 
 import com.marklogic.client.DatabaseClient;
 import com.marklogic.client.extensions.ResourceManager;
+import com.marklogic.client.extensions.ResourceServices;
 import com.marklogic.client.extensions.ResourceServices.ServiceResultIterator;
 import com.marklogic.client.io.BytesHandle;
 import com.marklogic.client.io.Format;
@@ -64,17 +65,6 @@ public class ExtensionCallMarkLogic extends AbstractMarkLogicProcessor {
         .description("Name of MarkLogic REST extension.")
         .expressionLanguageSupported(ExpressionLanguageScope.VARIABLE_REGISTRY)
         .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
-        .build();
-    public static final PropertyDescriptor REQUIRES_INPUT = new PropertyDescriptor.Builder()
-        .name("Requires Input")
-        .displayName("Requires Input")
-        .required(true)
-        .allowableValues("true", "false")
-        .description("Whether an incoming FlowFile is required to run; should only be 'false' if the processor " +
-            "has no incoming connections")
-        .expressionLanguageSupported(ExpressionLanguageScope.NONE)
-        .addValidator(StandardValidators.BOOLEAN_VALIDATOR)
-        .defaultValue("true")
         .build();
     public static final PropertyDescriptor PAYLOAD_SOURCE = new PropertyDescriptor.Builder()
         .name("Payload Source")
@@ -131,7 +121,6 @@ public class ExtensionCallMarkLogic extends AbstractMarkLogicProcessor {
         List<PropertyDescriptor> list = new ArrayList<>();
         list.add(DATABASE_CLIENT_SERVICE);
         list.add(EXTENSION_NAME);
-        list.add(REQUIRES_INPUT);
         list.add(METHOD_TYPE);
         list.add(PAYLOAD_SOURCE);
         list.add(PAYLOAD_FORMAT);
@@ -156,12 +145,8 @@ public class ExtensionCallMarkLogic extends AbstractMarkLogicProcessor {
     public void onTrigger(ProcessContext context, ProcessSessionFactory sessionFactory) throws ProcessException {
         final ProcessSession session = sessionFactory.createSession();
 
-        final String requiresInput = context.getProperty(REQUIRES_INPUT).getValue();
         FlowFile originalFlowFile = session.get();
-        if ("true".equals(requiresInput) && originalFlowFile == null) {
-            context.yield();
-            return;
-        } else if ("false".equals(requiresInput)) {
+        if (originalFlowFile == null) {
             originalFlowFile = session.create();
         }
 
@@ -188,9 +173,13 @@ public class ExtensionCallMarkLogic extends AbstractMarkLogicProcessor {
         }
         try {
             while (results.hasNext()) {
-                session.append(originalFlowFile, out -> out.write(results.next().getContent(new BytesHandle()).get()));
+                ResourceServices.ServiceResult file = results.next();
+                if (file.getLength() > 0) {
+                    originalFlowFile = session.append(originalFlowFile, out -> out.write(file.getContent(new BytesHandle()).get()));
+                }
             }
-        } finally {
+        }
+        finally {
             results.close();
             transferAndCommit(session, originalFlowFile, SUCCESS);
         }

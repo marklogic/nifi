@@ -38,13 +38,12 @@ public class ExtensionCallMarkLogicTest extends AbstractMarkLogicProcessorTest {
     }
 
     @Test
-    public void testValidator() throws Exception {
+    public void testValidator() {
         runner.enableControllerService(service);
         runner.assertValid(service);
         runner.assertNotValid();
 
         runner.setProperty(TestExtensionCallMarkLogic.EXTENSION_NAME, "extension");
-        runner.setProperty(TestExtensionCallMarkLogic.REQUIRES_INPUT, "true");
         runner.setProperty(TestExtensionCallMarkLogic.PAYLOAD_SOURCE, PayloadSources.NONE);
         runner.setProperty(TestExtensionCallMarkLogic.PAYLOAD_FORMAT, Format.TEXT.name());
         runner.setProperty(TestExtensionCallMarkLogic.METHOD_TYPE, MethodTypes.POST);
@@ -56,7 +55,6 @@ public class ExtensionCallMarkLogicTest extends AbstractMarkLogicProcessorTest {
         runner.enableControllerService(service);
 
         runner.setProperty(TestExtensionCallMarkLogic.EXTENSION_NAME, "example-rest");
-        runner.setProperty(TestExtensionCallMarkLogic.REQUIRES_INPUT, "false");
         runner.setProperty(TestExtensionCallMarkLogic.PAYLOAD_SOURCE, PayloadSources.FLOWFILE_CONTENT_STR);
         runner.setProperty(TestExtensionCallMarkLogic.PAYLOAD_FORMAT, Format.TEXT.name());
         runner.setProperty(TestExtensionCallMarkLogic.METHOD_TYPE, MethodTypes.PUT_STR);

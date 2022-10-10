@@ -20,7 +20,6 @@ public class CallRestExtensionMarkLogicIT extends AbstractMarkLogicIT {
         runner.setValidateExpressionUsage(false);
         runner.setProperty(CallRestExtensionMarkLogic.EXTENSION_NAME, "multipleItems");
         runner.setProperty(CallRestExtensionMarkLogic.METHOD_TYPE, CallRestExtensionMarkLogic.MethodTypes.GET_STR);
-        runner.setProperty(CallRestExtensionMarkLogic.REQUIRES_INPUT, "false");
 
         runner.run();
         runner.assertQueueEmpty();
@@ -82,7 +81,6 @@ public class CallRestExtensionMarkLogicIT extends AbstractMarkLogicIT {
         runner.setValidateExpressionUsage(false);
         runner.setProperty(CallRestExtensionMarkLogic.EXTENSION_NAME, "multipleItems");
         runner.setProperty(CallRestExtensionMarkLogic.METHOD_TYPE, CallRestExtensionMarkLogic.MethodTypes.POST_STR);
-        runner.setProperty(CallRestExtensionMarkLogic.REQUIRES_INPUT, "false");
 
         runner.run();
         runner.assertQueueEmpty();
