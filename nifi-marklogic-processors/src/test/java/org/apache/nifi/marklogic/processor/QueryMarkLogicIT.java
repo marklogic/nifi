@@ -29,7 +29,6 @@ import org.apache.nifi.flowfile.FlowFile;
 import org.apache.nifi.flowfile.attributes.CoreAttributes;
 import org.apache.nifi.marklogic.processor.util.QueryTypes;
 import org.apache.nifi.processor.Processor;
-import org.apache.nifi.reporting.InitializationException;
 import org.apache.nifi.util.MockFlowFile;
 import org.apache.nifi.util.TestRunner;
 import org.junit.jupiter.api.BeforeEach;
@@ -44,7 +43,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.*;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class QueryMarkLogicIT extends AbstractMarkLogicIT {
 
@@ -71,7 +70,7 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
     }
 
     @Override
-    protected TestRunner getNewTestRunner(Class processor) {
+    protected TestRunner getNewTestRunner(Class<? extends Processor> processor) {
         TestRunner runner = super.getNewTestRunner(processor);
         runner.assertNotValid();
         runner.setProperty(QueryMarkLogic.CONSISTENT_SNAPSHOT, "true");
@@ -89,23 +88,23 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
 
         runner.assertTransferCount(QueryMarkLogic.ORIGINAL, 1);
         MockFlowFile originalFlowFile = runner.getFlowFilesForRelationship(QueryMarkLogic.ORIGINAL).get(0);
-        assertEquals("If a FlowFile is passed to DeleteML/QueryML, it is expected to be sent to the " +
-            "ORIGINAL relationship before the job completes", 12345, originalFlowFile.getId());
+        assertEquals(12345, originalFlowFile.getId(), "If a FlowFile is passed to DeleteML/QueryML, it is expected to be sent to the " +
+            "ORIGINAL relationship before the job completes");
 
         runner.assertTransferCount(QueryMarkLogic.SUCCESS, numDocs);
         runner.assertAllFlowFilesContainAttribute(QueryMarkLogic.SUCCESS, CoreAttributes.FILENAME.key());
 
         List<MockFlowFile> flowFiles = runner.getFlowFilesForRelationship(QueryMarkLogic.SUCCESS);
-        byte[] actualByteArray = null;
+        byte[] actualByteArray = new byte[0];
         for (MockFlowFile flowFile : flowFiles) {
-            if (flowFile.getAttribute(CoreAttributes.FILENAME.key()).endsWith("/" + Integer.toString(jsonMod) + ".json")) {
+            if (flowFile.getAttribute(CoreAttributes.FILENAME.key()).endsWith("/" + jsonMod + ".json")) {
                 actualByteArray = runner.getContentAsByteArray(flowFile);
                 break;
             }
         }
         byte[] expectedByteArray = documents.get(jsonMod).getContent().getBytes();
         assertEquals(expectedByteArray.length, actualByteArray.length);
-        assertTrue(Arrays.equals(expectedByteArray, actualByteArray));
+        assertArrayEquals(expectedByteArray, actualByteArray);
     }
 
     @Test
@@ -117,16 +116,16 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
         runner.assertTransferCount(QueryMarkLogic.SUCCESS, numDocs);
         runner.assertAllFlowFilesContainAttribute(QueryMarkLogic.SUCCESS, CoreAttributes.FILENAME.key());
         List<MockFlowFile> flowFiles = runner.getFlowFilesForRelationship(QueryMarkLogic.SUCCESS);
-        byte[] actualByteArray = null;
+        byte[] actualByteArray = new byte[0];
         for (MockFlowFile flowFile : flowFiles) {
-            if (flowFile.getAttribute(CoreAttributes.FILENAME.key()).endsWith("/" + Integer.toString(jsonMod) + ".json")) {
+            if (flowFile.getAttribute(CoreAttributes.FILENAME.key()).endsWith("/" + jsonMod + ".json")) {
                 actualByteArray = runner.getContentAsByteArray(flowFile);
                 break;
             }
         }
         byte[] expectedByteArray = documents.get(jsonMod).getContent().getBytes();
         assertEquals(expectedByteArray.length, actualByteArray.length);
-        assertTrue(Arrays.equals(expectedByteArray, actualByteArray));
+        assertArrayEquals(expectedByteArray, actualByteArray);
     }
 
     /**
@@ -192,7 +191,6 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
      * After upgrading to Java Client 5.3.2 from 4.1.1, this is also causing a segfault on ML 10.0-5. It appears to be
      * due to bug 1283 as well.
      *
-     * @throws InitializationException
      * @throws IOException
      */
     @Test
@@ -318,16 +316,16 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
         runner.assertAllFlowFilesContainAttribute(QueryMarkLogic.SUCCESS, CoreAttributes.FILENAME.key());
         List<MockFlowFile> flowFiles = runner.getFlowFilesForRelationship(QueryMarkLogic.SUCCESS);
         assertEquals(flowFiles.size(), expectedJsonCount);
-        byte[] actualByteArray = null;
+        byte[] actualByteArray = new byte[0];
         for (MockFlowFile flowFile : flowFiles) {
-            if (flowFile.getAttribute(CoreAttributes.FILENAME.key()).endsWith("/" + Integer.toString(jsonMod) + ".json")) {
+            if (flowFile.getAttribute(CoreAttributes.FILENAME.key()).endsWith("/" + jsonMod + ".json")) {
                 actualByteArray = runner.getContentAsByteArray(flowFile);
                 break;
             }
         }
         byte[] expectedByteArray = documents.get(jsonMod).getContent().getBytes();
         assertEquals(expectedByteArray.length, actualByteArray.length);
-        assertTrue(Arrays.equals(expectedByteArray, actualByteArray));
+        assertArrayEquals(expectedByteArray, actualByteArray);
         runner.shutdown();
     }
 
@@ -357,7 +355,7 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
         assertEquals(flowFiles.size(), expectedXmlCount);
         byte[] actualByteArray = null;
         for (MockFlowFile flowFile : flowFiles) {
-            if (flowFile.getAttribute(CoreAttributes.FILENAME.key()).endsWith("/" + Integer.toString(xmlMod) + ".xml")) {
+            if (flowFile.getAttribute(CoreAttributes.FILENAME.key()).endsWith("/" + xmlMod + ".xml")) {
                 actualByteArray = runner.getContentAsByteArray(flowFile);
                 break;
             }
@@ -381,7 +379,7 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
         assertEquals(flowFiles.size(), expectedXmlCount);
         byte[] actualByteArray = null;
         for (MockFlowFile flowFile : flowFiles) {
-            if (flowFile.getAttribute(CoreAttributes.FILENAME.key()).endsWith("/" + Integer.toString(xmlMod) + ".xml")) {
+            if (flowFile.getAttribute(CoreAttributes.FILENAME.key()).endsWith("/" + xmlMod + ".xml")) {
                 actualByteArray = runner.getContentAsByteArray(flowFile);
                 break;
             }
@@ -406,9 +404,9 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
         assertEquals(flowFiles.size(), expectedXmlCount);
         for (MockFlowFile flowFile : flowFiles) {
             byte[] actualByteArray = runner.getContentAsByteArray(flowFile);
-            assertEquals("Content should be empty since we only asked for URIs", actualByteArray.length, 0);
+            assertEquals(actualByteArray.length, 0, "Content should be empty since we only asked for URIs");
             String uri = flowFile.getAttribute("filename");
-            assertTrue("Unexpected URI: " + uri, uri.startsWith("/PutMarkLogicTest/") && uri.endsWith(".xml"));
+            assertTrue(uri.startsWith("/PutMarkLogicTest/") && uri.endsWith(".xml"), "Unexpected URI: " + uri);
         }
         runner.shutdown();
     }
@@ -438,10 +436,8 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
 
             Set<String> attributeNames = flowFile.getAttributes().keySet();
             for (String name : attributeNames) {
-                assertFalse("No meta: attributes should exist since the document doesn't have any metadata values",
-                    name.startsWith("meta:"));
-                assertFalse("No property: attributes should exist since the document doesn't have any properties",
-                    name.startsWith("property:"));
+                assertFalse(name.startsWith("meta:"), "No meta: attributes should exist since the document doesn't have any metadata values");
+                assertFalse(name.startsWith("property:"), "No property: attributes should exist since the document doesn't have any properties");
             }
         } finally {
             getDatabaseClient().newJSONDocumentManager().delete(uri);
@@ -464,7 +460,7 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
         assertEquals(flowFiles.size(), expectedXmlCount);
         for (MockFlowFile flowFile : flowFiles) {
             byte[] actualByteArray = runner.getContentAsByteArray(flowFile);
-            assertEquals("Content should be empty since we only asked for metadata", actualByteArray.length, 0);
+            assertEquals(actualByteArray.length, 0, "Content should be empty since we only asked for metadata");
             assertEquals("world", flowFile.getAttribute("property:{org:example}hello"));
             verifyDocumentMetadataButIgnoreProperties(flowFile);
         }
@@ -488,11 +484,10 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
         assertEquals(flowFiles.size(), expectedXmlCount);
         for (MockFlowFile flowFile : flowFiles) {
             byte[] actualByteArray = runner.getContentAsByteArray(flowFile);
-            assertEquals("Content should be empty since we only asked for metadata", actualByteArray.length, 0);
+            assertEquals(actualByteArray.length, 0, "Content should be empty since we only asked for metadata");
 
-            assertNull("The user asked for metadata but no document properties, often because document properties " +
-                "can be very large and aren't worth including in every FlowFile",
-                flowFile.getAttribute("property:{org:example}hello"));
+            assertNull(flowFile.getAttribute("property:{org:example}hello"), "The user asked for metadata but no document properties, often because document properties " +
+                "can be very large and aren't worth including in every FlowFile");
             verifyDocumentMetadataButIgnoreProperties(flowFile);
         }
         runner.shutdown();
@@ -501,7 +496,7 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
     /**
      * Verify everything except the existence of document properties, as that differs between the two tests that
      * use this method.
-     * 
+     *
      * @param flowFile
      */
     private void verifyDocumentMetadataButIgnoreProperties(FlowFile flowFile) {
@@ -587,7 +582,7 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
         runner.run();
         runner.assertTransferCount(QueryMarkLogic.SUCCESS, 0);
         runner.clearTransferState();
-        HashMap<String, String> state = new HashMap<String, String>();
+        HashMap<String, String> state = new HashMap<>();
         state.put("queryState", "1999-01-01T00:00:00");
         runner.getStateManager().setState(state, Scope.CLUSTER);
         runner.run();
@@ -606,7 +601,7 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
         assertEquals(flowFiles.size(), expectedXmlCount);
         byte[] actualByteArray = null;
         for (MockFlowFile flowFile : flowFiles) {
-            if (flowFile.getAttribute(CoreAttributes.FILENAME.key()).endsWith("/" + Integer.toString(xmlMod) + ".xml")) {
+            if (flowFile.getAttribute(CoreAttributes.FILENAME.key()).endsWith("/" + xmlMod + ".xml")) {
                 actualByteArray = runner.getContentAsByteArray(flowFile);
                 break;
             }
@@ -624,7 +619,7 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
         runner.assertAllFlowFilesContainAttribute(QueryMarkLogic.SUCCESS, CoreAttributes.FILENAME.key());
         List<MockFlowFile> flowFiles = runner.getFlowFilesForRelationship(QueryMarkLogic.SUCCESS);
         assertEquals(flowFiles.size(), expectedJsonCount);
-        byte[] actualByteArray = null;
+        byte[] actualByteArray = new byte[0];
         for (MockFlowFile flowFile : flowFiles) {
             if (flowFile.getAttribute(CoreAttributes.FILENAME.key()).endsWith("/" + jsonMod + ".json")) {
                 actualByteArray = runner.getContentAsByteArray(flowFile);
@@ -633,7 +628,7 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
         }
         byte[] expectedByteArray = documents.get(jsonMod).getContent().getBytes();
         assertEquals(expectedByteArray.length, actualByteArray.length);
-        assertTrue(Arrays.equals(expectedByteArray, actualByteArray));
+        assertArrayEquals(expectedByteArray, actualByteArray);
         runner.shutdown();
     }
 }

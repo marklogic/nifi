@@ -40,9 +40,9 @@ public class RunFlowMarkLogicTest extends AbstractMarkLogicProcessorTest {
         HubConfigImpl hubConfig = processor.initializeHubConfig(processContext, config);
         assertEquals("somehost", hubConfig.getHost());
 
-        assertEquals(new Integer(9010), hubConfig.getPort(DatabaseKind.STAGING));
-        assertEquals(new Integer(9011), hubConfig.getPort(DatabaseKind.FINAL));
-        assertEquals(new Integer(9013), hubConfig.getPort(DatabaseKind.JOB));
+        assertEquals(Integer.valueOf(9010), hubConfig.getPort(DatabaseKind.STAGING));
+        assertEquals(Integer.valueOf(9011), hubConfig.getPort(DatabaseKind.FINAL));
+        assertEquals(Integer.valueOf(9013), hubConfig.getPort(DatabaseKind.JOB));
 
         assertEquals("someuser", hubConfig.getMlUsername());
         assertEquals("someword", hubConfig.getMlPassword());
@@ -107,9 +107,9 @@ public class RunFlowMarkLogicTest extends AbstractMarkLogicProcessorTest {
 
         HubConfigImpl hubConfig = processor.initializeHubConfig(processContext, config);
 
-        assertTrue(sslContext == hubConfig.getSslContext(DatabaseKind.STAGING));
-        assertTrue(sslContext == hubConfig.getSslContext(DatabaseKind.FINAL));
-        assertTrue(sslContext == hubConfig.getSslContext(DatabaseKind.JOB));
+        assertSame(sslContext, hubConfig.getSslContext(DatabaseKind.STAGING));
+        assertSame(sslContext, hubConfig.getSslContext(DatabaseKind.FINAL));
+        assertSame(sslContext, hubConfig.getSslContext(DatabaseKind.JOB));
         assertEquals(DatabaseClientFactory.SSLHostnameVerifier.STRICT, hubConfig.getSslHostnameVerifier(DatabaseKind.STAGING));
         assertEquals(DatabaseClientFactory.SSLHostnameVerifier.STRICT, hubConfig.getSslHostnameVerifier(DatabaseKind.FINAL));
         assertEquals(DatabaseClientFactory.SSLHostnameVerifier.STRICT, hubConfig.getSslHostnameVerifier(DatabaseKind.JOB));
@@ -131,17 +131,17 @@ public class RunFlowMarkLogicTest extends AbstractMarkLogicProcessorTest {
 
         HubConfigImpl hubConfig = processor.initializeHubConfig(processContext, config);
 
-        assertTrue(sslContext == hubConfig.getSslContext(DatabaseKind.STAGING));
-        assertTrue(sslContext == hubConfig.getSslContext(DatabaseKind.FINAL));
-        assertTrue(sslContext == hubConfig.getSslContext(DatabaseKind.JOB));
+        assertSame(sslContext, hubConfig.getSslContext(DatabaseKind.STAGING));
+        assertSame(sslContext, hubConfig.getSslContext(DatabaseKind.FINAL));
+        assertSame(sslContext, hubConfig.getSslContext(DatabaseKind.JOB));
         assertEquals(DatabaseClientFactory.SSLHostnameVerifier.COMMON, hubConfig.getSslHostnameVerifier(DatabaseKind.STAGING));
         assertEquals(DatabaseClientFactory.SSLHostnameVerifier.COMMON, hubConfig.getSslHostnameVerifier(DatabaseKind.FINAL));
         assertEquals(DatabaseClientFactory.SSLHostnameVerifier.COMMON, hubConfig.getSslHostnameVerifier(DatabaseKind.JOB));
 
         String message = "Should use the trust manager in the DatabaseClientConfig, which will have been configured " +
             "by the user in the NiFi SSL service";
-        assertTrue(message, trustManager == hubConfig.getTrustManager(DatabaseKind.STAGING));
-        assertTrue(message, trustManager == hubConfig.getTrustManager(DatabaseKind.FINAL));
-        assertTrue(message, trustManager == hubConfig.getTrustManager(DatabaseKind.JOB));
+        assertSame(message, trustManager, hubConfig.getTrustManager(DatabaseKind.STAGING));
+        assertSame(message, trustManager, hubConfig.getTrustManager(DatabaseKind.FINAL));
+        assertSame(message, trustManager, hubConfig.getTrustManager(DatabaseKind.JOB));
     }
 }

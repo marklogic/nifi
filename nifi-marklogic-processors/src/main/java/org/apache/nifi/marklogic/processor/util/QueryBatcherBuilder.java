@@ -70,22 +70,22 @@ public class QueryBatcherBuilder {
             case QueryTypes.COLLECTION_STR:
                 String[] collections = queryValue.split(",");
                 queryDef = queryManager.newStructuredQueryBuilder().collection(collections);
-                return new Tuple(queryDef, Format.XML);
+                return new Tuple<>(queryDef, Format.XML);
             case QueryTypes.COMBINED_JSON_STR:
                 queryDef = queryManager.newRawCombinedQueryDefinition(new StringHandle(queryValue).withFormat(Format.JSON));
-                return new Tuple(queryDef, Format.JSON);
+                return new Tuple<>(queryDef, Format.JSON);
             case QueryTypes.COMBINED_XML_STR:
                 queryDef = queryManager.newRawCombinedQueryDefinition(new StringHandle(queryValue).withFormat(Format.XML));
-                return new Tuple(queryDef, Format.XML);
+                return new Tuple<>(queryDef, Format.XML);
             case QueryTypes.STRUCTURED_JSON_STR:
                 queryDef = queryManager.newRawStructuredQueryDefinition(new StringHandle(queryValue).withFormat(Format.JSON));
-                return new Tuple(queryDef, Format.JSON);
+                return new Tuple<>(queryDef, Format.JSON);
             case QueryTypes.STRUCTURED_XML_STR:
                 queryDef = queryManager.newRawStructuredQueryDefinition(new StringHandle(queryValue).withFormat(Format.XML));
-                return new Tuple(queryDef, Format.XML);
+                return new Tuple<>(queryDef, Format.XML);
             default:
                 queryDef = queryManager.newStringDefinition().withCriteria(queryValue);
-                return new Tuple(queryDef, Format.XML);
+                return new Tuple<>(queryDef, Format.XML);
         }
     }
 

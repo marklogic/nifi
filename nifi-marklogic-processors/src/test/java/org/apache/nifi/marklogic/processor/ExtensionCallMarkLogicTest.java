@@ -64,14 +64,10 @@ public class ExtensionCallMarkLogicTest extends AbstractMarkLogicProcessorTest {
 
         processor.onTrigger(runner.getProcessContext(), mockProcessSessionFactory);
 
-
         assertEquals("value", runner.getProcessContext().getProperty("param:uri").getValue());
         assertEquals(MethodTypes.PUT_STR, runner.getProcessContext().getProperty(TestExtensionCallMarkLogic.METHOD_TYPE).toString());
 
-
         assertEquals(2, processor.relationships.size());
-
-
     }
 
     class TestExtensionCallMarkLogic extends ExtensionCallMarkLogic {

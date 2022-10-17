@@ -30,7 +30,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class DeleteMarkLogicIT extends AbstractMarkLogicIT {
     private String collection;
@@ -71,10 +71,11 @@ public class DeleteMarkLogicIT extends AbstractMarkLogicIT {
 
         runner.assertTransferCount(QueryMarkLogic.ORIGINAL, 1);
         MockFlowFile originalFlowFile = runner.getFlowFilesForRelationship(QueryMarkLogic.ORIGINAL).get(0);
-        assertEquals("If a FlowFile is passed to DeleteML/QueryML, it is expected to be sent to the " +
-            "ORIGINAL relationship before the job completes", 12345, originalFlowFile.getId());
+        assertEquals(12345, originalFlowFile.getId(), "If a FlowFile is passed to DeleteML/QueryML, it is expected to be sent to the " +
+            "ORIGINAL relationship before the job completes");
 
-        DocumentPage page = getDatabaseClient().newDocumentManager().search(new StructuredQueryBuilder().collection(collection), 1);
-        assertEquals(0, page.getTotalSize());
+        try(DocumentPage page = getDatabaseClient().newDocumentManager().search(new StructuredQueryBuilder().collection(collection), 1)) {
+            assertEquals(0, page.getTotalSize());
+        }
     }
 }

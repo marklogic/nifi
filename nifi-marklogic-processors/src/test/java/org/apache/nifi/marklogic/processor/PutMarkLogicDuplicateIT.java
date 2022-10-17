@@ -16,6 +16,7 @@
  */
 package org.apache.nifi.marklogic.processor;
 
+import org.apache.nifi.processor.Processor;
 import org.apache.nifi.util.TestRunner;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
@@ -23,7 +24,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class PutMarkLogicDuplicateIT extends AbstractMarkLogicIT {
 
@@ -43,7 +44,7 @@ public class PutMarkLogicDuplicateIT extends AbstractMarkLogicIT {
         }
     }
 
-    public TestRunner getNewTestRunner(Class processor) {
+    public TestRunner getNewTestRunner(Class<? extends Processor> processor) {
         TestRunner runner = super.getNewTestRunner(processor);
         runner.setThreadCount(4);//Change this to higher value than 1 and likely will fail with XDMP-CONFLICTINGUPDATE
         runner.setProperty(PutMarkLogic.URI_ATTRIBUTE_NAME, "filename");
@@ -72,8 +73,8 @@ public class PutMarkLogicDuplicateIT extends AbstractMarkLogicIT {
         runner.shutdown();
 
         int dbDocCount = getNumDocumentsInCollection(absolutePath);
-        assertEquals("Docs in db should be 0", 0, dbDocCount);
-        assertEquals("FAILURE should have numDocs", numDocs, runner.getFlowFilesForRelationship(PutMarkLogic.FAILURE).size());
+        assertEquals(0, dbDocCount, "Docs in db should be 0");
+        assertEquals(numDocs, runner.getFlowFilesForRelationship(PutMarkLogic.FAILURE).size(), "FAILURE should have numDocs");
     }
 
     @Test
@@ -96,8 +97,8 @@ public class PutMarkLogicDuplicateIT extends AbstractMarkLogicIT {
         runner.shutdown();
 
         int dbDocCount = getNumDocumentsInCollection(absolutePath);
-        assertEquals("Docs in db should match modulator", modulator, dbDocCount);
-        assertEquals("FAILED_URI should have numDocs - modulator", numDocs - modulator, runner.getFlowFilesForRelationship(PutMarkLogic.DUPLICATE_URI).size());
+        assertEquals(modulator, dbDocCount, "Docs in db should match modulator");
+        assertEquals(numDocs - modulator, runner.getFlowFilesForRelationship(PutMarkLogic.DUPLICATE_URI).size(), "FAILED_URI should have numDocs - modulator");
     }
 
 
@@ -125,8 +126,8 @@ public class PutMarkLogicDuplicateIT extends AbstractMarkLogicIT {
         runner.shutdown();
 
         int dbDocCount = getNumDocumentsInCollection(absolutePath);
-        assertEquals("Docs in db should match modulator", modulator, dbDocCount);
-        assertEquals("Docs in SUCCESS relationship should match numDocs", numDocs, runner.getFlowFilesForRelationship(PutMarkLogic.SUCCESS).size());
-        assertEquals("DuplicateUriFlowFileMap should be empty", 0, PutMarkLogic.duplicateFlowFileMap.size());
+        assertEquals(modulator, dbDocCount, "Docs in db should match modulator");
+        assertEquals(numDocs, runner.getFlowFilesForRelationship(PutMarkLogic.SUCCESS).size(), "Docs in SUCCESS relationship should match numDocs");
+        assertEquals(0, PutMarkLogic.duplicateFlowFileMap.size(), "DuplicateUriFlowFileMap should be empty");
     }
 }

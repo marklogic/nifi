@@ -31,7 +31,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class ApplyTransformMarkLogicIT extends AbstractMarkLogicIT {
 
@@ -65,11 +65,12 @@ public class ApplyTransformMarkLogicIT extends AbstractMarkLogicIT {
         runner.assertAllFlowFilesContainAttribute(QueryMarkLogic.SUCCESS, CoreAttributes.FILENAME.key());
         StringHandle queryHandle = new StringHandle().withFormat(Format.XML).with(queryStr);
         RawCombinedQueryDefinition qDef = queryMgr.newRawCombinedQueryDefinition(queryHandle);
-        DocumentPage page = getDatabaseClient().newDocumentManager().search(qDef, 1);
-        page.forEach((docRecord) -> {
-            String doc = docRecord.getContentAs(String.class);
-            assertTrue(doc.contains("myAttr=\"myVal\""));
-        });
+        try(DocumentPage page = getDatabaseClient().newDocumentManager().search(qDef, 1)) {
+            page.forEach((docRecord) -> {
+                String doc = docRecord.getContentAs(String.class);
+                assertTrue(doc.contains("myAttr=\"myVal\""));
+            });
+        }
     }
 
     private void loadDocumentsIntoCollection(String collection, List<IngestDoc> documents) {

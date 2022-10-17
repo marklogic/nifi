@@ -31,15 +31,12 @@ import org.apache.nifi.expression.ExpressionLanguageScope;
 import org.apache.nifi.flowfile.FlowFile;
 import org.apache.nifi.processor.*;
 import org.apache.nifi.processor.exception.ProcessException;
-import org.apache.nifi.processor.io.StreamCallback;
 import org.apache.nifi.processor.util.StandardValidators;
 import org.apache.nifi.util.StringUtils;
 
 import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.Map.Entry;
 
@@ -164,7 +161,7 @@ public class ExecuteScriptMarkLogic extends AbstractMarkLogicProcessor {
         .description("Receives the original FlowFile if the call to MarkLogic fails for any reason").build();
 
 
-    private static Charset UTF8 = Charset.forName("UTF-8");
+    private static Charset UTF8 = StandardCharsets.UTF_8;
 
     @Override
     public void init(ProcessorInitializationContext context) {
@@ -276,12 +273,7 @@ public class ExecuteScriptMarkLogic extends AbstractMarkLogicProcessor {
         synchronized (session) {
             if (resultsDest.equals("Content")) {
                 // write the query result to the FlowFile content
-                flowFile = session.write(flowFile, new StreamCallback() {
-                    @Override
-                    public void process(final InputStream in, final OutputStream out) throws IOException {
-                        out.write(resultStr.getBytes(UTF8));
-                    }
-                });
+                flowFile = session.write(flowFile, (in, out) -> out.write(resultStr.getBytes(UTF8)));
             } else if (resultsDest.equals("Attribute")) {
                 flowFile = session.putAttribute(flowFile, MARKLOGIC_RESULT, resultStr);
             } else {

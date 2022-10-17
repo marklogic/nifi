@@ -194,7 +194,7 @@ class TestQueryBatcher implements QueryBatcher {
     }
 
     @Override
-    public boolean awaitCompletion(long timeout, TimeUnit unit) throws InterruptedException {
+    public boolean awaitCompletion(long timeout, TimeUnit unit) {
         return false;
     }
 

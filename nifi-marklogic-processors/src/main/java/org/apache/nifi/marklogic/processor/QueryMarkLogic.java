@@ -55,7 +55,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Supports querying MarkLogic via the Data Movement SDK (DMSDK). More information on DMSDK can be found at
- * https://docs.marklogic.com/guide/java/data-movement#id_46947 .
+ * <a href="https://docs.marklogic.com/guide/java/data-movement#id_46947">...</a> .
  * <p>
  * The general approach is to require the user to specify a type of query and then a textual representation of a query
  * associated with that type.
@@ -432,7 +432,7 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
      * user's inputs to only select URIs with a dateTime value greater than the value found in the NiFi state map.
      * This effectively solves the problem of "Only process URIs newer than when the processor last ran".
      *
-     * @param queryBuilder
+     * @param client
      * @param context
      * @param incomingFlowFile
      * @return

@@ -289,7 +289,7 @@ public class PutMarkLogic extends AbstractMarkLogicProcessor {
                 FlowFileInfo flowFileInfo = getFlowFileInfoForWriteEvent(writeBatch.getItems()[0]);
                 if (flowFileInfo != null) {
                     ProcessSession session = flowFileInfo.session;
-                    String uriList = Stream.of(writeBatch.getItems()).map(item -> item.getTargetUri()).collect(Collectors.joining(","));
+                    String uriList = Stream.of(writeBatch.getItems()).map(WriteEvent::getTargetUri).collect(Collectors.joining(","));
                     FlowFile batchFlowFile = session.create();
 
                     JsonObject optionsJSONObj = new JsonObject();
@@ -297,7 +297,7 @@ public class PutMarkLogic extends AbstractMarkLogicProcessor {
                     for (String uri : uriList.split(",")) {
                         jsonArray.add(uri);
                     }
-                    ;
+
                     optionsJSONObj.add("uris", jsonArray);
 
                     session.putAttribute(batchFlowFile, "URIs", uriList);
@@ -382,7 +382,7 @@ public class PutMarkLogic extends AbstractMarkLogicProcessor {
                         break;
                     case FAIL_URI:
                         //Quick Fail the routeDocumentToRelationship will cleanup entry
-                        if (previousUUID != null && previousUUID != currentUUID) {
+                        if (previousUUID != null && !previousUUID.equals(currentUUID)) {
                             getLogger().debug("Routing to FAIL_URI:" + currentUUID);
                             uriFlowFileMap.put(currentUUID, new FlowFileInfo(flowFile, session, writeEvent));
                             routeDocumentToRelationship(writeEvent, DUPLICATE_URI);

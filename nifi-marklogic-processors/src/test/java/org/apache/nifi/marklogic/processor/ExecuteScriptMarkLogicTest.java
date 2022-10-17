@@ -34,7 +34,7 @@ public class ExecuteScriptMarkLogicTest extends AbstractMarkLogicProcessorTest {
     }
 
     @Test
-    public void testValidator() throws Exception {
+    public void testValidator() {
         runner.enableControllerService(service);
         runner.assertValid(service);
         runner.assertNotValid();
