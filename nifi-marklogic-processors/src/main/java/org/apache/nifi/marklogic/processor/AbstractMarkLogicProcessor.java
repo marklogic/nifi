@@ -262,7 +262,7 @@ public abstract class AbstractMarkLogicProcessor extends AbstractSessionFactoryP
     }
 
     /**
-     * See https://github.com/marklogic/nifi/issues/21 for details on why the calls to transfer and commit are within
+     * See <a href="https://github.com/marklogic/nifi/issues/21">...</a> for details on why the calls to transfer and commit are within
      * a synchronized block.
      *
      * @param session

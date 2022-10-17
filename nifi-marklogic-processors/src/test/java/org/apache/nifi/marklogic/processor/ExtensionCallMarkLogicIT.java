@@ -59,7 +59,6 @@ public class ExtensionCallMarkLogicIT extends AbstractMarkLogicIT {
         assertEquals(2, runner.getFlowFilesForRelationship(ExtensionCallMarkLogic.SUCCESS).size());
 
         List<MockFlowFile> results = runner.getFlowFilesForRelationship(ExtensionCallMarkLogic.SUCCESS);
-        assertEquals(2, results.size());
 
         MockFlowFile result = results.get(1);
         String resultValue = new String(runner.getContentAsByteArray(result));

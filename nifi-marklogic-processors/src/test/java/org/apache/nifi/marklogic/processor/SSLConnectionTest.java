@@ -20,7 +20,6 @@ import org.apache.nifi.marklogic.controller.DefaultMarkLogicDatabaseClientServic
 import org.apache.nifi.processor.ProcessContext;
 import org.apache.nifi.processor.ProcessSessionFactory;
 import org.apache.nifi.processor.exception.ProcessException;
-import org.apache.nifi.reporting.InitializationException;
 import org.apache.nifi.ssl.StandardSSLContextService;
 import org.junit.Before;
 import org.junit.Test;
@@ -31,13 +30,13 @@ import java.util.Map;
 public class SSLConnectionTest extends AbstractMarkLogicProcessorTest {
 
     @Before
-    public void setUp() throws InitializationException {
+    public void setUp() {
         initialize(new MockAbstractMarkLogicProcessor());
     }
 
     @Test
     public void testCreateClientWithSSL() throws Exception {
-        final Map<String, String> sslProperties = new HashMap<String, String>();
+        final Map<String, String> sslProperties = new HashMap<>();
         sslProperties.put(StandardSSLContextService.KEYSTORE.getName(), "src/test/resources/keystore.jks");
         sslProperties.put(StandardSSLContextService.KEYSTORE_PASSWORD.getName(), "passwordpassword");
         sslProperties.put(StandardSSLContextService.KEYSTORE_TYPE.getName(), "JKS");

@@ -23,6 +23,7 @@ import com.marklogic.client.query.StructuredQueryDefinition;
 import com.marklogic.junit5.spring.AbstractSpringMarkLogicTest;
 import org.apache.nifi.marklogic.controller.DefaultMarkLogicDatabaseClientService;
 import org.apache.nifi.marklogic.controller.MarkLogicDatabaseClientService;
+import org.apache.nifi.processor.Processor;
 import org.apache.nifi.reporting.InitializationException;
 import org.apache.nifi.util.TestRunner;
 import org.apache.nifi.util.TestRunners;
@@ -35,10 +36,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static junit.framework.TestCase.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 
 /**
- * Utilizes the JUnit5 test support provided by marklogic-junit - https://github.com/rjrudin/marklogic-junit .
+ * Utilizes the JUnit5 test support provided by marklogic-junit - <a href="https://github.com/rjrudin/marklogic-junit">...</a> .
  * <p>
  * A DatabaseClient is constructed based on the properties loaded by the TestConfig class, which conveniently reads
  * from the Gradle properties files that are used to deploy the test application.
@@ -106,7 +108,7 @@ public abstract class AbstractMarkLogicIT extends AbstractSpringMarkLogicTest {
         dataMovementManager = getDatabaseClient().newDataMovementManager();
         for (int i = 0; i < numDocs; i++) {
             String fileName = "/PutMarkLogicTest/";
-            String content = "";
+            String content;
             if (i % xmlMod == 0) {
                 fileName += i + ".xml";
                 content = "<root><sample>xmlcontent</sample><dateTime xmlns=\"namespace-test\">2000-01-01T00:00:00.000000</dateTime></root>";
@@ -138,7 +140,7 @@ public abstract class AbstractMarkLogicIT extends AbstractSpringMarkLogicTest {
         runner.enableControllerService(service);
     }
 
-    protected TestRunner getNewTestRunner(Class processor) {
+    protected TestRunner getNewTestRunner(Class<? extends Processor> processor) {
         TestRunner runner = TestRunners.newTestRunner(processor);
         addDatabaseClientService(runner);
         runner.setProperty(AbstractMarkLogicProcessor.BATCH_SIZE, batchSize);

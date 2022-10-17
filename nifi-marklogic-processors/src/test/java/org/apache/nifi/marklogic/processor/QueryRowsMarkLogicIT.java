@@ -151,7 +151,7 @@ public class QueryRowsMarkLogicIT extends AbstractMarkLogicIT {
         runner.run();
 
         List<MockFlowFile> list = runner.getFlowFilesForRelationship(QueryRowsMarkLogic.ORIGINAL);
-        assertEquals(new Integer(1), list.size(), "The new incoming FlowFile should go to Original");
+        assertEquals(Integer.valueOf(1), list.size(), "The new incoming FlowFile should go to Original");
         assertEquals(serializedPlan, list.get(0).getAttribute("marklogic-optic-plan"), "The serialized plan should be" +
             " on the success FlowFile so that a user knows what was executed to produce the rows");
 

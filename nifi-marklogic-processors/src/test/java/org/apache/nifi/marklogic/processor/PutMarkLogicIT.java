@@ -22,6 +22,7 @@ import com.marklogic.client.datamovement.ExportListener;
 import com.marklogic.client.datamovement.QueryBatcher;
 import com.marklogic.client.io.StringHandle;
 import com.marklogic.client.query.StructuredQueryBuilder;
+import org.apache.nifi.processor.Processor;
 import org.apache.nifi.util.TestRunner;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -29,7 +30,7 @@ import org.junit.jupiter.api.Test;
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class PutMarkLogicIT extends AbstractMarkLogicIT {
 
@@ -38,7 +39,7 @@ public class PutMarkLogicIT extends AbstractMarkLogicIT {
         super.setup();
     }
 
-    public TestRunner getNewTestRunner(Class processor) {
+    public TestRunner getNewTestRunner(Class<? extends Processor> processor) {
         TestRunner runner = super.getNewTestRunner(processor);
         runner.setProperty(PutMarkLogic.URI_ATTRIBUTE_NAME, "filename");
         return runner;

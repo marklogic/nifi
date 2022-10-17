@@ -84,7 +84,7 @@ public abstract class AbstractMarkLogicProcessorTest extends Assert {
     }
 
     protected MockFlowFile addFlowFile(String... contents) {
-        return addFlowFile(new HashMap(), contents);
+        return addFlowFile(new HashMap<>(), contents);
     }
 
     protected MockFlowFile addFlowFile(Map<String, String> attributes, String... contents) {

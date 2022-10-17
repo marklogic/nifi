@@ -25,6 +25,7 @@ import org.apache.nifi.flowfile.attributes.CoreAttributes;
 import org.apache.nifi.processor.Relationship;
 import org.apache.nifi.reporting.InitializationException;
 import org.apache.nifi.util.MockFlowFile;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -62,9 +63,9 @@ public class PutMarkLogicDuplicateUriTest extends AbstractMarkLogicProcessorTest
 
         processor.onTrigger(processContext, mockProcessSessionFactory);
 
-        assertEquals("Should only be 3 uri in uriFlowFileMap", 3, TestDuplicatePutMarkLogic.uriFlowFileMap.size());
-        assertEquals("Should only be 0 uri in duplicateFlowFileMap", 0, TestDuplicatePutMarkLogic.duplicateFlowFileMap.size());
-        assertEquals(3, processor.writeEventsCount);
+        Assertions.assertEquals(3, TestDuplicatePutMarkLogic.uriFlowFileMap.size(), "Should only be 3 uri in uriFlowFileMap");
+        Assertions.assertEquals(0, TestDuplicatePutMarkLogic.duplicateFlowFileMap.size(), "Should only be 0 uri in duplicateFlowFileMap");
+        Assertions.assertEquals(3, processor.writeEventsCount);
     }
 
     @Test
@@ -87,12 +88,10 @@ public class PutMarkLogicDuplicateUriTest extends AbstractMarkLogicProcessorTest
 
         processor.onTrigger(processContext, mockProcessSessionFactory);
 
-        assertEquals("Should only be 1 uri in uriFlowFileMap", 1, TestDuplicatePutMarkLogic.uriFlowFileMap.size());
-        assertEquals("Should only be 1 uri in duplicateFlowFileMap", 1,
-            TestDuplicatePutMarkLogic.duplicateFlowFileMap.size());
-        assertEquals("The first flowFile UUID should be the currentFlowFileUUID ",
-            flowFile.getAttribute(CoreAttributes.UUID.key()), processor.lastUUID);
-        assertEquals("Should be only 1 writeEvent", 1, processor.writeEventsCount);
+        Assertions.assertEquals(1, TestDuplicatePutMarkLogic.uriFlowFileMap.size(), "Should only be 1 uri in uriFlowFileMap");
+        Assertions.assertEquals(1, TestDuplicatePutMarkLogic.duplicateFlowFileMap.size(), "Should only be 1 uri in duplicateFlowFileMap");
+        Assertions.assertEquals(flowFile.getAttribute(CoreAttributes.UUID.key()), processor.lastUUID, "The first flowFile UUID should be the currentFlowFileUUID ");
+        Assertions.assertEquals(1, processor.writeEventsCount, "Should be only 1 writeEvent");
     }
 
     @Test
@@ -115,7 +114,10 @@ public class PutMarkLogicDuplicateUriTest extends AbstractMarkLogicProcessorTest
         MockFlowFile flowFile3 = addFlowFile(attributes, "{\"hello\":\"nifi rocks\"}");
         // The last superseded flow file is always the flowFile2
         processor.onTrigger(processContext, mockProcessSessionFactory);
-        assertEquals("CloseBatchWriter should be 2", 2, processor.closeWriterBatcherCount);
+        assertNotNull(flowFile1);
+        assertNotNull(flowFile2);
+        assertNotNull(flowFile3);
+        Assertions.assertEquals(2, processor.closeWriterBatcherCount, "CloseBatchWriter should be 2");
     }
 }
 
@@ -133,9 +135,9 @@ class TestDuplicatePutMarkLogic extends PutMarkLogic {
     public String lastSupersededIndex = "";
     public String lastSupersededUUID = "";
     public String lastUUID = "";
-    public HashMap<String, Integer> relationsMap = new HashMap<String, Integer>();
+    public HashMap<String, Integer> relationsMap = new HashMap<>();
 
-    //Clear the maps and variables so we can clean between tests.
+    //Clear the maps and variables, so we can clean between tests.
     void reset() {
         writeEventsCount = 0;
         failedCount = 0;
@@ -155,7 +157,7 @@ class TestDuplicatePutMarkLogic extends PutMarkLogic {
         String relName = relationship.getName();
         FlowFileInfo fileInfo = getFlowFileInfoForWriteEvent(writeEvent);
         int relCtr = relationsMap.get(relName) != null ? relationsMap.get(relName) : 0;
-        relationsMap.put(relName, relCtr++);
+        relationsMap.put(relName, relCtr);
         if (relName.equals("supersedes")) {
             lastSupersededIndex = fileInfo.flowFile.getAttribute("index");
             lastSupersededUUID = fileInfo.flowFile.getAttribute(CoreAttributes.UUID.key());

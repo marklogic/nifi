@@ -2,7 +2,6 @@ package org.apache.nifi.marklogic.processor;
 
 import com.marklogic.client.DatabaseClient;
 import com.marklogic.client.expression.PlanBuilder;
-import com.marklogic.client.io.BytesHandle;
 import com.marklogic.client.io.InputStreamHandle;
 import com.marklogic.client.io.StringHandle;
 import com.marklogic.client.row.RowManager;
@@ -86,16 +85,17 @@ public class QueryRowsMarkLogic extends AbstractMarkLogicProcessor {
             final DatabaseClient client = getDatabaseClient(context);
             final RowManager rowManager = client.newRowManager();
             PlanBuilder.Plan plan = rowManager.newRawPlanDefinition(new StringHandle(jsonPlan));
-
-            try (InputStream inputStream = rowManager.resultDoc(plan, new InputStreamHandle().withMimetype(mimeType))
-                    .get()) {
-                if (inputStream != null) {
-                    FlowFile resultFlowFile = session.write(
-                        session.create(incomingFlowFile),
-                        out -> FileCopyUtils.copy(inputStream, out));
-                    session.transfer(resultFlowFile, SUCCESS);
+            try (InputStreamHandle handle = new InputStreamHandle()){
+                try (InputStream inputStream = rowManager.resultDoc(plan, handle.withMimetype(mimeType))
+                        .get()) {
+                    if (inputStream != null) {
+                        FlowFile resultFlowFile = session.write(
+                            session.create(incomingFlowFile),
+                            out -> FileCopyUtils.copy(inputStream, out));
+                        session.transfer(resultFlowFile, SUCCESS);
+                    }
+                    transferAndCommit(session, incomingFlowFile, ORIGINAL);
                 }
-                transferAndCommit(session, incomingFlowFile, ORIGINAL);
             }
 
         } catch (final Throwable t) {

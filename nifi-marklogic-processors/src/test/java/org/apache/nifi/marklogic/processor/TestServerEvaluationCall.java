@@ -35,7 +35,7 @@ public class TestServerEvaluationCall implements ServerEvaluationCall {
     public int xqueryCalls = 0;
     public int javascriptCalls = 0;
     public int modulePathCalls = 0;
-    public Map<String, Object> variables = new HashMap<String, Object>();
+    public Map<String, Object> variables = new HashMap<>();
 
     @Override
     public ServerEvaluationCall xquery(String xquery) {
@@ -69,22 +69,22 @@ public class TestServerEvaluationCall implements ServerEvaluationCall {
 
     @Override
     public ServerEvaluationCall addVariable(String name, String value) {
-        return addVariableAs(name, (Object) value);
+        return addVariableAs(name, value);
     }
 
     @Override
     public ServerEvaluationCall addVariable(String name, Number value) {
-        return addVariableAs(name, (Object) value);
+        return addVariableAs(name, value);
     }
 
     @Override
     public ServerEvaluationCall addVariable(String name, Boolean value) {
-        return addVariableAs(name, (Object) value);
+        return addVariableAs(name, value);
     }
 
     @Override
     public ServerEvaluationCall addVariable(String name, AbstractWriteHandle value) {
-        return addVariableAs(name, (Object) value);
+        return addVariableAs(name, value);
     }
 
     @Override
@@ -131,7 +131,7 @@ public class TestServerEvaluationCall implements ServerEvaluationCall {
         variables.clear();
     }
 
-    class TestEvalResultIterator implements EvalResultIterator, Iterator<EvalResult> {
+    class TestEvalResultIterator implements EvalResultIterator {
 
         @Override
         public Iterator<EvalResult> iterator() {
