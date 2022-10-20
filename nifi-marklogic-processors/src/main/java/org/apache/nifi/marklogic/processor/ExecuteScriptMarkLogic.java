@@ -16,6 +16,39 @@
  */
 package org.apache.nifi.marklogic.processor;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map.Entry;
+import java.util.Set;
+
+import com.marklogic.client.FailedRequestException;
+import org.apache.nifi.annotation.behavior.DynamicProperty;
+import org.apache.nifi.annotation.documentation.CapabilityDescription;
+import org.apache.nifi.annotation.documentation.Tags;
+import org.apache.nifi.components.AllowableValue;
+import org.apache.nifi.components.PropertyDescriptor;
+import org.apache.nifi.components.ValidationContext;
+import org.apache.nifi.components.ValidationResult;
+import org.apache.nifi.components.Validator;
+import org.apache.nifi.expression.ExpressionLanguageScope;
+import org.apache.nifi.flowfile.FlowFile;
+import org.apache.nifi.processor.ProcessContext;
+import org.apache.nifi.processor.ProcessSession;
+import org.apache.nifi.processor.ProcessSessionFactory;
+import org.apache.nifi.processor.ProcessorInitializationContext;
+import org.apache.nifi.processor.Relationship;
+import org.apache.nifi.processor.exception.ProcessException;
+import org.apache.nifi.processor.io.StreamCallback;
+import org.apache.nifi.processor.util.StandardValidators;
+import org.apache.nifi.util.StringUtils;
+
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -23,26 +56,10 @@ import com.google.gson.JsonParser;
 import com.marklogic.client.DatabaseClient;
 import com.marklogic.client.eval.EvalResult;
 import com.marklogic.client.eval.ServerEvaluationCall;
-import org.apache.nifi.annotation.behavior.DynamicProperty;
-import org.apache.nifi.annotation.documentation.CapabilityDescription;
-import org.apache.nifi.annotation.documentation.Tags;
-import org.apache.nifi.components.*;
-import org.apache.nifi.expression.ExpressionLanguageScope;
-import org.apache.nifi.flowfile.FlowFile;
-import org.apache.nifi.processor.*;
-import org.apache.nifi.processor.exception.ProcessException;
-import org.apache.nifi.processor.util.StandardValidators;
-import org.apache.nifi.util.StringUtils;
 
-import java.io.ByteArrayOutputStream;
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
-import java.util.*;
-import java.util.Map.Entry;
-
-@Tags({"MarkLogic", "database", "XQuery", "JavaScript", "module", "server-side"})
+@Tags({ "MarkLogic", "database", "XQuery", "JavaScript", "module", "server-side" })
 @CapabilityDescription("Executes server-side code in MarkLogic, either in JavaScript or XQuery. "
-    + "Code can be given in a Script Body property or can be invoked as a path to a module installed on the server.")
+        + "Code can be given in a Script Body property or can be invoked as a path to a module installed on the server.")
 @DynamicProperty(name = "A FlowFile attribute to update",
     value = "The value to set it to",
     expressionLanguageScope = ExpressionLanguageScope.FLOWFILE_ATTRIBUTES,
@@ -59,7 +76,7 @@ public class ExecuteScriptMarkLogic extends AbstractMarkLogicProcessor {
             String modulePath = context.getProperty(MODULE_PATH).getValue();
             if (StringUtils.isEmpty(scriptBody) == StringUtils.isEmpty(modulePath)) {
                 return new ValidationResult.Builder().valid(false)
-                    .explanation("Exactly one of Module Path or Script Body must be set").build();
+                        .explanation("Exactly one of Module Path or Script Body must be set").build();
             } else {
                 return new ValidationResult.Builder().valid(true).build();
             }
@@ -73,19 +90,19 @@ public class ExecuteScriptMarkLogic extends AbstractMarkLogicProcessor {
     public static final String STR_MODULE_PATH = "Module Path";
 
     public static final AllowableValue AV_XQUERY = new AllowableValue(STR_XQUERY, STR_XQUERY,
-        "Execute XQuery supplied in the Script Body property");
+            "Execute XQuery supplied in the Script Body property");
 
     public static final AllowableValue AV_JAVASCRIPT = new AllowableValue(STR_JAVASCRIPT, STR_JAVASCRIPT,
-        "Execute JavaScript supplied in the Script Body property");
+            "Execute JavaScript supplied in the Script Body property");
 
     public static final AllowableValue AV_MODULE_PATH = new AllowableValue(STR_MODULE_PATH, STR_MODULE_PATH,
-        "Execute the module specified in the Module Path property");
+            "Execute the module specified in the Module Path property");
 
     public static final PropertyDescriptor EXECUTION_TYPE = new PropertyDescriptor.Builder().name("Execution Type")
-        .displayName("Execution Type")
-        .description("What will be executed: ad-hoc XQuery or JavaScript, or a path to a module on the server")
-        .allowableValues(AV_XQUERY, AV_JAVASCRIPT, AV_MODULE_PATH).required(true)
-        .addValidator(StandardValidators.NON_EMPTY_VALIDATOR).build();
+            .displayName("Execution Type")
+            .description("What will be executed: ad-hoc XQuery or JavaScript, or a path to a module on the server")
+            .allowableValues(AV_XQUERY, AV_JAVASCRIPT, AV_MODULE_PATH).required(true)
+            .addValidator(StandardValidators.NON_EMPTY_VALIDATOR).build();
 
     // ---------- Results Destination property ----------
 
@@ -94,74 +111,74 @@ public class ExecuteScriptMarkLogic extends AbstractMarkLogicProcessor {
     public static final String STR_FROMJSON = "Attributes from JSON Properties";
 
     public static final AllowableValue AV_CONTENT = new AllowableValue(STR_CONTENT, STR_CONTENT,
-        "Write the MarkLogic result to the FlowFile content");
+            "Write the MarkLogic result to the FlowFile content");
 
     public static final AllowableValue AV_ATTRIBUTE = new AllowableValue(STR_ATTRIBUTE, STR_ATTRIBUTE,
-        "Write the MarkLogic result to the marklogic.result attribute");
+            "Write the MarkLogic result to the marklogic.result attribute");
 
     public static final AllowableValue AV_FROMJSON = new AllowableValue(STR_FROMJSON, STR_FROMJSON,
-        "Parse a MarkLogic JSON result into attributes with the same names as the top-level JSON properties, where the values are simple types, not objects or arrays.");
+            "Parse a MarkLogic JSON result into attributes with the same names as the top-level JSON properties, where the values are simple types, not objects or arrays.");
 
     public static final PropertyDescriptor RESULTS_DESTINATION = new PropertyDescriptor.Builder()
-        .name("Results Destination").displayName("Results Destination")
-        .description("Where each result will be written in the FlowFile. "
-            + "If Attribute, the result will be written to the \"marklogic.result\" attribute.")
-        .allowableValues(AV_CONTENT, AV_ATTRIBUTE, AV_FROMJSON).required(true).defaultValue(STR_CONTENT)
-        .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
-        // Validators don't execute on non-required properties. We will attach the
-        // Script Body / Module Path validator here as a 2nd validator because this is
-        // required.
-        .addValidator(PATH_SCRIPT_VALIDATOR).build();
+            .name("Results Destination").displayName("Results Destination")
+            .description("Where each result will be written in the FlowFile. "
+                    + "If Attribute, the result will be written to the \"marklogic.result\" attribute.")
+            .allowableValues(AV_CONTENT, AV_ATTRIBUTE, AV_FROMJSON).required(true).defaultValue(STR_CONTENT)
+            .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
+            // Validators don't execute on non-required properties. We will attach the
+            // Script Body / Module Path validator here as a 2nd validator because this is
+            // required.
+            .addValidator(PATH_SCRIPT_VALIDATOR).build();
 
     public static final PropertyDescriptor SKIP_FIRST = new PropertyDescriptor.Builder().name("Skip First Result")
-        .displayName("Skip First Result")
-        .description("If true, first result is not sent to results relationship or "
-            + "last result relationship, but is sent to the first result relationship.")
-        .allowableValues("true", "false").required(true).defaultValue("false")
-        .addValidator(StandardValidators.NON_EMPTY_VALIDATOR).build();
+            .displayName("Skip First Result")
+            .description("If true, first result is not sent to results relationship or "
+                    + "last result relationship, but is sent to the first result relationship.")
+            .allowableValues("true", "false").required(true).defaultValue("false")
+            .addValidator(StandardValidators.NON_EMPTY_VALIDATOR).build();
 
     // ---------------------------
 
     public static final PropertyDescriptor SCRIPT_BODY = new PropertyDescriptor.Builder().name("Script Body")
-        .displayName("Script Body")
-        .description("Body of script to execute. Only one of Module Path or Script Body may be used")
-        .required(false).expressionLanguageSupported(ExpressionLanguageScope.FLOWFILE_ATTRIBUTES)
-        .addValidator(Validator.VALID).build();
+            .displayName("Script Body")
+            .description("Body of script to execute. Only one of Module Path or Script Body may be used")
+            .required(false).expressionLanguageSupported(ExpressionLanguageScope.FLOWFILE_ATTRIBUTES)
+            .addValidator(Validator.VALID).build();
 
     public static final PropertyDescriptor MODULE_PATH = new PropertyDescriptor.Builder().name("Module Path")
-        .displayName("Module Path")
-        .description("Path of module to execute. Only one of Module Path or Script Body may be used")
-        .required(false).expressionLanguageSupported(ExpressionLanguageScope.FLOWFILE_ATTRIBUTES)
-        .addValidator(Validator.VALID).build();
+            .displayName("Module Path")
+            .description("Path of module to execute. Only one of Module Path or Script Body may be used")
+            .required(false).expressionLanguageSupported(ExpressionLanguageScope.FLOWFILE_ATTRIBUTES)
+            .addValidator(Validator.VALID).build();
 
     public static final PropertyDescriptor CONTENT_VARIABLE = new PropertyDescriptor.Builder().name("Content Variable")
-        .displayName("Content Variable")
-        .description(
-            "The name of the external variable where the incoming content will be sent to the script. (optional)")
-        .required(false).expressionLanguageSupported(ExpressionLanguageScope.FLOWFILE_ATTRIBUTES)
-        .addValidator(Validator.VALID).build();
+            .displayName("Content Variable")
+            .description(
+                    "The name of the external variable where the incoming content will be sent to the script. (optional)")
+            .required(false).expressionLanguageSupported(ExpressionLanguageScope.FLOWFILE_ATTRIBUTES)
+            .addValidator(Validator.VALID).build();
 
     // ---------- RELATIONSHIPS ----------
 
     protected static final Relationship RESULTS = new Relationship.Builder().name("results")
-        .description("Receives a FlowFile for each result returned by the executed script. Will not receive a " +
-            "FlowFile for the first result if 'Skip First Result' is true.").build();
+            .description("Receives a FlowFile for each result returned by the executed script. Will not receive a " +
+                    "FlowFile for the first result if 'Skip First Result' is true.").build();
 
     protected static final Relationship FIRST_RESULT = new Relationship.Builder().name("first result")
-        .description("Receives a FlowFile for the first result returned by the executed script").build();
+            .description("Receives a FlowFile for the first result returned by the executed script").build();
 
     protected static final Relationship LAST_RESULT = new Relationship.Builder().name("last result")
-        .description("Receives a FlowFile for the last result returned by the executed script if it returns at " +
-            "least two results.").build();
+            .description("Receives a FlowFile for the last result returned by the executed script if it returns at " +
+                    "least two results.").build();
 
     protected static final Relationship ORIGINAL = new Relationship.Builder().name("original")
-        .description("Receives the original FlowFile that this processor received").build();
+            .description("Receives the original FlowFile that this processor received").build();
 
     protected static final Relationship FAILURE = new Relationship.Builder().name("failure")
-        .description("Receives the original FlowFile if the call to MarkLogic fails for any reason").build();
+            .description("Receives the original FlowFile if the call to MarkLogic fails for any reason").build();
 
 
-    private static Charset UTF8 = StandardCharsets.UTF_8;
+    private static Charset UTF8 = Charset.forName("UTF-8");
 
     @Override
     public void init(ProcessorInitializationContext context) {
@@ -188,7 +205,7 @@ public class ExecuteScriptMarkLogic extends AbstractMarkLogicProcessor {
 
     @Override
     public final void onTrigger(final ProcessContext context, final ProcessSessionFactory sessionFactory)
-        throws ProcessException {
+            throws ProcessException {
         final ProcessSession session = sessionFactory.createSession();
         FlowFile originalFF = null;
         try {
@@ -244,6 +261,17 @@ public class ExecuteScriptMarkLogic extends AbstractMarkLogicProcessor {
             originalFF = session.putAttribute(originalFF, MARKLOGIC_RESULTS_COUNT, Integer.toString(count));
             session.transfer(originalFF, ORIGINAL);
 
+            String scriptBody = determineScriptBody(context, originalFF);
+            String modulePath = determineModulePath(context, originalFF);
+
+            if (scriptBody.length() > 0) {
+                session.putAttribute(originalFF, "marklogic-script-body", determineScriptBody(context, originalFF));
+            }
+
+            if (modulePath.length() > 0) {
+                session.putAttribute(originalFF, "marklogic-module-path", determineModulePath(context, originalFF));
+            }
+
             if (last != null && (count > 1 || !skipFirst)) {
                 FlowFile lastFF = session.create(originalFF);
                 resultToFlowFile(session, last, lastFF, resultsDest);
@@ -273,7 +301,12 @@ public class ExecuteScriptMarkLogic extends AbstractMarkLogicProcessor {
         synchronized (session) {
             if (resultsDest.equals("Content")) {
                 // write the query result to the FlowFile content
-                flowFile = session.write(flowFile, (in, out) -> out.write(resultStr.getBytes(UTF8)));
+                flowFile = session.write(flowFile, new StreamCallback() {
+                    @Override
+                    public void process(final InputStream in, final OutputStream out) throws IOException {
+                        out.write(resultStr.getBytes(UTF8));
+                    }
+                });
             } else if (resultsDest.equals("Attribute")) {
                 flowFile = session.putAttribute(flowFile, MARKLOGIC_RESULT, resultStr);
             } else {
@@ -306,9 +339,22 @@ public class ExecuteScriptMarkLogic extends AbstractMarkLogicProcessor {
     @Override
     protected PropertyDescriptor getSupportedDynamicPropertyDescriptor(final String propertyDescriptorName) {
         PropertyDescriptor.Builder propertyBuilder = new PropertyDescriptor.Builder().name(propertyDescriptorName)
-            .required(false).addValidator(StandardValidators.ATTRIBUTE_KEY_PROPERTY_NAME_VALIDATOR)
-            .expressionLanguageSupported(ExpressionLanguageScope.FLOWFILE_ATTRIBUTES).dynamic(true);
+                .required(false).addValidator(StandardValidators.ATTRIBUTE_KEY_PROPERTY_NAME_VALIDATOR)
+                .expressionLanguageSupported(ExpressionLanguageScope.FLOWFILE_ATTRIBUTES).dynamic(true);
 
         return propertyBuilder.addValidator(StandardValidators.NON_EMPTY_VALIDATOR).build();
     }
+
+    protected String determineScriptBody(ProcessContext context, FlowFile flowFile) {
+
+        return context.getProperty(SCRIPT_BODY).evaluateAttributeExpressions(flowFile).getValue();
+
+    }
+
+    protected String determineModulePath(ProcessContext context, FlowFile flowFile) {
+
+        return context.getProperty(MODULE_PATH).evaluateAttributeExpressions(flowFile).getValue();
+
+    }
+
 }
