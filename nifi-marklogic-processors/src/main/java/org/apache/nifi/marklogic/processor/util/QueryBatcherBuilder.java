@@ -36,11 +36,12 @@ public class QueryBatcherBuilder {
      * @param stateRangeIndexQuery can be null
      * @return
      */
-    public Tuple<DataMovementManager, QueryBatcher> newQueryBatcher(QueryTypeAndValue queryTypeAndValue, RangeIndexQuery stateRangeIndexQuery) {
+    public QueryBatcherContext newQueryBatcher(QueryTypeAndValue queryTypeAndValue, RangeIndexQuery stateRangeIndexQuery) {
         DataMovementManager dataMovementManager = client.newDataMovementManager();
         QueryManager queryManager = client.newQueryManager();
 
         Tuple<QueryDefinition, Format> queryAndFormat = buildQueryDefinitionAndFormat(queryManager, queryTypeAndValue);
+        final QueryDefinition queryDef = queryAndFormat.getKey();
 
         QueryBatcher queryBatcher;
         if (stateRangeIndexQuery != null) {
@@ -49,7 +50,6 @@ public class QueryBatcherBuilder {
             RawCombinedQueryDefinition query = queryManager.newRawCombinedQueryDefinition(handle);
             queryBatcher = dataMovementManager.newQueryBatcher(query);
         } else {
-            final QueryDefinition queryDef = queryAndFormat.getKey();
             if (queryDef instanceof RawCombinedQueryDefinition) {
                 queryBatcher = dataMovementManager.newQueryBatcher((RawCombinedQueryDefinition) queryDef);
             } else if (queryDef instanceof RawStructuredQueryDefinition) {
@@ -60,7 +60,8 @@ public class QueryBatcherBuilder {
                 queryBatcher = dataMovementManager.newQueryBatcher((StringQueryDefinition) queryDef);
             }
         }
-        return new Tuple<>(dataMovementManager, queryBatcher);
+        
+        return new QueryBatcherContext(dataMovementManager, queryBatcher, queryDef);
     }
 
     private Tuple<QueryDefinition, Format> buildQueryDefinitionAndFormat(QueryManager queryManager, QueryTypeAndValue queryTypeAndValue) {

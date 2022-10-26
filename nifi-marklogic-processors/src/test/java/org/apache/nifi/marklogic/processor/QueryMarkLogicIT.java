@@ -91,6 +91,8 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
         assertEquals(12345, originalFlowFile.getId(), "If a FlowFile is passed to DeleteML/QueryML, it is expected to be sent to the " +
             "ORIGINAL relationship before the job completes");
 
+            assertTrue(originalFlowFile.getAttribute("marklogic-query").contains("com.marklogic.client.query.StructuredQueryBuilder$CollectionQuery"));
+
         runner.assertTransferCount(QueryMarkLogic.SUCCESS, numDocs);
         runner.assertAllFlowFilesContainAttribute(QueryMarkLogic.SUCCESS, CoreAttributes.FILENAME.key());
 
@@ -106,6 +108,27 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
         assertEquals(expectedByteArray.length, actualByteArray.length);
         assertArrayEquals(expectedByteArray, actualByteArray);
     }
+
+    @Test
+     public void invalidQuery() {
+        final String query = "invalid query";
+        final String expectedErrorMessage = "Local message: failed to apply resource at internal/forestinfo: Bad Request. Server Message: XDMP-JSONDOC: xdmp:get-request-body(\"json\") -- Document is not JSON";
+        TestRunner runner = getNewTestRunner(QueryMarkLogic.class);
+        runner.setProperty(QueryMarkLogic.QUERY, query);
+        runner.run();
+
+        assertEquals(1, runner.getFlowFilesForRelationship(QueryMarkLogic.FAILURE).size());
+
+        List<MockFlowFile> files = runner.getFlowFilesForRelationship(QueryMarkLogic.FAILURE);
+        assertEquals(1, files.size(), "A new FlowFile should have been created and sent to Failure");
+        MockFlowFile failureFile = files.get(0);
+        assertEquals(expectedErrorMessage, failureFile.getAttribute("markLogicErrorMessage"), "The Failure FlowFile should contain the marklogicErrorMessage attribute.");
+
+        assertEquals(0, runner.getFlowFilesForRelationship(QueryMarkLogic.SUCCESS).size(),
+            "No query was returned, so no FlowFiles should have been sent to Success");
+        assertEquals(0, runner.getFlowFilesForRelationship(QueryMarkLogic.ORIGINAL).size());
+     }
+
 
     @Test
     public void testOldCollectionQuery() {
