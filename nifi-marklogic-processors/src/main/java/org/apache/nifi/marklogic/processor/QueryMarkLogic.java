@@ -199,8 +199,6 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
      * @throws ProcessException
      */
     @Override
-    // TODO: Ask Rob how to pass the flow file to success areas.
-    // TODO: Ask Rob how to get a toString representation of the query definition that was run by the processor and save it to the attribute.
     public void onTrigger(ProcessContext context, ProcessSessionFactory sessionFactory) throws ProcessException {
         final ProcessSession session = sessionFactory.createSession();
         super.populatePropertiesByPrefix(context);

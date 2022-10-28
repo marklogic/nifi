@@ -66,6 +66,10 @@ public class ApplyTransformMarkLogic extends QueryMarkLogic {
         .required(true)
         .build();
 
+    protected static final Relationship ORIGINAL = new Relationship.Builder().name("original")
+        .autoTerminateDefault(true)
+        .description("If this processor receives a FlowFile, it will be routed to this relationship").build();
+
     @Override
     public void init(ProcessorInitializationContext context) {
         super.init(context);
@@ -84,6 +88,7 @@ public class ApplyTransformMarkLogic extends QueryMarkLogic {
         Set<Relationship> set = new HashSet<>();
         set.add(SUCCESS);
         set.add(FAILURE);
+        set.add(ORIGINAL);
         relationships = Collections.unmodifiableSet(set);
     }
 
@@ -96,6 +101,7 @@ public class ApplyTransformMarkLogic extends QueryMarkLogic {
      */
     @Override
     protected QueryBatchListener buildQueryBatchListener(final ProcessContext context, final ProcessSession session) {
+
         ApplyTransformListener applyTransform = new ApplyTransformListener()
             .withApplyResult(
                 ApplyResultTypes.INGORE_STR.equals(context.getProperty(APPLY_RESULT_TYPE).getValue()) ? ApplyResult.IGNORE : ApplyResult.REPLACE
@@ -103,10 +109,13 @@ public class ApplyTransformMarkLogic extends QueryMarkLogic {
             .withTransform(this.buildServerTransform(context))
             .onSuccess((batch) -> {
                 synchronized (session) {
+                    FlowFile incomingFlowFile = session.get();
+                    if (incomingFlowFile == null) {
+                        incomingFlowFile = session.create();
+                    }
                     for (String uri : batch.getItems()) {
-                        final FlowFile flowFile = session.create();
-                        session.putAttribute(flowFile, CoreAttributes.FILENAME.key(), uri);
-                        session.transfer(flowFile, SUCCESS);
+                        session.putAttribute(incomingFlowFile, CoreAttributes.FILENAME.key(), uri);
+                        session.transfer(incomingFlowFile, ORIGINAL);
                     }
                     session.commitAsync();
                 }
@@ -114,10 +123,13 @@ public class ApplyTransformMarkLogic extends QueryMarkLogic {
             .onFailure((batch, throwable) -> {
                 getLogger().error("Error processing transform", throwable);
                 synchronized (session) {
+                    FlowFile incomingFlowFile = session.get();
+                    if (incomingFlowFile == null) {
+                        incomingFlowFile = session.create();
+                    }
                     for (String uri : batch.getItems()) {
-                        final FlowFile flowFile = session.create();
-                        session.putAttribute(flowFile, CoreAttributes.FILENAME.key(), uri);
-                        session.transfer(flowFile, FAILURE);
+                        session.putAttribute(incomingFlowFile, CoreAttributes.FILENAME.key(), uri);
+                        session.transfer(incomingFlowFile, FAILURE);
                     }
                     session.commitAsync();
                 }
