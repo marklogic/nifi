@@ -21,6 +21,7 @@ import com.google.gson.JsonObject;
 import com.marklogic.client.DatabaseClient;
 import com.marklogic.client.datamovement.*;
 import org.apache.nifi.marklogic.processor.util.QueryBatcherBuilder;
+import org.apache.nifi.marklogic.processor.util.QueryBatcherContext;
 import com.marklogic.client.datamovement.impl.JobReportImpl;
 import com.marklogic.client.document.DocumentManager.Metadata;
 import com.marklogic.client.document.ServerTransform;
@@ -201,23 +202,27 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
     public void onTrigger(ProcessContext context, ProcessSessionFactory sessionFactory) throws ProcessException {
         final ProcessSession session = sessionFactory.createSession();
         super.populatePropertiesByPrefix(context);
-        try {
-            final FlowFile incomingFlowFile = context.hasIncomingConnection() ? session.get() : null;
 
-            Tuple<DataMovementManager, QueryBatcher> tuple = newQueryBatcher(context, incomingFlowFile);
-            configureQueryBatcher(context, session, incomingFlowFile, tuple.getValue());
+        FlowFile incomingFlowFile = session.get();
+         if (incomingFlowFile == null) {
+             incomingFlowFile = session.create();
+         }
+
+        try {
+            QueryBatcherContext  queryBatcherContext = newQueryBatcher(context, incomingFlowFile);
+            session.putAttribute(incomingFlowFile, "marklogic-query", queryBatcherContext.getQueryRepresentation());
+            configureQueryBatcher(context, session, incomingFlowFile, queryBatcherContext.getBatcher());
 
             // Save a reference to this solely to facilitate unit testing
-            this.queryBatcher = tuple.getValue();
+            this.queryBatcher = queryBatcherContext.getBatcher();
 
             // Can transfer the incoming FlowFile immediately
-            if (incomingFlowFile != null) {
-                session.transfer(incomingFlowFile, ORIGINAL);
-            }
-            runQueryBatcherAndCommit(session, tuple);
+            session.transfer(incomingFlowFile, ORIGINAL);
+            
+            runQueryBatcherAndCommit(session, new Tuple<DataMovementManager,QueryBatcher>(queryBatcherContext.getManager(), queryBatcherContext.getBatcher()));
         } catch (Throwable t) {
             context.yield();
-            this.logErrorAndRollbackSession(t, session);
+            logErrorAndTransfer(t, incomingFlowFile, session, FAILURE);
         }
     }
 
@@ -229,7 +234,7 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
      * @return A Tuple is returned to simplify the interface here so that this method can create and return both the
      * DataMovementManager and QueryBatcher. Both objects are needed to run the QueryBatcher.
      */
-    private Tuple<DataMovementManager, QueryBatcher> newQueryBatcher(ProcessContext context, FlowFile incomingFlowFile) {
+    private QueryBatcherContext newQueryBatcher(ProcessContext context, FlowFile incomingFlowFile) {
         DatabaseClient client = getDatabaseClient(context);
         QueryBatcherBuilder.QueryTypeAndValue queryTypeAndValue = determineQueryTypeAndValue(context, incomingFlowFile);
         RangeIndexQuery stateRangeIndexQuery = buildStateQuery(client, context, incomingFlowFile);
