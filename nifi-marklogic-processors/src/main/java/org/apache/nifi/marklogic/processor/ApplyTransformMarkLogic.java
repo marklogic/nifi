@@ -42,7 +42,8 @@ import java.util.*;
 @InputRequirement(Requirement.INPUT_ALLOWED)
 @SystemResourceConsideration(resource = SystemResource.MEMORY)
 @CapabilityDescription("Creates FlowFiles from batches of documents, matching the given criteria,"
-    + " transformed from a MarkLogic server using the MarkLogic Data Movement SDK (DMSDK)")
+    + " transformed from a MarkLogic server using the MarkLogic Data Movement SDK (DMSDK).\n"
+    + "This allows an input which can used in the Query property with the NiFi Expression Language.")
 @DynamicProperty(name = "Server transform parameter name", value = "Value of the server transform parameter",
     description = "Adds server transform parameters to be passed to the server transform specified. "
         + "Server transform parameter name should start with the string 'trans:'.",
@@ -53,7 +54,13 @@ import java.util.*;
 public class ApplyTransformMarkLogic extends QueryMarkLogic {
     public static final PropertyDescriptor APPLY_RESULT_TYPE = new PropertyDescriptor.Builder()
         .name("Apply Result Type").displayName("Apply Result Type").defaultValue(ApplyResultTypes.REPLACE.getValue())
-        .description("Whether to REPLACE each document with the result of the transform, or run the transform with each document as input, but IGNORE the result.").required(true)
+        .description("Whether to REPLACE each document with the result of the transform, or run the transform with each document "
+                        + "as input, but IGNORE the result. Default: Replace Available return types:\n"
+                        + "Replace Overwrites documents with the value returned by the transform, just like REST write transforms."
+                        + "This is the default behavior.\n"
+                        + "Ignore Run the transform on each document, but ignore the value returned by the transform because the "
+                        + "transform will do any necessary database modifications or other processing. For example, a transform might "
+                        + "call out to an external REST service or perhaps write multiple additional documents.").required(true)
         .allowableValues(ApplyResultTypes.allValues)
         .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
         .required(true)
@@ -61,7 +68,9 @@ public class ApplyTransformMarkLogic extends QueryMarkLogic {
     public static final PropertyDescriptor TRANSFORM = new PropertyDescriptor.Builder()
         .name("Server Transform")
         .displayName("Server Transform")
-        .description("The name of REST server transform to apply to every document")
+        .description("The name of REST server transform to apply to every document as it's written. trans:<custom-transform-parameter>\n" 
+                        + "A dynamic parameter with the prefix of trans: that will be passed to the transform. Expression Language Enabled: "
+                        + "Variable Scope")
         .addValidator(Validator.VALID)
         .required(true)
         .build();
@@ -70,6 +79,14 @@ public class ApplyTransformMarkLogic extends QueryMarkLogic {
         .autoTerminateDefault(true)
         .description("If this processor receives a FlowFile, it will be routed to this relationship").build();
 
+    protected static final Relationship SUCCESS = new Relationship.Builder().name("success")
+        .description("FlowFiles are generated for each document URI read out of MarkLogic.").build();
+
+    protected static final Relationship FAILURE = new Relationship.Builder().name("failure")
+        .description("If a query fails a FlowFile goes to the failure relationship. If an input is provided to the QueryMarkLogic processor," 
+                        + " the input FlowFile is penalized and passed. Otherwise a new FlowFile is generated and passed.").build();
+
+    
     @Override
     public void init(ProcessorInitializationContext context) {
         super.init(context);
