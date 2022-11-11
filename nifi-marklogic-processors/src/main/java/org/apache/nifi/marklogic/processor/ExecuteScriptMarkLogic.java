@@ -16,6 +16,39 @@
  */
 package org.apache.nifi.marklogic.processor;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map.Entry;
+import java.util.Set;
+
+import com.marklogic.client.FailedRequestException;
+import org.apache.nifi.annotation.behavior.DynamicProperty;
+import org.apache.nifi.annotation.documentation.CapabilityDescription;
+import org.apache.nifi.annotation.documentation.Tags;
+import org.apache.nifi.components.AllowableValue;
+import org.apache.nifi.components.PropertyDescriptor;
+import org.apache.nifi.components.ValidationContext;
+import org.apache.nifi.components.ValidationResult;
+import org.apache.nifi.components.Validator;
+import org.apache.nifi.expression.ExpressionLanguageScope;
+import org.apache.nifi.flowfile.FlowFile;
+import org.apache.nifi.processor.ProcessContext;
+import org.apache.nifi.processor.ProcessSession;
+import org.apache.nifi.processor.ProcessSessionFactory;
+import org.apache.nifi.processor.ProcessorInitializationContext;
+import org.apache.nifi.processor.Relationship;
+import org.apache.nifi.processor.exception.ProcessException;
+import org.apache.nifi.processor.io.StreamCallback;
+import org.apache.nifi.processor.util.StandardValidators;
+import org.apache.nifi.util.StringUtils;
+
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -23,22 +56,6 @@ import com.google.gson.JsonParser;
 import com.marklogic.client.DatabaseClient;
 import com.marklogic.client.eval.EvalResult;
 import com.marklogic.client.eval.ServerEvaluationCall;
-import org.apache.nifi.annotation.behavior.DynamicProperty;
-import org.apache.nifi.annotation.documentation.CapabilityDescription;
-import org.apache.nifi.annotation.documentation.Tags;
-import org.apache.nifi.components.*;
-import org.apache.nifi.expression.ExpressionLanguageScope;
-import org.apache.nifi.flowfile.FlowFile;
-import org.apache.nifi.processor.*;
-import org.apache.nifi.processor.exception.ProcessException;
-import org.apache.nifi.processor.util.StandardValidators;
-import org.apache.nifi.util.StringUtils;
-
-import java.io.ByteArrayOutputStream;
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
-import java.util.*;
-import java.util.Map.Entry;
 
 @Tags({"MarkLogic", "database", "XQuery", "JavaScript", "module", "server-side"})
 @CapabilityDescription("Executes server-side code in MarkLogic, either in JavaScript or XQuery. "
@@ -161,7 +178,7 @@ public class ExecuteScriptMarkLogic extends AbstractMarkLogicProcessor {
         .description("Receives the original FlowFile if the call to MarkLogic fails for any reason").build();
 
 
-    private static Charset UTF8 = StandardCharsets.UTF_8;
+    private static Charset UTF8 = Charset.forName("UTF-8");
 
     @Override
     public void init(ProcessorInitializationContext context) {
@@ -241,8 +258,21 @@ public class ExecuteScriptMarkLogic extends AbstractMarkLogicProcessor {
                 }
             }
 
+            String scriptBody = determineScriptBody(context, originalFF);
+            String modulePath = determineModulePath(context, originalFF);
+
+            if (scriptBody!= null && scriptBody.length() > 0) {
+                session.putAttribute(originalFF, "marklogic-script-body", determineScriptBody(context, originalFF));
+            }
+
+            if (modulePath!= null && modulePath.length() > 0) {
+                session.putAttribute(originalFF, "marklogic-module-path", determineModulePath(context, originalFF));
+            }
             originalFF = session.putAttribute(originalFF, MARKLOGIC_RESULTS_COUNT, Integer.toString(count));
             session.transfer(originalFF, ORIGINAL);
+
+
+
 
             if (last != null && (count > 1 || !skipFirst)) {
                 FlowFile lastFF = session.create(originalFF);
@@ -273,7 +303,12 @@ public class ExecuteScriptMarkLogic extends AbstractMarkLogicProcessor {
         synchronized (session) {
             if (resultsDest.equals("Content")) {
                 // write the query result to the FlowFile content
-                flowFile = session.write(flowFile, (in, out) -> out.write(resultStr.getBytes(UTF8)));
+                flowFile = session.write(flowFile, new StreamCallback() {
+                    @Override
+                    public void process(final InputStream in, final OutputStream out) throws IOException {
+                        out.write(resultStr.getBytes(UTF8));
+                    }
+                });
             } else if (resultsDest.equals("Attribute")) {
                 flowFile = session.putAttribute(flowFile, MARKLOGIC_RESULT, resultStr);
             } else {
@@ -311,4 +346,17 @@ public class ExecuteScriptMarkLogic extends AbstractMarkLogicProcessor {
 
         return propertyBuilder.addValidator(StandardValidators.NON_EMPTY_VALIDATOR).build();
     }
+
+    protected String determineScriptBody(ProcessContext context, FlowFile flowFile) {
+
+        return context.getProperty(SCRIPT_BODY).evaluateAttributeExpressions(flowFile).getValue();
+
+    }
+
+    protected String determineModulePath(ProcessContext context, FlowFile flowFile) {
+
+        return context.getProperty(MODULE_PATH).evaluateAttributeExpressions(flowFile).getValue();
+
+    }
+
 }
