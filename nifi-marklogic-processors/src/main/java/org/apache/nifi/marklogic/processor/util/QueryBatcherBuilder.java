@@ -36,31 +36,38 @@ public class QueryBatcherBuilder {
      * @param stateRangeIndexQuery can be null
      * @return
      */
-    public Tuple<DataMovementManager, QueryBatcher> newQueryBatcher(QueryTypeAndValue queryTypeAndValue, RangeIndexQuery stateRangeIndexQuery) {
+    public QueryBatcherContext newQueryBatcher(QueryTypeAndValue queryTypeAndValue, RangeIndexQuery stateRangeIndexQuery) {
         DataMovementManager dataMovementManager = client.newDataMovementManager();
         QueryManager queryManager = client.newQueryManager();
 
         Tuple<QueryDefinition, Format> queryAndFormat = buildQueryDefinitionAndFormat(queryManager, queryTypeAndValue);
+        final QueryDefinition queryDef = queryAndFormat.getKey();
+        String queryRepresentation;
 
         QueryBatcher queryBatcher;
         if (stateRangeIndexQuery != null) {
             String rawCombinedQuery = buildRawCombinedQueryWithStateQuery(queryAndFormat, queryTypeAndValue, stateRangeIndexQuery);
+            queryRepresentation = rawCombinedQuery;
             StringHandle handle = new StringHandle(rawCombinedQuery).withFormat(queryAndFormat.getValue());
             RawCombinedQueryDefinition query = queryManager.newRawCombinedQueryDefinition(handle);
             queryBatcher = dataMovementManager.newQueryBatcher(query);
         } else {
-            final QueryDefinition queryDef = queryAndFormat.getKey();
             if (queryDef instanceof RawCombinedQueryDefinition) {
                 queryBatcher = dataMovementManager.newQueryBatcher((RawCombinedQueryDefinition) queryDef);
+                queryRepresentation = ((RawQueryDefinition) queryDef).getHandle().toString();
             } else if (queryDef instanceof RawStructuredQueryDefinition) {
                 queryBatcher = dataMovementManager.newQueryBatcher((RawStructuredQueryDefinition) queryDef);
+                queryRepresentation = ((RawStructuredQueryDefinition) queryDef).serialize();
             } else if (queryDef instanceof StructuredQueryDefinition) {
                 queryBatcher = dataMovementManager.newQueryBatcher((StructuredQueryDefinition) queryDef);
+                queryRepresentation = ((StructuredQueryDefinition) queryDef).serialize();
             } else {
                 queryBatcher = dataMovementManager.newQueryBatcher((StringQueryDefinition) queryDef);
+                queryRepresentation = ((StringQueryDefinition) queryDef).getCriteria();
             }
         }
-        return new Tuple<>(dataMovementManager, queryBatcher);
+        
+        return new QueryBatcherContext(dataMovementManager, queryBatcher, queryDef, queryRepresentation);
     }
 
     private Tuple<QueryDefinition, Format> buildQueryDefinitionAndFormat(QueryManager queryManager, QueryTypeAndValue queryTypeAndValue) {
