@@ -78,7 +78,7 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
     }
 
     @Test
-    public void testSimpleCollectionQuery() {
+    public void simpleCollectionQuery() {
         TestRunner runner = getNewTestRunner(QueryMarkLogic.class);
         runner.setProperty(QueryMarkLogic.QUERY, TEST_COLLECTION);
         runner.setProperty(QueryMarkLogic.QUERY_TYPE, QueryTypes.COLLECTION);
@@ -90,8 +90,35 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
         MockFlowFile originalFlowFile = runner.getFlowFilesForRelationship(QueryMarkLogic.ORIGINAL).get(0);
         assertEquals(12345, originalFlowFile.getId(), "If a FlowFile is passed to DeleteML/QueryML, it is expected to be sent to the " +
             "ORIGINAL relationship before the job completes");
+        verifySimpleCollectionQueryResult(runner);
+    }
 
-        assertTrue(originalFlowFile.getAttribute("marklogic-query").contains(TEST_COLLECTION));
+    @Test
+    public void collectionQueryWithNoIncomingFlowFile() {
+        TestRunner runner = getNewTestRunner(QueryMarkLogic.class);
+        runner.setProperty(QueryMarkLogic.QUERY, TEST_COLLECTION);
+        runner.setProperty(QueryMarkLogic.QUERY_TYPE, QueryTypes.COLLECTION);
+        runner.assertValid();
+        runner.run();
+
+        runner.assertTransferCount(QueryMarkLogic.ORIGINAL, 1);
+        MockFlowFile originalFlowFile = runner.getFlowFilesForRelationship(QueryMarkLogic.ORIGINAL).get(0);
+        assertEquals(0, originalFlowFile.getId(), "Since no FlowFile was passed in, a new one should have been created " +
+            "with an ID of zero");
+        verifySimpleCollectionQueryResult(runner);
+    }
+
+    /**
+     * Common assertions for simpleCollectionQuery and collectionQueryWithNoIncomingFlowFile.
+     *
+     * @param runner
+     */
+    private void verifySimpleCollectionQueryResult(TestRunner runner) {
+        MockFlowFile originalFlowFile = runner.getFlowFilesForRelationship(QueryMarkLogic.ORIGINAL).get(0);
+        final String query = originalFlowFile.getAttribute("marklogic-query");
+        assertTrue(query.contains("<collection-query><uri>" + TEST_COLLECTION + "</uri></collection-query>"),
+            "The query should be saved as an attribute so that the user has evidence of what query was actually used; " +
+                "query: " + query);
 
         runner.assertTransferCount(QueryMarkLogic.SUCCESS, numDocs);
         runner.assertAllFlowFilesContainAttribute(QueryMarkLogic.SUCCESS, CoreAttributes.FILENAME.key());
@@ -99,6 +126,9 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
         List<MockFlowFile> flowFiles = runner.getFlowFilesForRelationship(QueryMarkLogic.SUCCESS);
         byte[] actualByteArray = new byte[0];
         for (MockFlowFile flowFile : flowFiles) {
+            assertNull(flowFile.getAttribute("marklogic-query"),
+                "The marklogic-query attribute shouldn't be on each FlowFIle created for a query result as that would be " +
+                    "duplicating a potentially large serialized query on a potentially large number of FlowFiles");
             if (flowFile.getAttribute(CoreAttributes.FILENAME.key()).endsWith("/" + jsonMod + ".json")) {
                 actualByteArray = runner.getContentAsByteArray(flowFile);
                 break;
@@ -110,7 +140,7 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
     }
 
     @Test
-     public void invalidQuery() {
+    public void queryBatcherCannotBeCreatedDueToInvalidQuery() {
         final String query = "invalid query";
         final String expectedErrorMessage = "Local message: failed to apply resource at internal/forestinfo: Bad Request. Server Message: XDMP-JSONDOC: xdmp:get-request-body(\"json\") -- Document is not JSON";
         TestRunner runner = getNewTestRunner(QueryMarkLogic.class);
@@ -127,7 +157,7 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
         assertEquals(0, runner.getFlowFilesForRelationship(QueryMarkLogic.SUCCESS).size(),
             "No query was returned, so no FlowFiles should have been sent to Success");
         assertEquals(0, runner.getFlowFilesForRelationship(QueryMarkLogic.ORIGINAL).size());
-     }
+    }
 
 
     @Test
@@ -271,6 +301,12 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
         runner.setProperty(QueryMarkLogic.QUERY, "jsoncontent");
         runner.setProperty(QueryMarkLogic.QUERY_TYPE, QueryTypes.STRING);
         testStateManagerJSON(runner, expectedJsonCount);
+
+        final String query = runner.getFlowFilesForRelationship(QueryMarkLogic.ORIGINAL).get(0).getAttribute("marklogic-query");
+        assertTrue(query.startsWith("<search"), "When a state range index query is included (which is expected in the " +
+            "last processor run performed by testStateManagerJSON, the simple string query will be wrapped in a " +
+            "combined XML search query; query: " + query);
+
         runner.shutdown();
     }
 
@@ -368,8 +404,10 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
         runner.assertValid();
         runner.run();
 
-        // The single enqueued doc should show up here
         runner.assertTransferCount(QueryMarkLogic.ORIGINAL, 1);
+        final String query = runner.getFlowFilesForRelationship(QueryMarkLogic.ORIGINAL).get(0).getAttribute("marklogic-query");
+        assertTrue(query.contains("<text>xmlcontent</text>"), "A raw structured query is expected to be represented as " +
+            "a serialized XML query; query: " + query);
 
         runner.assertTransferCount(QueryMarkLogic.SUCCESS, expectedXmlCount);
         runner.assertAllFlowFilesContainAttribute(QueryMarkLogic.SUCCESS, CoreAttributes.FILENAME.key());
@@ -421,6 +459,12 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
         runner.setProperty(QueryMarkLogic.QUERY_TYPE, QueryTypes.STRING);
         runner.assertValid();
         runner.run();
+
+        assertEquals(1, runner.getFlowFilesForRelationship(QueryMarkLogic.ORIGINAL).size());
+        final String query = runner.getFlowFilesForRelationship(QueryMarkLogic.ORIGINAL).get(0).getAttribute("marklogic-query");
+        assertEquals("xmlcontent", query, "When a StringQueryDefinition is used, it should equal whatever the value " +
+            "of the QUERY attribute is; query: " + query);
+
         runner.assertTransferCount(QueryMarkLogic.SUCCESS, expectedXmlCount);
         runner.assertAllFlowFilesContainAttribute(QueryMarkLogic.SUCCESS, CoreAttributes.FILENAME.key());
         List<MockFlowFile> flowFiles = runner.getFlowFilesForRelationship(QueryMarkLogic.SUCCESS);
@@ -596,22 +640,25 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
     private void testStateManagerWithIndex(TestRunner runner, int expectedCount) throws IOException {
         runner.assertValid();
         runner.run();
+
+        assertEquals(1, runner.getFlowFilesForRelationship(QueryMarkLogic.ORIGINAL).size());
         runner.assertTransferCount(QueryMarkLogic.SUCCESS, expectedCount);
         runner.assertAllFlowFilesContainAttribute(QueryMarkLogic.SUCCESS, CoreAttributes.FILENAME.key());
         List<MockFlowFile> flowFiles = runner.getFlowFilesForRelationship(QueryMarkLogic.SUCCESS);
         assertEquals(flowFiles.size(), expectedCount);
         runner.clearTransferState();
+
         runner.getStateManager().assertStateEquals("queryState", "2000-01-01T00:00:00", Scope.CLUSTER);
         runner.run();
         runner.assertTransferCount(QueryMarkLogic.SUCCESS, 0);
         runner.clearTransferState();
+
         HashMap<String, String> state = new HashMap<>();
         state.put("queryState", "1999-01-01T00:00:00");
         runner.getStateManager().setState(state, Scope.CLUSTER);
         runner.run();
+        runner.assertTransferCount(QueryMarkLogic.ORIGINAL, 1);
         runner.assertTransferCount(QueryMarkLogic.SUCCESS, expectedCount);
-        runner.clearTransferState();
-        runner.getStateManager().setState(new HashMap<>(), Scope.CLUSTER);
     }
 
     private void verifyCombinedXMLQueryResults(TestRunner runner) {
@@ -638,6 +685,12 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
     private void verifyCombinedJSONQueryResults(TestRunner runner) {
         runner.assertValid();
         runner.run();
+
+        runner.assertTransferCount(QueryMarkLogic.ORIGINAL, 1);
+        final String query = runner.getFlowFilesForRelationship(QueryMarkLogic.ORIGINAL).get(0).getAttribute("marklogic-query");
+        assertTrue(query.contains("\"ctsquery\""), "For a raw combined JSON query, the query representation should at " +
+            "least contain a 'ctsquery' key; query: " + query);
+
         runner.assertTransferCount(QueryMarkLogic.SUCCESS, expectedJsonCount);
         runner.assertAllFlowFilesContainAttribute(QueryMarkLogic.SUCCESS, CoreAttributes.FILENAME.key());
         List<MockFlowFile> flowFiles = runner.getFlowFilesForRelationship(QueryMarkLogic.SUCCESS);
