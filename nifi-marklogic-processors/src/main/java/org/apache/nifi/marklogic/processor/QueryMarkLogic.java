@@ -20,8 +20,6 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.marklogic.client.DatabaseClient;
 import com.marklogic.client.datamovement.*;
-import org.apache.nifi.marklogic.processor.util.QueryBatcherBuilder;
-import org.apache.nifi.marklogic.processor.util.QueryBatcherContext;
 import com.marklogic.client.datamovement.impl.JobReportImpl;
 import com.marklogic.client.document.DocumentManager.Metadata;
 import com.marklogic.client.document.ServerTransform;
@@ -42,6 +40,8 @@ import org.apache.nifi.components.state.StateMap;
 import org.apache.nifi.expression.ExpressionLanguageScope;
 import org.apache.nifi.flowfile.FlowFile;
 import org.apache.nifi.flowfile.attributes.CoreAttributes;
+import org.apache.nifi.marklogic.processor.util.QueryBatcherBuilder;
+import org.apache.nifi.marklogic.processor.util.QueryBatcherContext;
 import org.apache.nifi.marklogic.processor.util.QueryTypes;
 import org.apache.nifi.marklogic.processor.util.RangeIndexQuery;
 import org.apache.nifi.processor.*;
@@ -204,12 +204,12 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
         super.populatePropertiesByPrefix(context);
 
         FlowFile incomingFlowFile = session.get();
-         if (incomingFlowFile == null) {
-             incomingFlowFile = session.create();
-         }
+        if (incomingFlowFile == null) {
+            incomingFlowFile = session.create();
+        }
 
         try {
-            QueryBatcherContext  queryBatcherContext = newQueryBatcher(context, incomingFlowFile);
+            QueryBatcherContext queryBatcherContext = newQueryBatcher(context, incomingFlowFile);
             session.putAttribute(incomingFlowFile, "marklogic-query", queryBatcherContext.getQueryRepresentation());
             configureQueryBatcher(context, session, incomingFlowFile, queryBatcherContext.getBatcher());
 
@@ -218,8 +218,8 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
 
             // Can transfer the incoming FlowFile immediately
             session.transfer(incomingFlowFile, ORIGINAL);
-            
-            runQueryBatcherAndCommit(session, new Tuple<DataMovementManager,QueryBatcher>(queryBatcherContext.getManager(), queryBatcherContext.getBatcher()));
+
+            runQueryBatcherAndCommit(session, new Tuple<DataMovementManager, QueryBatcher>(queryBatcherContext.getManager(), queryBatcherContext.getBatcher()));
         } catch (Throwable t) {
             context.yield();
             logErrorAndTransfer(t, incomingFlowFile, session, FAILURE);
@@ -285,12 +285,14 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
 
         configureJobCompletionListener(context, incomingFlowFile, queryBatcher);
 
-        queryBatcher.onQueryFailure(exception -> {
-            getLogger().error("Query failure: " + exception.getMessage());
-            FlowFile failureFlowFile = incomingFlowFile != null ? session.penalize(incomingFlowFile) : session.create();
-            session.transfer(failureFlowFile, FAILURE);
-            session.commitAsync();
-            context.yield();
+        /**
+         * onQueryFailure is confusing in that - based on an analysis of the QueryBatcherImpl source code - the listener
+         * likely never be invoked, and certainly not on account of a query failure. This is here only in the
+         * extremely unlikely event that a listener is invoked.
+         */
+        queryBatcher.onQueryFailure(ex -> {
+            FlowFile failureFlowFile = session.create(incomingFlowFile);
+            logErrorAndTransfer(ex, failureFlowFile, session, FAILURE);
         });
     }
 
