@@ -126,7 +126,7 @@ public abstract class AbstractMarkLogicIT extends AbstractSpringMarkLogicTest {
         }
     }
 
-    protected void addDatabaseClientService(TestRunner runner) {
+    private void addDatabaseClientService(TestRunner runner, String username, String password) {
         service = new DefaultMarkLogicDatabaseClientService();
         try {
             runner.addControllerService(databaseClientServiceIdentifier, service);
@@ -135,14 +135,18 @@ public abstract class AbstractMarkLogicIT extends AbstractSpringMarkLogicTest {
         }
         runner.setProperty(service, DefaultMarkLogicDatabaseClientService.HOST, testConfig.getHost());
         runner.setProperty(service, DefaultMarkLogicDatabaseClientService.PORT, testConfig.getRestPort().toString());
-        runner.setProperty(service, DefaultMarkLogicDatabaseClientService.USERNAME, testConfig.getUsername());
-        runner.setProperty(service, DefaultMarkLogicDatabaseClientService.PASSWORD, testConfig.getPassword());
+        runner.setProperty(service, DefaultMarkLogicDatabaseClientService.USERNAME, username);
+        runner.setProperty(service, DefaultMarkLogicDatabaseClientService.PASSWORD, password);
         runner.enableControllerService(service);
     }
 
     protected TestRunner getNewTestRunner(Class<? extends Processor> processor) {
+        return getNewTestRunner(processor, testConfig.getUsername(), testConfig.getPassword());
+    }
+
+    protected TestRunner getNewTestRunner(Class<? extends Processor> processor, String username, String password) {
         TestRunner runner = TestRunners.newTestRunner(processor);
-        addDatabaseClientService(runner);
+        addDatabaseClientService(runner, username, password);
         runner.setProperty(AbstractMarkLogicProcessor.BATCH_SIZE, batchSize);
         runner.setProperty(AbstractMarkLogicProcessor.THREAD_COUNT, threadCount);
         assertTrue(runner.isControllerServiceEnabled(service));

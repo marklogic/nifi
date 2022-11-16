@@ -48,7 +48,6 @@ import org.apache.nifi.processor.*;
 import org.apache.nifi.processor.exception.ProcessException;
 import org.apache.nifi.processor.util.StandardValidators;
 import org.apache.nifi.util.StringUtils;
-import org.apache.nifi.util.Tuple;
 
 import java.io.IOException;
 import java.util.*;
@@ -216,13 +215,12 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
             // Save a reference to this solely to facilitate unit testing
             this.queryBatcher = queryBatcherContext.getBatcher();
 
-            // Can transfer the incoming FlowFile immediately
-            session.transfer(incomingFlowFile, ORIGINAL);
-
-            runQueryBatcherAndCommit(session, new Tuple<DataMovementManager, QueryBatcher>(queryBatcherContext.getManager(), queryBatcherContext.getBatcher()));
+            // Transfer the incoming FF immediately in case the QueryBatcher returns no results
+            transferAndCommit(session, incomingFlowFile, ORIGINAL);
+            runQueryBatcherJob(queryBatcherContext);
         } catch (Throwable t) {
-            context.yield();
             logErrorAndTransfer(t, incomingFlowFile, session, FAILURE);
+            context.yield();
         }
     }
 
@@ -274,7 +272,8 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
             queryBatcher.withThreadCount(context.getProperty(THREAD_COUNT).asInteger());
         }
 
-        QueryBatchListener batchListener = buildQueryBatchListener(context, session);
+        Map<String, String> attributesToCopy = getAttributesToCopy(incomingFlowFile);
+        QueryBatchListener batchListener = buildQueryBatchListener(context, session, attributesToCopy);
         queryBatcher.onUrisReady(batchListener);
 
         queryBatcher.onUrisReady(batch -> {
@@ -290,10 +289,7 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
          * likely never be invoked, and certainly not on account of a query failure. This is here only in the
          * extremely unlikely event that a listener is invoked.
          */
-        queryBatcher.onQueryFailure(ex -> {
-            FlowFile failureFlowFile = session.create(incomingFlowFile);
-            logErrorAndTransfer(ex, failureFlowFile, session, FAILURE);
-        });
+        queryBatcher.onQueryFailure(ex -> logErrorAndTransfer(ex, session.create(), session, FAILURE));
     }
 
     /**
@@ -303,12 +299,31 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
      * @param session
      * @return
      */
-    protected QueryBatchListener buildQueryBatchListener(final ProcessContext context, final ProcessSession session) {
+    protected QueryBatchListener buildQueryBatchListener(ProcessContext context, ProcessSession session, Map<String, String> incomingAttributes) {
         final boolean retrieveFullDocument =
             ReturnTypes.DOCUMENTS_STR.equals(context.getProperty(RETURN_TYPE).getValue()) ||
                 ReturnTypes.DOCUMENTS_AND_META_STR.equals(context.getProperty(RETURN_TYPE).getValue());
 
-        return retrieveFullDocument ? buildFullDocumentExporter(context, session) : buildNoDocumentExporter(context, session);
+        return retrieveFullDocument ?
+            buildFullDocumentExporter(context, session, incomingAttributes) :
+            buildNoDocumentExporter(context, session, incomingAttributes);
+    }
+
+    /**
+     * Used to trigger a commitAsync after each batch is processed.
+     */
+    static class DocumentExporter extends ExportListener {
+        private ProcessSession session;
+        public DocumentExporter(ProcessSession session) {
+            this.session = session;
+        }
+        @Override
+        public void processEvent(QueryBatch batch) {
+            super.processEvent(batch);
+            synchronized (session) {
+                this.session.commitAsync();
+            }
+        }
     }
 
     /**
@@ -318,17 +333,19 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
      * @param session
      * @return
      */
-    private ExportListener buildFullDocumentExporter(ProcessContext context, ProcessSession session) {
+    private ExportListener buildFullDocumentExporter(ProcessContext context, ProcessSession session, Map<String, String> incomingAttributes) {
         final boolean retrieveMetadata = shouldRetrieveMetadata(context);
 
-        ExportListener exportListener = new ExportListener().onDocumentReady(doc -> {
+        ExportListener exportListener = new DocumentExporter(session).onDocumentReady(doc -> {
             synchronized (session) {
-                final FlowFile flowFile = session.write(session.create(),
-                    out -> out.write(doc.getContent(new BytesHandle()).get()));
+                final FlowFile flowFile = session.write(
+                    createFlowFileWithAttributes(session, incomingAttributes),
+                    out -> out.write(doc.getContent(new BytesHandle()).get())
+                );
+                session.putAttribute(flowFile, CoreAttributes.FILENAME.key(), doc.getUri());
                 if (retrieveMetadata) {
                     addDocumentMetadata(context, session, flowFile, doc.getMetadata(new DocumentMetadataHandle()));
                 }
-                session.putAttribute(flowFile, CoreAttributes.FILENAME.key(), doc.getUri());
                 session.transfer(flowFile, SUCCESS);
                 if (getLogger().isDebugEnabled()) {
                     getLogger().debug("Routing " + doc.getUri() + " to " + SUCCESS.getName());
@@ -355,12 +372,12 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
      * @param session
      * @return
      */
-    private QueryBatchListener buildNoDocumentExporter(ProcessContext context, ProcessSession session) {
+    private QueryBatchListener buildNoDocumentExporter(ProcessContext context, ProcessSession session, Map<String, String> incomingAttributes) {
         final boolean consistentSnapshot = Boolean.TRUE.equals(context.getProperty(CONSISTENT_SNAPSHOT).asBoolean());
         return batch -> {
             synchronized (session) {
                 Arrays.stream(batch.getItems()).forEach((uri) -> {
-                    FlowFile flowFile = session.create();
+                    FlowFile flowFile = createFlowFileWithAttributes(session, incomingAttributes);
                     session.putAttribute(flowFile, CoreAttributes.FILENAME.key(), uri);
                     if (shouldRetrieveMetadata(context)) {
                         DocumentMetadataHandle metadata = new DocumentMetadataHandle();
@@ -416,21 +433,17 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
     }
 
     /**
-     * Runs the {@code QueryBatcher} job and waits for it to complete, at which point it's safe to commit the
-     * NiFi session.
+     * Runs the {@code QueryBatcher} job and waits for it to complete.
      *
-     * @param session
-     * @param tuple
+     * @param queryBatcherContext
      */
-    private void runQueryBatcherAndCommit(ProcessSession session, Tuple<DataMovementManager, QueryBatcher> tuple) {
+    private void runQueryBatcherJob(QueryBatcherContext queryBatcherContext) {
         getLogger().info("Starting job");
-        tuple.getKey().startJob(tuple.getValue());
+        queryBatcherContext.getManager().startJob(queryBatcherContext.getBatcher());
         getLogger().info("Awaiting job completion");
-        tuple.getValue().awaitCompletion();
+        queryBatcherContext.getBatcher().awaitCompletion();
         getLogger().info("Stopping job");
-        tuple.getKey().stopJob(tuple.getValue());
-        getLogger().info("Committing session");
-        session.commitAsync();
+        queryBatcherContext.getManager().stopJob(queryBatcherContext.getBatcher());
     }
 
     /**

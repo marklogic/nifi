@@ -30,10 +30,7 @@ import org.apache.nifi.components.state.Scope;
 import org.apache.nifi.expression.ExpressionLanguageScope;
 import org.apache.nifi.flowfile.FlowFile;
 import org.apache.nifi.flowfile.attributes.CoreAttributes;
-import org.apache.nifi.processor.ProcessContext;
-import org.apache.nifi.processor.ProcessSession;
-import org.apache.nifi.processor.ProcessorInitializationContext;
-import org.apache.nifi.processor.Relationship;
+import org.apache.nifi.processor.*;
 import org.apache.nifi.processor.util.StandardValidators;
 
 import java.util.*;
@@ -92,10 +89,11 @@ public class ApplyTransformMarkLogic extends QueryMarkLogic {
      *
      * @param context
      * @param session
+     * @param incomingAttributes
      * @return
      */
     @Override
-    protected QueryBatchListener buildQueryBatchListener(final ProcessContext context, final ProcessSession session) {
+    protected QueryBatchListener buildQueryBatchListener(final ProcessContext context, final ProcessSession session, Map<String, String> incomingAttributes) {
         ApplyTransformListener applyTransform = new ApplyTransformListener()
             .withApplyResult(
                 ApplyResultTypes.INGORE_STR.equals(context.getProperty(APPLY_RESULT_TYPE).getValue()) ? ApplyResult.IGNORE : ApplyResult.REPLACE

@@ -22,6 +22,7 @@ import org.apache.nifi.components.PropertyDescriptor;
 import org.apache.nifi.components.Validator;
 import org.apache.nifi.expression.ExpressionLanguageScope;
 import org.apache.nifi.flowfile.FlowFile;
+import org.apache.nifi.flowfile.attributes.CoreAttributes;
 import org.apache.nifi.marklogic.controller.MarkLogicDatabaseClientService;
 import org.apache.nifi.processor.*;
 import org.apache.nifi.processor.exception.ProcessException;
@@ -87,6 +88,15 @@ public abstract class AbstractMarkLogicProcessor extends AbstractSessionFactoryP
         Pattern.compile("(?i)XDMP-DOC.*:\\s+xdmp:get-request-body(\"xml\")", Pattern.CASE_INSENSITIVE);
     private Pattern invalidJSONPattern =
         Pattern.compile("(?i)XDMP-DOC.*:\\s+xdmp:get-request-body(\"json\")", Pattern.CASE_INSENSITIVE);
+
+    // Memoized here for quick reference via getAttributesToCopy
+    private final static List<String> CORE_ATTRIBUTE_KEYS = new ArrayList<>();
+
+    static {
+        for (CoreAttributes value : CoreAttributes.values()) {
+            CORE_ATTRIBUTE_KEYS.add(value.key());
+        }
+    }
 
     @Override
     public void init(final ProcessorInitializationContext context) {
@@ -262,8 +272,11 @@ public abstract class AbstractMarkLogicProcessor extends AbstractSessionFactoryP
     }
 
     /**
-     * See <a href="https://github.com/marklogic/nifi/issues/21">...</a> for details on why the calls to transfer and commit are within
-     * a synchronized block.
+     * The purpose of the synchronized block is to ensure that when a processor instance runs multiple threads - such
+     * as a processor that uses QueryBatcher - 2+ threads are not trying to commit or create/modify a FlowFile at the
+     * same time with the same session. In that scenario, NiFi will throw an exception like this:
+     * "java.lang.IllegalStateException: Cannot commit session while writing to FlowFile". If such a processor
+     * calls commit or commitAsync outside of this method, it should use synchronized as well.
      *
      * @param session
      * @param flowFile
@@ -274,5 +287,45 @@ public abstract class AbstractMarkLogicProcessor extends AbstractSessionFactoryP
             session.transfer(flowFile, relationship);
             session.commitAsync();
         }
+    }
+
+    /**
+     * @param incomingFlowFile
+     * @return the subset of attributes on the incomingFlowFile that can then be included on new FlowFiles. Testing
+     * seems to indicate that NiFi won't allow for filename/uuid/path to be overridden, but to be safe, those 3 are
+     * still excluded.
+     */
+    protected final Map<String, String> getAttributesToCopy(FlowFile incomingFlowFile) {
+        Map<String, String> attributes = new HashMap<>();
+        incomingFlowFile.getAttributes().forEach((key, value) -> {
+            if (!CORE_ATTRIBUTE_KEYS.contains(key)) {
+                attributes.put(key, value);
+            }
+        });
+        return attributes;
+    }
+
+    /**
+     * Helper method for the common use case of creating a new FlowFile and including attributes from another
+     * FlowFile - typically the incoming one. This is used instead of {@code session.create(incomingFlowFile)}, as that
+     * technique requires the incoming FlowFile to not have been transferred and committed yet. That requirement will
+     * cause issues, such as out of memory errors, for any processor that wants to create a large number - around
+     * hundreds of thousands or more - of FlowFiles from the incoming FlowFile.
+     *
+     * Additionally, the technique of creating a new FlowFile - as opposed to using
+     * {@code session.create(incomingFlowFile} - seems acceptable per the NiFi javadocs for {@code session.create()},
+     * which state "This method is appropriate only when data is received or created from an external system".
+     *
+     * @param session
+     * @param attributes this is expected to have been created via {@code getAttributesToCopy}, which ensures that NiFi
+     *                   core attributes are not included
+     * @return
+     */
+    protected final FlowFile createFlowFileWithAttributes(ProcessSession session, Map<String, String> attributes) {
+        FlowFile flowFile = session.create();
+        if (attributes != null) {
+            session.putAllAttributes(flowFile, attributes);
+        }
+        return flowFile;
     }
 }
