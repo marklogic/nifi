@@ -19,7 +19,6 @@ package org.apache.nifi.marklogic.processor;
 import org.apache.nifi.processor.Processor;
 import org.apache.nifi.util.TestRunner;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -103,10 +102,6 @@ public class PutMarkLogicDuplicateIT extends AbstractMarkLogicIT {
 
 
     @Test
-    @Disabled("Disabled in 1.16.3.1; it seems to fail based on changes to NiFi test plumbing which results in the " +
-        "processor being shutdown while there are still batches left to process. That causes an NPE when the " +
-        "WriteBatcher is accessed. Fixing this should involve simplifying the test - we don't need 1200 docs to be " +
-        "created, we just need a small number with a small batch size.")
     public void ingestUsingCloseBatchStrategy() {
         String collection = "DuplicatePutMarkLogicTest";
         String absolutePath = "/DuplicateUriCloseBatch/";
