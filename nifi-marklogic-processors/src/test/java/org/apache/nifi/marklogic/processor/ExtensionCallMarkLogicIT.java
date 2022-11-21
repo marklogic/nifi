@@ -40,6 +40,7 @@ public class ExtensionCallMarkLogicIT extends AbstractMarkLogicIT {
         runner.setProperty(ExtensionCallMarkLogic.PAYLOAD_SOURCE, ExtensionCallMarkLogic.PayloadSources.NONE);
         runner.setProperty(ExtensionCallMarkLogic.PAYLOAD_FORMAT, Format.TEXT.name());
         runner.setProperty("param:replay", "${dynamicParam}");
+        runner.setProperty("separator:param:replay", ",");
 
         runner.run();
         assertEquals(0, runner.getFlowFilesForRelationship(ExtensionCallMarkLogic.FAILURE).size());
@@ -48,7 +49,7 @@ public class ExtensionCallMarkLogicIT extends AbstractMarkLogicIT {
 
         MockFlowFile mockFlowFile = new MockFlowFile(1);
         Map<String, String> attributes = new HashMap<>();
-        attributes.put("dynamicParam", "dynamicValue");
+        attributes.put("dynamicParam", "dynamic,Value");
         mockFlowFile.putAttributes(attributes);
 
         runner.enqueue(mockFlowFile);
@@ -62,11 +63,11 @@ public class ExtensionCallMarkLogicIT extends AbstractMarkLogicIT {
 
         MockFlowFile result = results.get(1);
         String resultValue = new String(runner.getContentAsByteArray(result));
-        assertEquals("dynamicValue", resultValue,
+        assertEquals("dynamic Value", resultValue,
             "The test 'replay' extension is expected to return the value of the 'replay' parameter, " +
                 "which is sent via the replay:param property. That property then has an expression, " +
-                "which is expected to be evaluated against the flowfile attributes, producing the " +
-                "value 'dynamicvalue'");
+                "which is expected to be evaluated against the flowfile attributes. The value is then " +
+                "expected to be separated via the separator:param:replay attribute");
     }
 
     @Test

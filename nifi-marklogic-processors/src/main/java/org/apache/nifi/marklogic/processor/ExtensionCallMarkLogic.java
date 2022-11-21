@@ -23,11 +23,8 @@ import com.marklogic.client.extensions.ResourceServices.ServiceResultIterator;
 import com.marklogic.client.io.BytesHandle;
 import com.marklogic.client.io.Format;
 import com.marklogic.client.util.RequestParameters;
-import org.apache.nifi.annotation.behavior.DynamicProperty;
-import org.apache.nifi.annotation.behavior.InputRequirement;
+import org.apache.nifi.annotation.behavior.*;
 import org.apache.nifi.annotation.behavior.InputRequirement.Requirement;
-import org.apache.nifi.annotation.behavior.SystemResource;
-import org.apache.nifi.annotation.behavior.SystemResourceConsideration;
 import org.apache.nifi.annotation.documentation.CapabilityDescription;
 import org.apache.nifi.annotation.documentation.Tags;
 import org.apache.nifi.annotation.lifecycle.OnScheduled;
@@ -51,10 +48,17 @@ import java.util.regex.Pattern;
     "output from the call to MarkLogic being appended to the incoming FlowFile which is unlikely to be desirable " +
     "behavior. CallRestExtensionMarkLogic should be used instead.")
 @SystemResourceConsideration(resource = SystemResource.MEMORY)
-@DynamicProperty(name = "param: URL parameter, separator: separator to split values for a parameter.",
-    value = "param: URL parameter, separator: separator to split values for a parameter.",
-    description = "Depending on the property prefix, routes data to parameter, or splits parameter.",
-    expressionLanguageScope = ExpressionLanguageScope.FLOWFILE_ATTRIBUTES)
+@DynamicProperties({
+    @DynamicProperty(name = "param:{name}",
+        value = "The value of a request parameter to be sent to the REST extension",
+        description = "A request parameter with name equal to that of '{name}' will be sent in the call to the REST extension",
+        expressionLanguageScope = ExpressionLanguageScope.FLOWFILE_ATTRIBUTES),
+    @DynamicProperty(name = "separator:param:{name}",
+        value = "A string to use as a separator",
+        description = "Value will be used to split the value associated with the 'param:{name}' attribute, resulting in " +
+            "multiple request parameters being sent with name equal to that of '{name}'",
+        expressionLanguageScope = ExpressionLanguageScope.FLOWFILE_ATTRIBUTES)
+})
 @Deprecated
 public class ExtensionCallMarkLogic extends AbstractMarkLogicProcessor {
 
@@ -62,7 +66,7 @@ public class ExtensionCallMarkLogic extends AbstractMarkLogicProcessor {
         .name("Extension Name")
         .displayName("Extension Name")
         .required(true)
-        .description("Name of MarkLogic REST extension.")
+        .description("Name of MarkLogic REST extension")
         .expressionLanguageSupported(ExpressionLanguageScope.VARIABLE_REGISTRY)
         .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
         .build();
@@ -70,7 +74,7 @@ public class ExtensionCallMarkLogic extends AbstractMarkLogicProcessor {
         .name("Payload Source")
         .displayName("Payload Source")
         .required(true)
-        .description("Whether a payload body is passed and if so, from the FlowFile content or the Payload property.")
+        .description("Source of the payload to use as the body of the REST request")
         .expressionLanguageSupported(ExpressionLanguageScope.NONE)
         .allowableValues(PayloadSources.allValues)
         .defaultValue(PayloadSources.NONE_STR)
@@ -80,7 +84,7 @@ public class ExtensionCallMarkLogic extends AbstractMarkLogicProcessor {
         .name("Payload Format")
         .displayName("Payload Format")
         .required(true)
-        .description("Format of request body payload.")
+        .description("Format of request body payload")
         .expressionLanguageSupported(ExpressionLanguageScope.NONE)
         .allowableValues(Format.JSON.name(), Format.XML.name(), Format.TEXT.name(), Format.BINARY.name(), Format.UNKNOWN.name())
         .defaultValue(Format.TEXT.name())
@@ -90,7 +94,7 @@ public class ExtensionCallMarkLogic extends AbstractMarkLogicProcessor {
         .name("Payload")
         .displayName("Payload")
         .required(false)
-        .description("Payload for request body if \"Payload Property\" is the selected Payload Type.")
+        .description("Payload for request body if 'Payload Property' is the selected Payload Type")
         .expressionLanguageSupported(ExpressionLanguageScope.FLOWFILE_ATTRIBUTES)
         .addValidator(Validator.VALID)
         .build();
@@ -99,7 +103,7 @@ public class ExtensionCallMarkLogic extends AbstractMarkLogicProcessor {
         .displayName("Method Type")
         .required(false)
         .defaultValue(MethodTypes.POST_STR)
-        .description("HTTP method to call the REST extension with.")
+        .description("HTTP method for the call to the REST extension")
         .expressionLanguageSupported(ExpressionLanguageScope.NONE)
         .allowableValues(MethodTypes.allValues)
         .addValidator(Validator.VALID)
@@ -113,7 +117,8 @@ public class ExtensionCallMarkLogic extends AbstractMarkLogicProcessor {
         .build();
 
     protected static final Relationship FAILURE = new Relationship.Builder().name("failure")
-        .description("All FlowFiles that failed to produce a valid query.").build();
+        .description("If an error occurs during the call to MarkLogic or during the process of the results from " +
+            "that call, the incoming FlowFile will be sent to this relationship").build();
 
     @Override
     public void init(ProcessorInitializationContext context) {
@@ -232,7 +237,8 @@ public class ExtensionCallMarkLogic extends AbstractMarkLogicProcessor {
                 String paramValue = context.getProperty(propertyDesc).evaluateAttributeExpressions(flowFile).getValue();
                 PropertyValue separatorProperty = context.getProperty("separator:" + propertyDesc.getName());
                 if (separatorProperty != null && separatorProperty.getValue() != null && !separatorProperty.getValue().isEmpty()) {
-                    requestParameters.add(paramName, paramValue.split(Pattern.quote(separatorProperty.evaluateAttributeExpressions(flowFile).getValue())));
+                    String separator = Pattern.quote(separatorProperty.evaluateAttributeExpressions(flowFile).getValue());
+                    requestParameters.add(paramName, paramValue.split(separator));
                 } else {
                     requestParameters.add(paramName, paramValue);
                 }
@@ -278,13 +284,13 @@ public class ExtensionCallMarkLogic extends AbstractMarkLogicProcessor {
 
         public static final String NONE_STR = "None";
         public static final AllowableValue NONE = new AllowableValue(NONE_STR, NONE_STR,
-            "No paylod is passed to the request body.");
+            "No payload is passed to the request body");
         public static final String FLOWFILE_CONTENT_STR = "FlowFile Content";
         public static final AllowableValue FLOWFILE_CONTENT = new AllowableValue(FLOWFILE_CONTENT_STR, FLOWFILE_CONTENT_STR,
-            "The FlowFile content is passed as a payload to the request body.");
+            "The FlowFile content is passed as the body of the request");
         public static final String PAYLOAD_PROPERTY_STR = "Payload Property";
         public static final AllowableValue PAYLOAD_PROPERTY = new AllowableValue(PAYLOAD_PROPERTY_STR, PAYLOAD_PROPERTY_STR,
-            "The Payload property is passed as a payload to the request body.");
+            "The Payload property is passed as the body of the request");
 
         public static final AllowableValue[] allValues = new AllowableValue[]{NONE, FLOWFILE_CONTENT, PAYLOAD_PROPERTY};
     }
