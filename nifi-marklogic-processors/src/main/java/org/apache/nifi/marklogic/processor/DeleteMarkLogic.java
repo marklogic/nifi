@@ -16,8 +16,6 @@
  */
 package org.apache.nifi.marklogic.processor;
 
-import com.marklogic.client.datamovement.DeleteListener;
-import com.marklogic.client.datamovement.QueryBatch;
 import com.marklogic.client.datamovement.QueryBatchListener;
 import org.apache.nifi.annotation.behavior.*;
 import org.apache.nifi.annotation.behavior.InputRequirement.Requirement;
@@ -27,8 +25,10 @@ import org.apache.nifi.components.PropertyDescriptor;
 import org.apache.nifi.components.state.Scope;
 import org.apache.nifi.flowfile.FlowFile;
 import org.apache.nifi.flowfile.attributes.CoreAttributes;
-import org.apache.nifi.processor.*;
-import org.apache.nifi.processor.exception.ProcessException;
+import org.apache.nifi.processor.ProcessContext;
+import org.apache.nifi.processor.ProcessSession;
+import org.apache.nifi.processor.ProcessorInitializationContext;
+import org.apache.nifi.processor.Relationship;
 
 import java.util.*;
 
@@ -67,54 +67,44 @@ public class DeleteMarkLogic extends QueryMarkLogic {
         relationships = Collections.unmodifiableSet(set);
     }
 
-    @Override
-    public void onTrigger(final ProcessContext context, final ProcessSessionFactory sessionFactory)
-        throws ProcessException {
-        super.onTrigger(context, sessionFactory);
-    }
-
     /**
      * Overrides the behavior in the parent class for how each batch of URIs should be processed.
      *
      * @param context
      * @param session
+     * @param incomingAttributes
      * @return
      */
     @Override
-    protected QueryBatchListener buildQueryBatchListener(final ProcessContext context, final ProcessSession session) {
-        return new NiFiDeleteListener(session).onFailure((batch, throwable) -> {
-            synchronized (session) {
-                getLogger().error("Error deleting batch", throwable);
-                for (String uri : batch.getItems()) {
-                    FlowFile flowFile = session.create();
-                    session.putAttribute(flowFile, CoreAttributes.FILENAME.key(), uri);
-                    session.transfer(flowFile, FAILURE);
+    protected QueryBatchListener buildQueryBatchListener(final ProcessContext context, final ProcessSession session,
+                                                         Map<String, String> incomingAttributes) {
+        return batch -> {
+            boolean succeeded = false;
+            try {
+                batch.getClient().newDocumentManager().delete(batch.getItems());
+                succeeded = true;
+            } catch (Throwable t) {
+                synchronized (session) {
+                    getLogger().error("Unable to delete batch of URIs; cause: " + t.getMessage());
+                    for (String uri : batch.getItems()) {
+                        FlowFile flowFile = createFlowFileWithAttributes(session, incomingAttributes);
+                        session.putAttribute(flowFile, CoreAttributes.FILENAME.key(), uri);
+                        session.putAttribute(flowFile, "markLogicErrorMessage", t.getMessage());
+                        session.transfer(flowFile, FAILURE);
+                    }
+                    session.commitAsync();
                 }
-                session.commitAsync();
-                context.yield();
             }
-        });
-    }
-
-    private class NiFiDeleteListener extends DeleteListener {
-        private final ProcessSession session;
-
-        private NiFiDeleteListener(final ProcessSession session) {
-            super();
-            this.session = session;
-        }
-
-        @Override
-        public void processEvent(QueryBatch batch) {
-            super.processEvent(batch);
-            synchronized (session) {
-                for (String uri : batch.getItems()) {
-                    FlowFile flowFile = session.create();
-                    session.putAttribute(flowFile, CoreAttributes.FILENAME.key(), uri);
-                    session.transfer(flowFile, SUCCESS);
+            if (succeeded) {
+                synchronized (session) {
+                    for (String uri : batch.getItems()) {
+                        FlowFile flowFile = createFlowFileWithAttributes(session, incomingAttributes);
+                        session.putAttribute(flowFile, CoreAttributes.FILENAME.key(), uri);
+                        session.transfer(flowFile, SUCCESS);
+                    }
+                    session.commitAsync();
                 }
-                session.commitAsync();
             }
-        }
+        };
     }
 }
