@@ -127,6 +127,9 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
         .description("If an error occurs while retrieving a batch of records for a query, a FlowFile will be sent to this relationship").build();
 
     protected static final Relationship ORIGINAL = new Relationship.Builder().name("original")
+        // In 1.16.3.2, this is set to true so ApplyTransformMarkLogic can include it without breaking existing
+        // instances of that processor
+        .autoTerminateDefault(true)
         .description("If this processor receives a FlowFile, it will be routed to this relationship").build();
 
     // Keeps track of the server timestamp at the point in time in which the query was issued. Only applies for when the

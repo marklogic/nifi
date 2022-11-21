@@ -18,6 +18,7 @@ package org.apache.nifi.marklogic.processor;
 
 import com.marklogic.client.datamovement.ApplyTransformListener;
 import com.marklogic.client.datamovement.ApplyTransformListener.ApplyResult;
+import com.marklogic.client.datamovement.QueryBatch;
 import com.marklogic.client.datamovement.QueryBatchListener;
 import org.apache.nifi.annotation.behavior.*;
 import org.apache.nifi.annotation.behavior.InputRequirement.Requirement;
@@ -30,7 +31,10 @@ import org.apache.nifi.components.state.Scope;
 import org.apache.nifi.expression.ExpressionLanguageScope;
 import org.apache.nifi.flowfile.FlowFile;
 import org.apache.nifi.flowfile.attributes.CoreAttributes;
-import org.apache.nifi.processor.*;
+import org.apache.nifi.processor.ProcessContext;
+import org.apache.nifi.processor.ProcessSession;
+import org.apache.nifi.processor.ProcessorInitializationContext;
+import org.apache.nifi.processor.Relationship;
 import org.apache.nifi.processor.util.StandardValidators;
 
 import java.util.*;
@@ -66,6 +70,7 @@ public class ApplyTransformMarkLogic extends QueryMarkLogic {
     @Override
     public void init(ProcessorInitializationContext context) {
         super.init(context);
+
         List<PropertyDescriptor> list = new ArrayList<>();
         list.add(DATABASE_CLIENT_SERVICE);
         list.add(BATCH_SIZE);
@@ -78,7 +83,9 @@ public class ApplyTransformMarkLogic extends QueryMarkLogic {
         list.add(STATE_INDEX);
         list.add(STATE_INDEX_TYPE);
         properties = Collections.unmodifiableList(list);
+
         Set<Relationship> set = new HashSet<>();
+        set.add(ORIGINAL);
         set.add(SUCCESS);
         set.add(FAILURE);
         relationships = Collections.unmodifiableSet(set);
@@ -94,34 +101,23 @@ public class ApplyTransformMarkLogic extends QueryMarkLogic {
      */
     @Override
     protected QueryBatchListener buildQueryBatchListener(final ProcessContext context, final ProcessSession session, Map<String, String> incomingAttributes) {
-        ApplyTransformListener applyTransform = new ApplyTransformListener()
+        return new ApplyTransformListener()
             .withApplyResult(
                 ApplyResultTypes.INGORE_STR.equals(context.getProperty(APPLY_RESULT_TYPE).getValue()) ? ApplyResult.IGNORE : ApplyResult.REPLACE
             )
             .withTransform(this.buildServerTransform(context))
-            .onSuccess((batch) -> {
-                synchronized (session) {
-                    for (String uri : batch.getItems()) {
-                        final FlowFile flowFile = session.create();
-                        session.putAttribute(flowFile, CoreAttributes.FILENAME.key(), uri);
-                        session.transfer(flowFile, SUCCESS);
-                    }
-                    session.commitAsync();
-                }
-            })
-            .onFailure((batch, throwable) -> {
-                getLogger().error("Error processing transform", throwable);
-                synchronized (session) {
-                    for (String uri : batch.getItems()) {
-                        final FlowFile flowFile = session.create();
-                        session.putAttribute(flowFile, CoreAttributes.FILENAME.key(), uri);
-                        session.transfer(flowFile, FAILURE);
-                    }
-                    session.commitAsync();
-                }
-                context.yield();
-            });
-        return applyTransform;
+            .onSuccess(batch -> sendBatchToRelationship(session, batch, incomingAttributes, SUCCESS))
+            .onFailure((batch, throwable) -> sendBatchToRelationship(session, batch, incomingAttributes, FAILURE));
+    }
+
+    private void sendBatchToRelationship(ProcessSession session, QueryBatch batch, Map<String, String> incomingAttributes, Relationship relationship) {
+        synchronized (session) {
+            for (String uri : batch.getItems()) {
+                final FlowFile flowFile = createFlowFileWithAttributes(session, incomingAttributes);
+                session.putAttribute(flowFile, CoreAttributes.FILENAME.key(), uri);
+                session.transfer(flowFile, relationship);
+            }
+        }
     }
 
     public static class ApplyResultTypes {
