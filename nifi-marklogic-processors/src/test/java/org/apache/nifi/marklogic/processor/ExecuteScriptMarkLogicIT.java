@@ -43,18 +43,50 @@ public class ExecuteScriptMarkLogicIT extends AbstractMarkLogicIT {
         runner.setProperty(ExecuteScriptMarkLogic.RESULTS_DESTINATION, ExecuteScriptMarkLogic.AV_CONTENT);
         runner.setProperty(ExecuteScriptMarkLogic.SCRIPT_BODY, "1 + 1");
 
-        runner.enqueue(new MockFlowFile(3));
+        MockFlowFile mockFlowFile = new MockFlowFile(3);
+        Map<String, String> attributes = new HashMap<>();
+        attributes.put("hello", "world");
+        mockFlowFile.putAttributes(attributes);
+        runner.enqueue(mockFlowFile);
         runner.run(1);
 
         runner.assertQueueEmpty();
         assertEquals(0, runner.getFlowFilesForRelationship(ExecuteScriptMarkLogic.FAILURE).size());
+        assertEquals(1, runner.getFlowFilesForRelationship(ExecuteScriptMarkLogic.ORIGINAL).size());
+
+        runner.assertAllFlowFiles(ExecuteScriptMarkLogic.ORIGINAL, flowFile -> {
+            assertEquals("1 + 1", flowFile.getAttribute("marklogic-script-body"));
+        });
 
         List<MockFlowFile> results = runner.getFlowFilesForRelationship(ExecuteScriptMarkLogic.RESULTS);
         assertEquals(1, results.size());
+        runner.assertAllFlowFiles(ExecuteScriptMarkLogic.RESULTS, flowFile -> {
+            String resultValue = new String(runner.getContentAsByteArray((MockFlowFile) flowFile));
+            assertEquals("2", resultValue, "The script is expected to return the value 2");
+        });
+    }
 
-        MockFlowFile result = results.get(0);
-        String resultValue = new String(runner.getContentAsByteArray(result));
-        assertEquals("2", resultValue, "The script is expected to return the value 2");
+    @Test
+    public void noIncomingFlowFileAndModulePath() {
+        TestRunner runner = super.getNewTestRunner(ExecuteScriptMarkLogic.class);
+        runner.setValidateExpressionUsage(false);
+        runner.setProperty(ExecuteScriptMarkLogic.EXECUTION_TYPE, ExecuteScriptMarkLogic.AV_MODULE_PATH);
+        runner.setProperty(ExecuteScriptMarkLogic.RESULTS_DESTINATION, ExecuteScriptMarkLogic.AV_CONTENT);
+        runner.setProperty(ExecuteScriptMarkLogic.MODULE_PATH, "/sampleModule.xqy");
+        runner.run();
+
+        assertEquals(0, runner.getFlowFilesForRelationship(ExecuteScriptMarkLogic.FAILURE).size());
+
+        assertEquals(1, runner.getFlowFilesForRelationship(ExecuteScriptMarkLogic.ORIGINAL).size());
+        runner.assertAllFlowFiles(ExecuteScriptMarkLogic.ORIGINAL, flowFile -> {
+            assertEquals("/sampleModule.xqy", flowFile.getAttribute("marklogic-module-path"));
+        });
+
+        assertEquals(1, runner.getFlowFilesForRelationship(ExecuteScriptMarkLogic.RESULTS).size());
+        runner.assertAllFlowFiles(ExecuteScriptMarkLogic.RESULTS, flowFile -> {
+            String resultValue = new String(runner.getContentAsByteArray((MockFlowFile) flowFile));
+            assertEquals("Hello world", resultValue);
+        });
     }
 
     @Test

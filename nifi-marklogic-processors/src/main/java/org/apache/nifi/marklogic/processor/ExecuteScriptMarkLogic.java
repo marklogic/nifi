@@ -48,9 +48,9 @@ import java.util.Map.Entry;
     expressionLanguageScope = ExpressionLanguageScope.FLOWFILE_ATTRIBUTES,
     description = "Updates a FlowFile attribute specified by the Dynamic Property's key with the value specified by the Dynamic Property's value")
 public class ExecuteScriptMarkLogic extends AbstractMarkLogicProcessor {
+
     public static final String MARKLOGIC_RESULT = "marklogic.result";
     public static final String MARKLOGIC_RESULTS_COUNT = "marklogic.results.count";
-    public static final String MARKLOGIC_RESULTS_ERROR = "marklogic.results.error";
 
     protected static Validator PATH_SCRIPT_VALIDATOR = new Validator() {
         @Override
@@ -194,14 +194,14 @@ public class ExecuteScriptMarkLogic extends AbstractMarkLogicProcessor {
         try {
             originalFF = session.get();
             if (originalFF == null) {
-                return;
+                originalFF = session.create();
             }
 
             final String resultsDest = context.getProperty(RESULTS_DESTINATION).getValue();
             final String contentVariable = context.getProperty(CONTENT_VARIABLE).evaluateAttributeExpressions(originalFF).getValue();
             final boolean skipFirst = context.getProperty(SKIP_FIRST).getValue().equals("true");
 
-            ServerEvaluationCall call = buildCall(context, originalFF);
+            ServerEvaluationCall call = buildCall(context, session, originalFF);
 
             // write the content to the contentVariable external variable, if supplied
             if (contentVariable != null && contentVariable.length() > 0) {
@@ -256,16 +256,19 @@ public class ExecuteScriptMarkLogic extends AbstractMarkLogicProcessor {
         }
     }
 
-    private ServerEvaluationCall buildCall(ProcessContext context, FlowFile originalFlowFile) {
+    private ServerEvaluationCall buildCall(ProcessContext context, ProcessSession session, FlowFile originalFlowFile) {
         DatabaseClient client = getDatabaseClient(context);
         final String executionType = context.getProperty(EXECUTION_TYPE).getValue();
         ServerEvaluationCall call = client.newServerEval();
 
         if (STR_MODULE_PATH.equals(executionType)) {
-            return call.modulePath(context.getProperty(MODULE_PATH).evaluateAttributeExpressions(originalFlowFile).getValue());
+            String modulePath = context.getProperty(MODULE_PATH).evaluateAttributeExpressions(originalFlowFile).getValue();
+            session.putAttribute(originalFlowFile, "marklogic-module-path", modulePath);
+            return call.modulePath(modulePath);
         }
 
         final String scriptBody = context.getProperty(SCRIPT_BODY).evaluateAttributeExpressions(originalFlowFile).getValue();
+        session.putAttribute(originalFlowFile, "marklogic-script-body", scriptBody);
         return STR_JAVASCRIPT.equals(executionType) ? call.javascript(scriptBody) : call.xquery(scriptBody);
     }
 
@@ -273,9 +276,9 @@ public class ExecuteScriptMarkLogic extends AbstractMarkLogicProcessor {
         synchronized (session) {
             if (resultsDest.equals("Content")) {
                 // write the query result to the FlowFile content
-                flowFile = session.write(flowFile, (in, out) -> out.write(resultStr.getBytes(UTF8)));
+                session.write(flowFile, (in, out) -> out.write(resultStr.getBytes(UTF8)));
             } else if (resultsDest.equals("Attribute")) {
-                flowFile = session.putAttribute(flowFile, MARKLOGIC_RESULT, resultStr);
+                session.putAttribute(flowFile, MARKLOGIC_RESULT, resultStr);
             } else {
                 JsonElement jelement = new JsonParser().parse(resultStr);
                 JsonObject obj = jelement.getAsJsonObject();
@@ -296,8 +299,7 @@ public class ExecuteScriptMarkLogic extends AbstractMarkLogicProcessor {
                     if (value == null) {
                         value = "";
                     }
-
-                    flowFile = session.putAttribute(flowFile, property, value);
+                    session.putAttribute(flowFile, property, value);
                 }
             }
         }
