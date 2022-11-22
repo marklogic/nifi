@@ -44,14 +44,15 @@ public class QueryRowsMarkLogic extends AbstractMarkLogicProcessor {
         .build();
 
     protected static final Relationship FAILURE = new Relationship.Builder().name("failure")
-        .description("FlowFiles that were not successfully processed are routed here").build();
+        .description("If any error occurs while querying for rows, the incoming FlowFile, or a new one if an incoming one " +
+            "does not exist, will be sent here").build();
 
     protected static final Relationship SUCCESS = new Relationship.Builder().name("success")
-        .description("A FlowFile is routed here with its content being that exported rows").build();
+        .description("A FlowFile is routed here with its content set to the list of matching rows").build();
 
     protected static final Relationship ORIGINAL = new Relationship.Builder().name("original")
         .autoTerminateDefault(true)
-        .description("If this processor receives a FlowFile, it will be routed to this relationship").build();
+        .description("The incoming FlowFile, or a new one if an incoming one does not exist, is sent here").build();
 
     @Override
     public void init(ProcessorInitializationContext context) {
