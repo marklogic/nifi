@@ -203,477 +203,60 @@
 
         </div>
         <div class="col-md-9">
-          <h1 id="controller-service">Controller Service</h1>
-
-<h2 id="marklogicdatabaseclientservice">MarkLogicDatabaseClientService</h2>
-
-<p>Provides a MarkLogic DatabaseClient instance for use by other processors.</p>
-
-<h3 id="properties">Properties</h3>
-<dl>
-  <dt>Host</dt>
-  <dd>The host with the REST server for which a DatabaseClient instance needs to be created</dd>
-  <dt>Port</dt>
-  <dd>The port on which the REST server is hosted</dd>
-  <dt>Load Balancer</dt>
-  <dd>Is the host specified a load balancer?</dd>
-  <dt>Security Context Type</dt>
-  <dd>The type of the Security Context that needs to be used for authentication. The options are:
-    <ul>
-      <li>DIGEST</li>
-      <li>BASIC</li>
-      <li>CERTIFICATE</li>
-    </ul>
-  </dd>
-  <dt>Username</dt>
-  <dd>The user with read, write, or admin privileges - Required for Basic and Digest authentication</dd>
-  <dt>Password</dt>
-  <dd>The password for the user - Required for Basic and Digest authentication</dd>
-  <dt>Database</dt>
-  <dd>The database to access. By default, the configured database for the REST server would be accessed.</dd>
-  <dt>SSL Context Service</dt>
-  <dd>The SSL Context Service used to provide KeyStore and TrustManager information for secure connections.</dd>
-  <dt>Client Authentication</dt>
-  <dd>Client authentication policy when connecting via a secure connection. This property is only used when an SSL Context has been defined and enabled.</dd>
-</dl>
-
-<h1 id="marklogic-processors">MarkLogic Processors</h1>
-
-<h2 id="applytransformmarklogic-processor">ApplyTransformMarkLogic Processor</h2>
-
-<p>Creates FlowFiles from batches of documents, matching the given criteria, transformed from a MarkLogic server using the MarkLogic Data Movement SDK (DMSDK).</p>
-
-<p>This allows an input which can used in the <code class="highlighter-rouge">Query</code> property with the NiFi Expression Language.</p>
-
-<h3 id="relationships">Relationships</h3>
-
-<h4 id="success">success</h4>
-
-<p>FlowFiles are generated for each document URI read out of MarkLogic.</p>
-
-<h4 id="failure">failure</h4>
-
-<p>If a query fails a FlowFile goes to the failure relationship. If an input is provided to the QueryMarkLogic processor, the input FlowFile is penalized and passed. Otherwise a new FlowFile is generated and passed.</p>
-
-<h3 id="properties-1">Properties</h3>
-
-<dl>
-  <dt>DatabaseClient Service</dt>
-  <dd>The DatabaseClient Controller Service that provides the MarkLogic connection.</dd>
-  <dt>Batch Size</dt>
-  <dd>The number of documents per batch - sets the batch size on the Batcher.</dd>
-  <dt>Thread Count</dt>
-  <dd>The number of threads - sets the thread count on the Batcher.</dd>
-  <dt>Query</dt>
-  <dd>The query criteria for retrieving documents that corresponds with the <code class="highlighter-rouge">Query Type</code> selected. <strong>Expression Language Enabled: FlowFile Scope</strong></dd>
-  <dt>Query Type</dt>
-  <dd>The type of query contained in the <code class="highlighter-rouge">Query</code> property. Available query types:
-    <ul>
-      <li><strong>Collection Query</strong> Comma-separated list of collections to query from a MarkLogic server.</li>
-      <li><strong>Combined Query (JSON)</strong> Combine a string or structured query with dynamic query options (Allows JSON serialized cts queries). See <a href="https://docs.marklogic.com/guide/java/searches#id_76144">documentation for more details</a>.</li>
-      <li><strong>Combined Query (XML)</strong> Combine a string or structured query with dynamic query options (Allows XML serialized cts queries). See <a href="https://docs.marklogic.com/guide/java/searches#id_76144">documentation for more details</a>.</li>
-      <li><strong>String Query</strong> A Google-style query string to search documents and metadata. See <a href="https://docs.marklogic.com/guide/java/searches#id_80640">documentation for more details</a>.</li>
-      <li><strong>Structured Query (JSON)</strong> A simple and easy way to construct queries as a JSON structure, allowing you to manipulate complex queries.  See <a href="https://docs.marklogic.com/guide/java/searches#id_70572">documentation for more details</a>.</li>
-      <li><strong>Structured Query (XML)</strong> A simple and easy way to construct queries as a XML structure, allowing you to manipulate complex queries. See <a href="https://docs.marklogic.com/guide/java/searches#id_70572">documentation for more details</a>.</li>
-    </ul>
-  </dd>
-  <dt>Apply Result Type</dt>
-  <dd>Whether to REPLACE each document with the result of the transform, or run the transform with each document as input, but IGNORE the result. Default: <code class="highlighter-rouge">Replace</code> Available return types:
-    <ul>
-      <li><strong>Replace</strong> Overwrites documents with the value returned by the transform, just like REST write transforms. This is the default behavior.</li>
-      <li><strong>Ignore</strong> Run the transform on each document, but ignore the value returned by the transform because the transform will do any necessary database modifications or other processing. For example, a transform might call out to an external REST service or perhaps write multiple additional documents.</li>
-    </ul>
-  </dd>
-  <dt>State Index</dt>
-  <dd>Definition of the index which will be used to keep state to restrict future calls. <em>Currently only supports xs:dateTime indexes.</em></dd>
-</dl>
-
-<p>Example State Index Values By Type</p>
-<ul>
-  <li>Element Index: <code class="highlighter-rouge">xhtml:title</code>
-    <ul>
-      <li>Dynamic Property <code class="highlighter-rouge">ns:xhtml</code> =&gt; <code class="highlighter-rouge">http://www.w3.org/1999/xhtml</code></li>
-    </ul>
-  </li>
-  <li>JSON Property: <code class="highlighter-rouge">title</code></li>
-  <li>Path Index: <code class="highlighter-rouge">/xhtml:html/xhtml:head/xhtml:title</code>
-    <ul>
-      <li>Dynamic Property <code class="highlighter-rouge">ns:xhtml</code> =&gt; <code class="highlighter-rouge">http://www.w3.org/1999/xhtml</code></li>
-    </ul>
-  </li>
-</ul>
-
-<dl>
-  <dt>State Index Type</dt>
-  <dd>Type of index to determine state for next set of documents.
-    <ul>
-      <li><strong>Element Index</strong> Index on an element. (Namespaces can be defined with dynamic properties prefixed with ‘ns:’.)</li>
-      <li><strong>JSON Property Index</strong> Index on a JSON property.</li>
-      <li><strong>Path Index</strong> Index on a Path. (Namespaces can be defined with dynamic properties prefixed with ‘ns:’.)</li>
-    </ul>
-  </dd>
-  <dt>Server Transform</dt>
-  <dd>The name of REST server transform to apply to every document as it’s written.</dd>
-  <dt>trans:<em>&lt;custom-transform-parameter&gt;</em></dt>
-  <dd>A dynamic parameter with the prefix of <code class="highlighter-rouge">trans:</code> that will be passed to the transform. <strong>Expression Language Enabled: Variable Scope</strong></dd>
-</dl>
-
-<h2 id="deletemarklogic-processor">DeleteMarkLogic Processor</h2>
-
-<p>Creates FlowFiles from batches of documents, matching the given criteria, deleted from a MarkLogic server using the MarkLogic Data Movement SDK (DMSDK).</p>
-
-<p>This allows an input which can used in the <code class="highlighter-rouge">Query</code> property with the NiFi Expression Language.</p>
-
-<h3 id="relationships-1">Relationships</h3>
-
-<h4 id="success-1">success</h4>
-
-<p>FlowFiles are generated for each document URI read out of MarkLogic.</p>
-
-<h4 id="failure-1">failure</h4>
-
-<p>If a query fails a FlowFile goes to the failure relationship. If an input is provided to the QueryMarkLogic processor, the input FlowFile is penalized and passed. Otherwise a new FlowFile is generated and passed.</p>
-
-<h3 id="properties-2">Properties</h3>
-
-<dl>
-  <dt>DatabaseClient Service</dt>
-  <dd>The DatabaseClient Controller Service that provides the MarkLogic connection.</dd>
-  <dt>Batch Size</dt>
-  <dd>The number of documents per batch - sets the batch size on the Batcher.</dd>
-  <dt>Thread Count</dt>
-  <dd>The number of threads - sets the thread count on the Batcher.</dd>
-  <dt>Query</dt>
-  <dd>The query criteria for retrieving documents that corresponds with the <code class="highlighter-rouge">Query Type</code> selected. <strong>Expression Language Enabled: FlowFile Scope</strong></dd>
-  <dt>Query Type</dt>
-  <dd>The type of query contained in the <code class="highlighter-rouge">Query</code> property. Available query types:
-    <ul>
-      <li><strong>Collection Query</strong> Comma-separated list of collections to query from a MarkLogic server.</li>
-      <li><strong>Combined Query (JSON)</strong> Combine a string or structured query with dynamic query options (Allows JSON serialized cts queries). See <a href="https://docs.marklogic.com/guide/java/searches#id_76144">documentation for more details</a>.</li>
-      <li><strong>Combined Query (XML)</strong> Combine a string or structured query with dynamic query options (Allows XML serialized cts queries). See <a href="https://docs.marklogic.com/guide/java/searches#id_76144">documentation for more details</a>.</li>
-      <li><strong>String Query</strong> A Google-style query string to search documents and metadata. See <a href="https://docs.marklogic.com/guide/java/searches#id_80640">documentation for more details</a>.</li>
-      <li><strong>Structured Query (JSON)</strong> A simple and easy way to construct queries as a JSON structure, allowing you to manipulate complex queries.  See <a href="https://docs.marklogic.com/guide/java/searches#id_70572">documentation for more details</a>.</li>
-      <li><strong>Structured Query (XML)</strong> A simple and easy way to construct queries as a XML structure, allowing you to manipulate complex queries. See <a href="https://docs.marklogic.com/guide/java/searches#id_70572">documentation for more details</a>.</li>
-    </ul>
-  </dd>
-  <dt>State Index</dt>
-  <dd>Definition of the index which will be used to keep state to restrict future calls. <em>Currently only supports xs:dateTime indexes.</em></dd>
-</dl>
-
-<p>Example State Index Values By Type</p>
-<ul>
-  <li>Element Index: <code class="highlighter-rouge">xhtml:title</code>
-    <ul>
-      <li>Dynamic Property <code class="highlighter-rouge">ns:xhtml</code> =&gt; <code class="highlighter-rouge">http://www.w3.org/1999/xhtml</code></li>
-    </ul>
-  </li>
-  <li>JSON Property: <code class="highlighter-rouge">title</code></li>
-  <li>Path Index: <code class="highlighter-rouge">/xhtml:html/xhtml:head/xhtml:title</code>
-    <ul>
-      <li>Dynamic Property <code class="highlighter-rouge">ns:xhtml</code> =&gt; <code class="highlighter-rouge">http://www.w3.org/1999/xhtml</code></li>
-    </ul>
-  </li>
-</ul>
-
-<dl>
-  <dt>State Index Type</dt>
-  <dd>Type of index to determine state for next set of documents.
-    <ul>
-      <li><strong>Element Index</strong> Index on an element. (Namespaces can be defined with dynamic properties prefixed with ‘ns:’.)</li>
-      <li><strong>JSON Property Index</strong> Index on a JSON property.</li>
-      <li><strong>Path Index</strong> Index on a Path. (Namespaces can be defined with dynamic properties prefixed with ‘ns:’.)</li>
-    </ul>
-  </dd>
-</dl>
-
-<h2 id="executescriptmarklogic-processor">ExecuteScriptMarkLogic Processor</h2>
-
-<p>Executes server-side code in MarkLogic, either in JavaScript or XQuery. Code can be given in a Script Body property or can be invoked as a path to a module installed on the server.</p>
-
-<h3 id="relationships-2">Relationships</h3>
-
-<h4 id="results">results</h4>
-
-<p>Receives a FlowFile for each result returned by the executed script. Will not receive a FlowFile for the first result if 'Skip First Result' is true</p>
-
-<h4 id="first-result">first result</h4>
-
-<p>Receives a FlowFile for the first result returned by the executed script</p>
-
-<h4 id="last-result">last result</h4>
-
-<p>Receives a FlowFile for the last result returned by the executed script if it returns at least two results.</p>
-
-<h4 id="original">original</h4>
-
-<p>Receives the original FlowFile that this processor received</p>
-
-<h4 id="failure-2">failure</h4>
-
-<p>Receives the original FlowFile if the call to MarkLogic fails for any reason</p>
-
-<h3 id="properties-3">Properties</h3>
-
-<dl>
-  <dt>DatabaseClient Service</dt>
-  <dd>The DatabaseClient Controller Service that provides the MarkLogic connection.</dd>
-  <dt>Execution Type</dt>
-  <dd>What will be executed: ad-hoc XQuery or JavaScript, or a path to a module on the server:
-    <ul>
-      <li><strong>XQuery</strong> Execute XQuery supplied in the Script Body property.</li>
-      <li><strong>JavaScript</strong> Execute JavaScript supplied in the Script Body property.</li>
-      <li><strong>Module Path</strong> Execute the module specified in the Module Path property.</li>
-    </ul>
-  </dd>
-  <dt>Script Body</dt>
-  <dd>Body of script to execute. Only one of Module Path or Script Body may be used. <strong>Expression Language Enabled: FlowFile Scope</strong></dd>
-  <dt>Module Path</dt>
-  <dd>Path of module to execute. Only one of Module Path or Script Body may be used. <strong>Expression Language Enabled: FlowFile Scope</strong></dd>
-  <dt>Results Destination</dt>
-  <dd>Where each result will be written in the FlowFile. If Attribute, the result will be written to the <code class="highlighter-rouge">marklogic.result</code> attribute:
-    <ul>
-      <li><strong>Content</strong> Write the MarkLogic result to the FlowFile content.</li>
-      <li><strong>Attribute</strong> Write the MarkLogic result to the marklogic.result attribute.</li>
-      <li><strong>Attributes from JSON Properties</strong> Parse a MarkLogic JSON result into attributes with the same names as the top-level JSON properties, where the values are simple types, not objects or arrays.</li>
-    </ul>
-  </dd>
-  <dt>Skip First Result</dt>
-  <dd>If true, first result is not sent to results relationship or last result relationship, but is sent to the first result relationship.</dd>
-  <dt>Content Variable</dt>
-  <dd>The name of the external variable where the incoming content will be sent to the script. (optional) <strong>Expression Language Enabled: FlowFile Scope</strong></dd>
-  <dt><em>&lt;custom-external-variable&gt;</em></dt>
-  <dd>A dynamic parameter that will be passed as an external variable. <strong>Expression Language Enabled: Variable Scope</strong></dd>
-</dl>
-
-<h2 id="putmarklogic-processor">PutMarkLogic Processor</h2>
-
-<p>Write batches of FlowFiles as documents to a MarkLogic server using the MarkLogic Data Movement SDK (DMSDK).</p>
-
-<h3 id="relationships-4">Relationships</h3>
-
-<h4 id="success-3">success</h4>
-
-<p>FlowFiles that have been written successfully to MarkLogic are passed to this relationship.</p>
-
-<h4 id="batch_success">batch_success</h4>
-
-<p>A FlowFile is created and written to this relationship for each batch. The FlowFile has an attribute of URIs, which is a comma-separated list of URIs successfully written in a batch. This can assist with post-batch processing.</p>
-
-<h4 id="failure-4">failure</h4>
-
-<p>FlowFiles that have failed to be written to MarkLogic are passed to this relationship.</p>
-
-<h3 id="properties-5">Properties</h3>
-
-<dl>
-  <dt>DatabaseClient Service</dt>
-  <dd>The DatabaseClient Controller Service that provides the MarkLogic connection.</dd>
-  <dt>Batch Size</dt>
-  <dd>The number of documents per batch - sets the batch size on the Batcher.</dd>
-  <dt>Thread Count</dt>
-  <dd>The number of threads - sets the thread count on the Batcher.</dd>
-  <dt>Collections</dt>
-  <dd>Comma-delimited sequence of collections to add to each document. <strong>Expression Language Enabled: FlowFile Scope</strong></dd>
-  <dt>Format</dt>
-  <dd>Format for each document; if not specified, MarkLogic will determine the format based on the URI.</dd>
-  <dt>Job ID</dt>
-  <dd>ID for the WriteBatcher job.</dd>
-  <dt>Job Name</dt>
-  <dd>Name for the WriteBatcher job.</dd>
-  <dt>MIME Type</dt>
-  <dd>MIME type for each document; if not specified, MarkLogic will determine the MIME type based on the URI.</dd>
-  <dt>Permissions</dt>
-  <dd>Comma-delimited sequence of permissions - role1, capability1, role2, capability2 - to add to each document</dd>
-  <dt>Temporal Collection</dt>
-  <dd>The temporal collection to use for a temporal document insert.</dd>
-  <dt>Server Transform</dt>
-  <dd>The name of REST server transform to apply to every document as it’s written.</dd>
-  <dt>URI Attribute Name</dt>
-  <dd>The name of the FlowFile attribute whose value will be used as the URI.</dd>
-  <dt>URI Prefix</dt>
-  <dd>The prefix to prepend to each URI.</dd>
-  <dt>URI Suffix</dt>
-  <dd>The suffix to append to each URI.</dd>
-  <dt>trans:<em>&lt;custom-transform-parameter&gt;</em></dt>
-  <dd>A dynamic parameter with the prefix of <code class="highlighter-rouge">trans:</code> that will be passed to the transform. <strong>Expression Language Enabled: Variable Scope</strong></dd>
-</dl>
-
-<h2 id="putmarklogicrecord-processor">PutMarkLogicRecord Processor</h2>
-
-<p>Breaks down FlowFiles into batches of Records and inserts JSON documents to a MarkLogic server using the MarkLogic Data Movement SDK (DMSDK).</p>
-
-<h3 id="relationships-5">Relationships</h3>
-
-<h4 id="success-4">success</h4>
-
-<p>FlowFiles that have been written successfully to MarkLogic are passed to this relationship.</p>
-
-<h4 id="batch_success-1">batch_success</h4>
-
-<p>A FlowFile is created and written to this relationship for each batch. The FlowFile has an attribute of URIs, which is a comma-separated list of URIs successfully written in a batch. This can assist with post-batch processing.</p>
-
-<h4 id="failure-5">failure</h4>
-
-<p>FlowFiles that have failed to be written to MarkLogic are passed to this relationship.</p>
-
-<h3 id="properties-6">Properties</h3>
-
-<dl>
-  <dt>DatabaseClient Service</dt>
-  <dd>The DatabaseClient Controller Service that provides the MarkLogic connection.</dd>
-  <dt>Batch Size</dt>
-  <dd>The number of documents per batch - sets the batch size on the Batcher.</dd>
-  <dt>Thread Count</dt>
-  <dd>The number of threads - sets the thread count on the Batcher.</dd>
-  <dt>Record Reader</dt>
-  <dd>The Record Reader to use for incoming FlowFiles.</dd>
-  <dt>Record Writer</dt>
-  <dd>The Record Writer to use for creating new FlowFiles.</dd>
-  <dt>Collections</dt>
-  <dd>Comma-delimited sequence of collections to add to each document. <strong>Expression Language Enabled: FlowFile Scope</strong></dd>
-  <dt>Format</dt>
-  <dd>Format for each document; if not specified, MarkLogic will determine the format based on the URI.</dd>
-  <dt>Job ID</dt>
-  <dd>ID for the WriteBatcher job.</dd>
-  <dt>Job Name</dt>
-  <dd>Name for the WriteBatcher job.</dd>
-  <dt>MIME Type</dt>
-  <dd>MIME type for each document; if not specified, MarkLogic will determine the MIME type based on the URI.</dd>
-  <dt>Permissions</dt>
-  <dd>Comma-delimited sequence of permissions - role1, capability1, role2, capability2 - to add to each document</dd>
-  <dt>Temporal Collection</dt>
-  <dd>The temporal collection to use for a temporal document insert.</dd>
-  <dt>Server Transform</dt>
-  <dd>The name of REST server transform to apply to every document as it’s written.</dd>
-  <dt>URI Field Name</dt>
-  <dd>The name of the record field whose value will be used as the URI. If not specified, a UUID will be generated.</dd>
-  <dt>URI Prefix</dt>
-  <dd>The prefix to prepend to each URI.</dd>
-  <dt>URI Suffix</dt>
-  <dd>The suffix to append to each URI.</dd>
-  <dt>trans:<em>&lt;custom-transform-parameter&gt;</em></dt>
-  <dd>A dynamic parameter with the prefix of <code class="highlighter-rouge">trans:</code> that will be passed to the transform. <strong>Expression Language Enabled: Variable Scope</strong></dd>
-</dl>
-
-<h2 id="querymarklogic-processor">QueryMarkLogic Processor</h2>
-
-<p>Creates FlowFiles from batches of documents, matching the given criteria, retrieved from a MarkLogic server using the MarkLogic Data Movement SDK (DMSDK).</p>
-
-<p>This allows an input which can used in the <code class="highlighter-rouge">Query</code> property with the NiFi Expression Language.</p>
-
-<h3 id="relationships-6">Relationships</h3>
-
-<h4 id="success-5">success</h4>
-
-<p>FlowFiles are generated for each document URI read out of MarkLogic.</p>
-
-<h4 id="failure-6">failure</h4>
-
-<p>If a query fails a FlowFile goes to the failure relationship. If an input is provided to the QueryMarkLogic processor, the input FlowFile is penalized and passed. Otherwise a new FlowFile is generated and passed.</p>
-
-<h3 id="properties-7">Properties</h3>
-
-<dl>
-  <dt>DatabaseClient Service</dt>
-  <dd>The DatabaseClient Controller Service that provides the MarkLogic connection.</dd>
-  <dt>Batch Size</dt>
-  <dd>The number of documents per batch - sets the batch size on the Batcher.</dd>
-  <dt>Thread Count</dt>
-  <dd>The number of threads - sets the thread count on the Batcher.</dd>
-  <dt>Consistent Snapshot</dt>
-  <dd>Boolean used to indicate that the matching documents were retrieved from a consistent snapshot.</dd>
-  <dt>Query</dt>
-  <dd>The query criteria for retrieving documents that corresponds with the <code class="highlighter-rouge">Query Type</code> selected. <strong>Expression Language Enabled: FlowFile Scope</strong></dd>
-  <dt>Query Type</dt>
-  <dd>The type of query contained in the <code class="highlighter-rouge">Query</code> property. Available query types:
-    <ul>
-      <li><strong>Collection Query</strong> Comma-separated list of collections to query from a MarkLogic server.</li>
-      <li><strong>Combined Query (JSON)</strong> Combine a string or structured query with dynamic query options (Allows JSON serialized cts queries). See <a href="https://docs.marklogic.com/guide/java/searches#id_76144">documentation for more details</a>.</li>
-      <li><strong>Combined Query (XML)</strong> Combine a string or structured query with dynamic query options (Allows XML serialized cts queries). See <a href="https://docs.marklogic.com/guide/java/searches#id_76144">documentation for more details</a>.</li>
-      <li><strong>String Query</strong> A Google-style query string to search documents and metadata. See <a href="https://docs.marklogic.com/guide/java/searches#id_80640">documentation for more details</a>.</li>
-      <li><strong>Structured Query (JSON)</strong> A simple and easy way to construct queries as a JSON structure, allowing you to manipulate complex queries.  See <a href="https://docs.marklogic.com/guide/java/searches#id_70572">documentation for more details</a>.</li>
-      <li><strong>Structured Query (XML)</strong> A simple and easy way to construct queries as a XML structure, allowing you to manipulate complex queries. See <a href="https://docs.marklogic.com/guide/java/searches#id_70572">documentation for more details</a>.</li>
-    </ul>
-  </dd>
-  <dt>Return Type</dt>
-  <dd>The type of data that is returned. Default: <code class="highlighter-rouge">Documents</code> Available return types:
-    <ul>
-      <li><strong>URIs Only</strong> Passes FlowFiles with just <code class="highlighter-rouge">filename</code> attribute with the matching document URIs.</li>
-      <li><strong>Documents</strong> Adds document in FlowFile content.</li>
-      <li><strong>Documents + Metadata</strong> Adds document in FlowFile content and adds metadata with the <code class="highlighter-rouge">meta:</code> prefix and properties with the <code class="highlighter-rouge">property:</code> prefix to the FlowFile attributes.</li>
-      <li><strong>Metadata</strong> Adds metadata with the <code class="highlighter-rouge">meta:</code> prefix and properties with the <code class="highlighter-rouge">property:</code> prefix to the FlowFile attributes.</li>
-    </ul>
-  </dd>
-  <dt>State Index</dt>
-  <dd>Definition of the index which will be used to keep state to restrict future calls. <em>Currently only supports xs:dateTime indexes.</em></dd>
-</dl>
-
-<p>Example State Index Values By Type</p>
-<ul>
-  <li>Element Index: <code class="highlighter-rouge">xhtml:title</code>
-    <ul>
-      <li>Dynamic Property <code class="highlighter-rouge">ns:xhtml</code> =&gt; <code class="highlighter-rouge">http://www.w3.org/1999/xhtml</code></li>
-    </ul>
-  </li>
-  <li>JSON Property: <code class="highlighter-rouge">title</code></li>
-  <li>Path Index: <code class="highlighter-rouge">/xhtml:html/xhtml:head/xhtml:title</code>
-    <ul>
-      <li>Dynamic Property <code class="highlighter-rouge">ns:xhtml</code> =&gt; <code class="highlighter-rouge">http://www.w3.org/1999/xhtml</code></li>
-    </ul>
-  </li>
-</ul>
-
-<dl>
-  <dt>State Index Type</dt>
-  <dd>Type of index to determine state for next set of documents.
-    <ul>
-      <li><strong>Element Index</strong> Index on an element. (Namespaces can be defined with dynamic properties prefixed with ‘ns:’.)</li>
-      <li><strong>JSON Property Index</strong> Index on a JSON property.</li>
-      <li><strong>Path Index</strong> Index on a Path. (Namespaces can be defined with dynamic properties prefixed with ‘ns:’.)</li>
-    </ul>
-  </dd>
-  <dt>Collections</dt>
-  <dd><strong>DEPRECATED use Query Type <code class="highlighter-rouge">Collection Query</code> with Query instead.</strong> Comma-separated list of collections to query from a MarkLogic server.</dd>
-  <dt>Server Transform</dt>
-  <dd>The name of REST server transform to apply to every document as it’s read.</dd>
-  <dt>trans:<em>&lt;custom-transform-parameter&gt;</em></dt>
-  <dd>A dynamic parameter with the prefix of <code class="highlighter-rouge">trans:</code> that will be passed to the transform. <strong>Expression Language Enabled: Variable Scope</strong></dd>
-</dl>
-
-          <h2 id="executescriptmarklogic-processor">RunFlowMarkLogic Processor</h2>
-
-          <p>Run a MarkLogic Data Hub 5 flow via the Data Hub Framework (DHF) client.
-            This is expected to be run on non-ingestion steps, where data has already been ingested into MarkLogic.
-            Ingestion steps depend on access to local files, which isn't a common use case for NiFi in production.</p>
-
-          <p>The 1.16.3.1 release of the connector uses version 5.7.2 of the DHF client.</p>
-          
-          <h3 id="relationships-2">Relationships</h3>
-
-          <h4 id="results">finished</h4>
-
-          <p>If the flow finishes, then regardless of its outcome, the JSON response will be sent to this relationship. If an exception is thrown when running the flow, then a NiFi ProcessException will be thrown instead.</p>
-
-          <h3 id="properties-3">Properties</h3>
-
-          <dl>
-            <dt>DatabaseClient Service</dt>
-            <dd>The DatabaseClient Controller Service that provides the MarkLogic connection. Note that if "SSL Context Service" is
-            configured on this service, the DHF staging and jobs app servers must be configured to require SSL.</dd>
-            <dt>Final Server Port</dt>
-            <dd>The port on which the Final REST server is hosted</dd>
-            <dt>Job Server Port</dt>
-            <dd>The port on which the Job REST server is hosted</dd>
-            <dt>Flow Name</dt>
-            <dd>Name of the Data Hub flow to run</dd>
-            <dt>Steps</dt>
-            <dd>Comma-delimited string of step numbers to run</dd>
-            <dt>Job ID</dt>
-            <dd>ID for the Data Hub job</dd>
-            <dt>Options JSON</dt>
-            <dd>JSON object defining options for running the flow</dd>
-          </dl>
-
+          <h1>Connector Features</h1>
+
+          <p>
+          The MarkLogic NiFi connector consists of two types of NiFi components - a controller service, and multiple
+          processors. The controller service defines the details for connecting to a MarkLogic server, while the
+          processors perform a variety of functions focused primarily on moving data in to and out of MarkLogic.
+          </p>
+
+            <h2>Controller Service</h2>
+
+            <p>
+                An instance of the MarkLogic controller service can be added and made available to processors via the
+                following steps:
+            </p>
+
+            <ol>
+                <li>Click anywhere on the NiFi canvas so that in the "Operate" panel on the left, a process group is shown as selected</li>
+            <li>Click on the cog icon in the "Operate" panel</li>
+            <li>Click on the "Controller Services" tab if it is not already selected</li>
+            <li>Click on the plus icon on the right side of the "Controller Services" tab</li>
+            <li>In the "Add Controller Service" dialog that appears, enter "MarkLogic"</li>
+            <li>Select the 'DefaultMarkLogicDatabaseClientService' item that appears</li>
+            </ol>
+            <p>
+                Details on each property of the controller service can be viewed by hovering over the question mark icon
+                for each property.
+            </p>
+
+            <h2>Processors</h2>
+
+            <p>
+            The list of processors in the MarkLogic NiFi connector can be viewed by dragging a new processor
+            onto the NiFi canvas and entering the word "MarkLogic" into the search box that NiFi displays. The
+            "Add Processor" dialog in NiFi will show a description for each processor. Once a processor has been
+            added to the canvas, full details can be viewed by right-clicking on the processor and selecting "View Usage".
+          </p>
+
+          <p>
+              As an overview of the functionality available via the processors, each is listed below with a description.
+              As noted above, for full details, use the "View Usage" feature within NiFi.
+          </p>
+
+            <ul>
+                <li><code class="highlighter-rouge">ApplyTransformMarkLogic</code> - apply a REST transform against every document matching a query</li>
+                <li><code class="highlighter-rouge">CallRestExtensionMarkLogic</code> - call a REST extension service</li>
+                <li><code class="highlighter-rouge">DeleteMarkLogic</code> - delete each document matching a query</li>
+                <li><code class="highlighter-rouge">ExecuteScriptMarkLogic</code> - execute a JavaScript or XQuery script</li>
+                <li><code class="highlighter-rouge">ExtensionCallMarkLogic</code> - call a REST extension service; deprecated in favor of <code class="highlighter-rouge">CallRestExtensionMarkLogic</code></li>
+                <li><code class="highlighter-rouge">PutMarkLogic</code> - write new documents to MarkLogic</li>
+                <li><code class="highlighter-rouge">PutMarkLogicRecord</code> - write new documents to MarkLogic by first splitting a FlowFile into a set of documents</li>
+                <li><code class="highlighter-rouge">QueryMarkLogic</code> - query for and return any of documents, URIs, and metadata from MarkLogic</li>
+                <li><code class="highlighter-rouge">QueryRowsMarkLogic</code> - query for rows in MarkLogic via an Optic plan</li>
+                <li><code class="highlighter-rouge">RunFlowMarkLogic</code> - run a Data Hub Framework flow in MarkLogic</li>
+            </ul>
         </div>
       </div>
     </div>
