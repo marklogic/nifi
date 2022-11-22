@@ -25,7 +25,7 @@
     <version>1.16.3</version>
   </parent>
 
-  <version>1.16.3.1</version>
+  <version>1.16.3.2</version>
 
   <artifactId>nifi-marklogic-bundle</artifactId>
   <packaging>pom</packaging>
@@ -34,7 +34,7 @@
     <!-- Ensure that the NARs will work on Java 8, as NiFi requires either Java 8 or 11 -->
     <maven.compiler.release>8</maven.compiler.release>
     <nifi.version>1.16.3</nifi.version>
-    <marklogicnar.version>1.16.3.1</marklogicnar.version>
+    <marklogicnar.version>1.16.3.2</marklogicnar.version>
     <marklogicclientapi.version>5.5.3</marklogicclientapi.version>
   </properties>
 
