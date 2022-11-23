@@ -312,7 +312,8 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
          * likely never be invoked, and certainly not on account of a query failure. This is here only in the
          * extremely unlikely event that a listener is invoked.
          */
-        queryBatcher.onQueryFailure(ex -> logErrorAndTransfer(ex, session.create(), session, FAILURE));
+        queryBatcher.onQueryFailure(ex ->
+            logErrorAndTransfer(ex, createFlowFileWithAttributes(session, attributesToCopy), session, FAILURE));
     }
 
     /**

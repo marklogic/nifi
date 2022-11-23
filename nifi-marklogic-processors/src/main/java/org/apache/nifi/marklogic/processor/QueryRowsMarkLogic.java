@@ -91,7 +91,7 @@ public class QueryRowsMarkLogic extends AbstractMarkLogicProcessor {
                         .get()) {
                     if (inputStream != null) {
                         FlowFile resultFlowFile = session.write(
-                            session.create(incomingFlowFile),
+                            createFlowFileWithAttributes(session, incomingFlowFile.getAttributes()),
                             out -> FileCopyUtils.copy(inputStream, out));
                         session.transfer(resultFlowFile, SUCCESS);
                     }

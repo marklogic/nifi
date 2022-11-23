@@ -192,23 +192,23 @@ public class ExecuteScriptMarkLogic extends AbstractMarkLogicProcessor {
     public final void onTrigger(final ProcessContext context, final ProcessSessionFactory sessionFactory)
         throws ProcessException {
         final ProcessSession session = sessionFactory.createSession();
-        FlowFile originalFF = null;
+        FlowFile incomingFlowFile = null;
         try {
-            originalFF = session.get();
-            if (originalFF == null) {
-                originalFF = session.create();
+            incomingFlowFile = session.get();
+            if (incomingFlowFile == null) {
+                incomingFlowFile = session.create();
             }
 
             final String resultsDest = context.getProperty(RESULTS_DESTINATION).getValue();
-            final String contentVariable = context.getProperty(CONTENT_VARIABLE).evaluateAttributeExpressions(originalFF).getValue();
+            final String contentVariable = context.getProperty(CONTENT_VARIABLE).evaluateAttributeExpressions(incomingFlowFile).getValue();
             final boolean skipFirst = context.getProperty(SKIP_FIRST).getValue().equals("true");
 
-            ServerEvaluationCall call = buildCall(context, session, originalFF);
+            ServerEvaluationCall call = buildCall(context, session, incomingFlowFile);
 
             // write the content to the contentVariable external variable, if supplied
             if (contentVariable != null && contentVariable.length() > 0) {
                 final ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-                session.exportTo(originalFF, bytes);
+                session.exportTo(incomingFlowFile, bytes);
                 final String content = bytes.toString();
 
                 call.addVariable(contentVariable, content);
@@ -219,7 +219,7 @@ public class ExecuteScriptMarkLogic extends AbstractMarkLogicProcessor {
             for (PropertyDescriptor entry : context.getProperties().keySet()) {
                 if (entry.isDynamic()) {
                     String name = entry.getName();
-                    String value = context.getProperty(name).evaluateAttributeExpressions(originalFF).getValue();
+                    String value = context.getProperty(name).evaluateAttributeExpressions(incomingFlowFile).getValue();
                     call.addVariable(name, value);
                 }
             }
@@ -232,29 +232,29 @@ public class ExecuteScriptMarkLogic extends AbstractMarkLogicProcessor {
                 final String resultStr = result.getString();
                 last = resultStr;
                 if (count == 1) {
-                    FlowFile firstFF = session.create(originalFF);
+                    FlowFile firstFF = createFlowFileWithAttributes(session, incomingFlowFile.getAttributes());
                     resultToFlowFile(session, resultStr, firstFF, resultsDest);
                     session.transfer(firstFF, FIRST_RESULT);
                 }
                 if (count > 1 || !skipFirst) {
-                    FlowFile resultFF = session.create(originalFF);
+                    FlowFile resultFF = createFlowFileWithAttributes(session, incomingFlowFile.getAttributes());
                     resultToFlowFile(session, resultStr, resultFF, resultsDest);
                     session.transfer(resultFF, RESULTS);
                 }
             }
 
-            originalFF = session.putAttribute(originalFF, MARKLOGIC_RESULTS_COUNT, Integer.toString(count));
-            session.transfer(originalFF, ORIGINAL);
+            incomingFlowFile = session.putAttribute(incomingFlowFile, MARKLOGIC_RESULTS_COUNT, Integer.toString(count));
+            session.transfer(incomingFlowFile, ORIGINAL);
 
             if (last != null && (count > 1 || !skipFirst)) {
-                FlowFile lastFF = session.create(originalFF);
+                FlowFile lastFF = createFlowFileWithAttributes(session, incomingFlowFile.getAttributes());
                 resultToFlowFile(session, last, lastFF, resultsDest);
                 session.transfer(lastFF, LAST_RESULT);
             }
 
             session.commitAsync();
         } catch (final Throwable t) {
-            logErrorAndTransfer(t, originalFF, session, FAILURE);
+            logErrorAndTransfer(t, incomingFlowFile, session, FAILURE);
         }
     }
 

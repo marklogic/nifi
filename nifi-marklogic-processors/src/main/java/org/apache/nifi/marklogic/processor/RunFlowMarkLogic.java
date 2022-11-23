@@ -140,13 +140,13 @@ public class RunFlowMarkLogic extends AbstractMarkLogicProcessor {
     public void onTrigger(ProcessContext context, ProcessSessionFactory sessionFactory) throws ProcessException {
         final ProcessSession session = sessionFactory.createSession();
 
-        FlowFile flowFile = session.get();
-        if (flowFile == null) {
-            flowFile = session.create();
+        FlowFile incomingFlowFile = session.get();
+        if (incomingFlowFile == null) {
+            incomingFlowFile = session.create();
         }
 
         try {
-            FlowInputs inputs = buildFlowInputs(context, flowFile);
+            FlowInputs inputs = buildFlowInputs(context, incomingFlowFile);
             FlowRunner flowRunner = new FlowRunnerImpl(hubConfig);
             if (inputs.getSteps() != null) {
                 getLogger().info(String.format("Running steps %s in flow %s", inputs.getSteps(), inputs.getFlowName()));
@@ -162,8 +162,8 @@ public class RunFlowMarkLogic extends AbstractMarkLogicProcessor {
                 getLogger().info(String.format("Finished running flow %s", inputs.getFlowName()));
             }
 
-            session.write(flowFile, out -> out.write(response.toJson().getBytes()));
-            transferAndCommit(session, flowFile, FINISHED);
+            session.write(incomingFlowFile, out -> out.write(response.toJson().getBytes()));
+            transferAndCommit(session, incomingFlowFile, FINISHED);
         } catch (Throwable t) {
             this.logErrorAndRollbackSession(t, session);
         }
