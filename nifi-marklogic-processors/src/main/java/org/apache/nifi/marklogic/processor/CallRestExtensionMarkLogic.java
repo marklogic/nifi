@@ -38,7 +38,7 @@ public class CallRestExtensionMarkLogic extends ExtensionCallMarkLogic {
             "attributes from the incoming FlowFile if one exists.").build();
 
     protected static final Relationship ORIGINAL = new Relationship.Builder().name("original")
-        .description("The original FlowFile - either the incoming one or a new one if 'Requires Input' is false - " +
+        .description("The original FlowFile - either the incoming one or a new one - " +
             "will be sent here after the extension call to MarkLogic is completed.").build();
 
 

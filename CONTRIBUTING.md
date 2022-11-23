@@ -73,6 +73,7 @@ function nifirebuild {
   $NIFI_HOME/bin/nifi stop
   mvn clean install -DskipTests
   rm -f $NIFI_HOME/libexec/lib/nifi-marklogic*
+  rm -rf $NIFI_HOME/libexec/work/docs/components/org.apache.nifi/nifi-marklogic-nar
   cp nifi-marklogic-nar/target/nifi-marklogic-nar-*.nar $NIFI_HOME/libexec/lib
   cp nifi-marklogic-services-api-nar/target/nifi-marklogic-services-api-nar-*.nar $NIFI_HOME/libexec/lib
   $NIFI_HOME/bin/nifi start
@@ -82,6 +83,11 @@ function nifirebuild {
 
 Based on how you've installed NiFi, you may need to adjust the NAR library path - i.e. `$NIFI_HOME/libexec/lib` will 
 work if you've installed NiFi homebrew, but otherwise, you likely will need `$NIFI_HOME/lib`.
+
+A note on the above script - the reason for deleting the `libexec/work/docs/components/org.apache.nifi/nifi-marklogic-nar`
+directory is to ensure that changes to documentation in the connector components can be verified after a rebuild. 
+Otherwise, NiFi appears to cache connector documentation for a particular version in this directory, and that cache 
+is not updated when the connector is modified. 
 
 ## Running the tests
 
