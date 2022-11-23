@@ -150,16 +150,16 @@ public class ExtensionCallMarkLogic extends AbstractMarkLogicProcessor {
     public void onTrigger(ProcessContext context, ProcessSessionFactory sessionFactory) throws ProcessException {
         final ProcessSession session = sessionFactory.createSession();
 
-        FlowFile originalFlowFile = session.get();
-        if (originalFlowFile == null) {
-            originalFlowFile = session.create();
+        FlowFile incomingFlowFile = session.get();
+        if (incomingFlowFile == null) {
+            incomingFlowFile = session.create();
         }
 
         try {
-            ServiceResultIterator results = callExtension(context, session, originalFlowFile);
-            handleExtensionCallResults(results, session, originalFlowFile);
+            ServiceResultIterator results = callExtension(context, session, incomingFlowFile);
+            handleExtensionCallResults(results, session, incomingFlowFile);
         } catch (Throwable t) {
-            logErrorAndTransfer(t, originalFlowFile, session, FAILURE);
+            logErrorAndTransfer(t, incomingFlowFile, session, FAILURE);
         }
     }
 

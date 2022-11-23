@@ -69,7 +69,7 @@ public class CallRestExtensionMarkLogic extends ExtensionCallMarkLogic {
         }
         try {
             while (results.hasNext()) {
-                FlowFile resultFlowFile = session.create(originalFlowFile);
+                FlowFile resultFlowFile = createFlowFileWithAttributes(session, originalFlowFile.getAttributes());
                 session.write(resultFlowFile, out -> out.write(results.next().getContent(new BytesHandle()).get()));
                 session.transfer(resultFlowFile, RESULTS);
             }
