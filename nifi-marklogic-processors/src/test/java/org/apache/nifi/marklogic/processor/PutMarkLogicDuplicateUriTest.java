@@ -176,7 +176,7 @@ class TestDuplicatePutMarkLogic extends PutMarkLogic {
     }
 
     @Override
-    public void closeWriteBatcher() {
+    public void flushAndWait() {
         closeWriterBatcherCount++;
     }
 }

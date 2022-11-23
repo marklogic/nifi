@@ -49,23 +49,8 @@ import java.util.*;
 @EventDriven
 @Tags({"MarkLogic", "Put", "Bulk", "Insert"})
 @InputRequirement(InputRequirement.Requirement.INPUT_REQUIRED)
-@CapabilityDescription("Breaks down FlowFiles into batches of Records and inserts JSON documents to a MarkLogic server using the " +
+@CapabilityDescription("Breaks down FlowFiles into batches of Records and inserts documents to a MarkLogic server using the " +
     "MarkLogic Data Movement SDK (DMSDK)")
-@SystemResourceConsideration(resource = SystemResource.MEMORY)
-// These are intentionally duplicated here from the parent class. It's unknown how NiFi actually makes use of these,
-// as it appears that the getSupportedDynamicPropertyDescriptor method in AbstractMarkLogicProcessor is what NiFi uses
-// to provide information about each dynamic property.
-@DynamicProperties({
-    @DynamicProperty(name = "trans:", value = "Value of the transform parameter",
-        description = "Defines the name and value of a REST transform parameter",
-        expressionLanguageScope = ExpressionLanguageScope.VARIABLE_REGISTRY),
-    @DynamicProperty(name = "property:", value = "Value of the document property",
-        description = "Defines the name and value of a property to add to the properties fragment of each document",
-        expressionLanguageScope = ExpressionLanguageScope.FLOWFILE_ATTRIBUTES),
-    @DynamicProperty(name = "meta:", value = "Value of the document metadata key",
-        description = "Defines the name and value of a document metadata key to add to each document",
-        expressionLanguageScope = ExpressionLanguageScope.FLOWFILE_ATTRIBUTES)
-})
 public class PutMarkLogicRecord extends PutMarkLogic {
     static final PropertyDescriptor RECORD_READER = new PropertyDescriptor.Builder()
         .name("record-reader")
@@ -117,7 +102,7 @@ public class PutMarkLogicRecord extends PutMarkLogic {
 
     protected static final Relationship ORIGINAL = new Relationship.Builder()
         .name("original")
-        .description("Original FlowFiles coming into PutMarkLogicRecord.")
+        .description("The incoming FlowFile will be written to this relationship")
         .build();
 
     private RecordReaderFactory recordReaderFactory;
@@ -145,6 +130,7 @@ public class PutMarkLogicRecord extends PutMarkLogic {
         list.add(URI_PREFIX);
         list.add(URI_SUFFIX);
         properties = Collections.unmodifiableList(list);
+
         Set<Relationship> set = new HashSet<>();
         set.add(BATCH_SUCCESS);
         set.add(SUCCESS);
