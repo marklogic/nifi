@@ -45,7 +45,7 @@ public abstract class AbstractMarkLogicProcessor extends AbstractSessionFactoryP
         .name("DatabaseClient Service")
         .displayName("DatabaseClient Service")
         .required(true)
-        .description("The DatabaseClient Controller Service that provides the MarkLogic connection")
+        .description("Defines the details for connecting to MarkLogic")
         .identifiesControllerService(MarkLogicDatabaseClientService.class)
         .build();
 
