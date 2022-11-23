@@ -60,19 +60,28 @@ import java.util.stream.Stream;
     "MarkLogic Data Movement SDK (DMSDK)")
 @SystemResourceConsideration(resource = SystemResource.MEMORY)
 @DynamicProperties({
-    @DynamicProperty(name = "trans:", value = "Value of the transform parameter",
-        description = "Defines the name and value of a REST transform parameter",
-        expressionLanguageScope = ExpressionLanguageScope.VARIABLE_REGISTRY),
-    @DynamicProperty(name = "property:", value = "Value of the document property",
+    @DynamicProperty(
+        name = "trans:{name}",
+        value = "The value of a parameter to be passed to a REST server transform",
+        description = "A transform parameter with name equal to that of '{name}' will be passed to the REST server " +
+            "transform identified by the optional 'Server Transform' property",
+        expressionLanguageScope = ExpressionLanguageScope.VARIABLE_REGISTRY
+    ),
+    @DynamicProperty(
+        name = "property:{name}",
+        value = "Value of the document property",
         description = "Defines the name and value of a property to add to the properties fragment of each document",
-        expressionLanguageScope = ExpressionLanguageScope.FLOWFILE_ATTRIBUTES),
-    @DynamicProperty(name = "meta:", value = "Value of the document metadata key",
+        expressionLanguageScope = ExpressionLanguageScope.FLOWFILE_ATTRIBUTES
+    ),
+    @DynamicProperty(
+        name = "meta:{name}",
+        value = "Value of the document metadata key",
         description = "Defines the name and value of a document metadata key to add to each document",
-        expressionLanguageScope = ExpressionLanguageScope.FLOWFILE_ATTRIBUTES)
+        expressionLanguageScope = ExpressionLanguageScope.FLOWFILE_ATTRIBUTES
+    )
 })
 @TriggerWhenEmpty
-@WritesAttribute(attribute = "URIs", description = "On batch_success, writes successful URIs as coma-separated list.")
-
+@WritesAttribute(attribute = "URIs", description = "On batch_success, writes successful URIs as coma-separated list")
 public class PutMarkLogic extends AbstractMarkLogicProcessor {
     class FlowFileInfo {
         FlowFile flowFile;
@@ -95,9 +104,13 @@ public class PutMarkLogic extends AbstractMarkLogicProcessor {
     public static final String IGNORE = "IGNORE";
     public static final String FAIL_URI = "FAIL_URI";
     public static final String CLOSE_BATCH = "CLOSE_BATCH";
-    protected static final AllowableValue DUPLICATE_IGNORE = new AllowableValue(IGNORE, IGNORE, "Does not handle duplicate uris");
-    protected static final AllowableValue DUPLICATE_FAIL_URI = new AllowableValue(FAIL_URI, FAIL_URI, "Routes a duplicate FlowFile like taking first flow file with targetUri (FIFO)");
-    protected static final AllowableValue DUPLICATE_CLOSE_BATCH = new AllowableValue(CLOSE_BATCH, CLOSE_BATCH, "Attempts to close the current batch, before inserting duplicate flowFile");
+
+    private static final AllowableValue DUPLICATE_IGNORE = new AllowableValue(IGNORE, IGNORE,
+        "No checks will be made for duplicate URIs within a batch");
+    private static final AllowableValue DUPLICATE_FAIL_URI = new AllowableValue(FAIL_URI, FAIL_URI,
+        "When a duplicate URI within a batch is detected, a FlowFile with the URI will be sent to the 'duplicate_uri' relationship");
+    private static final AllowableValue DUPLICATE_CLOSE_BATCH = new AllowableValue(CLOSE_BATCH, CLOSE_BATCH,
+        "When a duplicate URI within a batch is detected, the current batch is immediately written to avoid an error");
 
     public static final PropertyDescriptor COLLECTIONS = new PropertyDescriptor.Builder()
         .name("Collections")
@@ -200,8 +213,8 @@ public class PutMarkLogic extends AbstractMarkLogicProcessor {
 
     public static final PropertyDescriptor DUPLICATE_URI_HANDLING = new PropertyDescriptor.Builder()
         .name("Duplicate URI Handling")
-        .displayName("Duplicate Uri Handling")
-        .description("Strategy used for multiple docuuments with same URI")
+        .displayName("Duplicate URI Handling")
+        .description("Defines how to handle duplicate URIs within the same batch")
         .required(false)
         .allowableValues(DUPLICATE_IGNORE, DUPLICATE_FAIL_URI, DUPLICATE_CLOSE_BATCH)
         .defaultValue(DUPLICATE_IGNORE.getValue())
@@ -209,24 +222,25 @@ public class PutMarkLogic extends AbstractMarkLogicProcessor {
 
     protected static final Relationship BATCH_SUCCESS = new Relationship.Builder()
         .name("batch_success")
-        .description("All successful URIs in a batch passed comma-separated in URIs FlowFile attribute.")
+        .description("A FlowFile is created and written to this relationship for each batch. " +
+            "The FlowFile has an attribute of 'URIs', which is a comma-separated list of URIs successfully written in a batch. " +
+            "This can assist with post-batch processing")
         .build();
 
     protected static final Relationship SUCCESS = new Relationship.Builder()
         .name("success")
-        .description("All FlowFiles that are successfully written to MarkLogic are routed to the " +
-            "success relationship for future processing.")
+        .description("FlowFiles that have been written successfully to MarkLogic are passed to this relationship")
         .build();
 
     protected static final Relationship FAILURE = new Relationship.Builder()
         .name("failure")
-        .description("All FlowFiles that failed to be written to MarkLogic are routed to the " +
-            "failure relationship for future processing.")
+        .description("FlowFiles that have failed to be written to MarkLogic are passed to this relationship")
         .build();
 
     protected static final Relationship DUPLICATE_URI = new Relationship.Builder()
         .name("duplicate_uri")
-        .description("A flowFile that resulted in a DUPLICATE_URI used in FAIL_URI Duplicate Uri Handling")
+        .description("When 'Duplicate URI Handling' is set to 'FAIL_URI', FlowFiles identifying duplicate URIs will " +
+            "be sent to this relationship")
         .build();
 
     private volatile DataMovementManager dataMovementManager;
@@ -252,12 +266,12 @@ public class PutMarkLogic extends AbstractMarkLogicProcessor {
         list.add(URI_SUFFIX);
         list.add(DUPLICATE_URI_HANDLING);
         properties = Collections.unmodifiableList(list);
+
         Set<Relationship> set = new HashSet<>();
         set.add(BATCH_SUCCESS);
         set.add(SUCCESS);
         set.add(FAILURE);
         set.add(DUPLICATE_URI);
-        //set.add(SUPERSEDED_URI);
         relationships = Collections.unmodifiableSet(set);
     }
 
@@ -381,14 +395,11 @@ public class PutMarkLogic extends AbstractMarkLogicProcessor {
                         addWriteEvent(this.writeBatcher, writeEvent);
                         break;
                     case FAIL_URI:
-                        //Quick Fail the routeDocumentToRelationship will cleanup entry
                         if (previousUUID != null && !previousUUID.equals(currentUUID)) {
-                            getLogger().debug("Routing to FAIL_URI:" + currentUUID);
                             uriFlowFileMap.put(currentUUID, new FlowFileInfo(flowFile, session, writeEvent));
                             routeDocumentToRelationship(writeEvent, DUPLICATE_URI);
 
                         } else {
-                            //Now just add new WriteEvent
                             uriFlowFileMap.put(currentUUID, new FlowFileInfo(flowFile, session, writeEvent));
                             duplicateFlowFileMap.put(currentUrl, currentUUID);
                             addWriteEvent(this.writeBatcher, writeEvent);
@@ -397,8 +408,8 @@ public class PutMarkLogic extends AbstractMarkLogicProcessor {
 
                     case CLOSE_BATCH:
                         if (previousUUID != null) {
-                            getLogger().info("Closing Batch ... Duplicate Detected for uri:" + writeEvent.getTargetUri());
-                            this.closeWriteBatcher();
+                            getLogger().info("Closing batch; duplicate URI:" + writeEvent.getTargetUri());
+                            this.flushAndWait();
                         }
                         uriFlowFileMap.put(currentUUID, new FlowFileInfo(flowFile, session, writeEvent));
                         duplicateFlowFileMap.put(currentUrl, currentUUID);
@@ -546,8 +557,8 @@ public class PutMarkLogic extends AbstractMarkLogicProcessor {
         }
     }
 
-    // Included for testing purposes
-    protected void closeWriteBatcher() {
+    // Protected instead of private so that it can be overridden for testing purposes
+    protected void flushAndWait() {
         if (writeBatcher != null) {
             writeBatcher.flushAndWait();
         }
