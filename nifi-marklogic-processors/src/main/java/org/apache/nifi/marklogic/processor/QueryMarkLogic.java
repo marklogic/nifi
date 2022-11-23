@@ -65,24 +65,39 @@ import java.util.concurrent.atomic.AtomicLong;
 @SystemResourceConsideration(resource = SystemResource.MEMORY)
 @CapabilityDescription("Creates FlowFiles from batches of documents, matching the given criteria,"
     + " retrieved from a MarkLogic server using the MarkLogic Data Movement SDK (DMSDK)")
-@DynamicProperty(name = "trans: Server transform parameter name, ns: Namespace prefix for XPath or element names",
-    value = "trans: Value of the server transform parameter, ns: Namespace value associated with prefix",
-    description = "Depending on the property prefix, routes data to transform or maps to a namespace prefix.",
-    expressionLanguageScope = ExpressionLanguageScope.VARIABLE_REGISTRY)
+@DynamicProperties({
+    @DynamicProperty(
+        name = "ns:{prefix}",
+        value = "A namespace URI",
+        description = "Define namespace prefixes and URIs that can be used to construct State Index values when " +
+            "State Index type is either ELEMENT or PATH",
+        expressionLanguageScope = ExpressionLanguageScope.FLOWFILE_ATTRIBUTES
+    ),
+    @DynamicProperty(
+        name = "trans:{name}",
+        value = "The value of a parameter to be passed to a REST server transform",
+        description = "A transform parameter with name equal to that of '{name}' will be passed to the REST server " +
+            "transform identified by the optional 'Server Transform' property",
+        expressionLanguageScope = ExpressionLanguageScope.VARIABLE_REGISTRY
+    )
+})
 @WritesAttributes({
-    @WritesAttribute(attribute = "filename", description = "The filename is set to the uri of the document retrieved from MarkLogic")})
-@Stateful(description = "Can keep state of a range index value to restrict future queries.", scopes = {Scope.CLUSTER})
+    @WritesAttribute(
+        attribute = "filename",
+        description = "The filename is set to the URI of the document retrieved from MarkLogic"
+    )
+})
+@Stateful(description = "Can keep state of a range index value to restrict future queries", scopes = {Scope.CLUSTER})
 public class QueryMarkLogic extends AbstractMarkLogicProcessor {
 
     public static final PropertyDescriptor CONSISTENT_SNAPSHOT = new PropertyDescriptor.Builder()
         .name("Consistent Snapshot").displayName("Consistent Snapshot").defaultValue("true")
-        .description("Boolean used to indicate that the matching documents were retrieved from a "
-            + "consistent snapshot")
+        .description("Set to 'true' for query results to be based on the same server timestamp")
         .required(true).addValidator(StandardValidators.BOOLEAN_VALIDATOR).build();
 
     public static final PropertyDescriptor RETURN_TYPE = new PropertyDescriptor.Builder().name("Return Type")
         .displayName("Return Type").defaultValue(ReturnTypes.DOCUMENTS.getValue())
-        .description("Determines what gets retrieved by query").required(true)
+        .description("The type of data to return from the query").required(true)
         .allowableValues(ReturnTypes.allValues).addValidator(StandardValidators.NON_EMPTY_VALIDATOR).build();
 
     public static final PropertyDescriptor INCLUDE_DOCUMENT_PROPERTIES = new PropertyDescriptor.Builder()
@@ -99,29 +114,34 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
         .build();
 
     public static final PropertyDescriptor QUERY_TYPE = new PropertyDescriptor.Builder().name("Query Type")
-        .displayName("Query Type").description("Type of query that will be used to retrieve data from MarkLogic")
+        .displayName("Query Type").description("Type of query that will be used to retrieve data from MarkLogic. " +
+            "For more information on combined queries, see https://docs.marklogic.com/guide/java/searches#id_76144 . " +
+            "For more information on structured queries, see https://docs.marklogic.com/guide/java/searches#id_70572 . " +
+            "For more information on string queries, see https://docs.marklogic.com/guide/java/searches#id_80640 . ")
         .required(true).allowableValues(QueryTypes.allValues).defaultValue(QueryTypes.COMBINED_JSON.getValue())
         .addValidator(StandardValidators.NON_EMPTY_VALIDATOR).build();
 
     public static final PropertyDescriptor STATE_INDEX = new PropertyDescriptor.Builder().name("State Index")
         .displayName("State Index")
-        .description("Definition of the index which will be used to keep state to restrict future calls")
+        .description("Definition of the index which will be used to keep state to restrict future calls; only supports " +
+            "xs:dateTime indices; see State Index Type for examples of what to provide here")
         .required(false).expressionLanguageSupported(ExpressionLanguageScope.FLOWFILE_ATTRIBUTES)
         .addValidator(Validator.VALID).build();
 
     public static final PropertyDescriptor STATE_INDEX_TYPE = new PropertyDescriptor.Builder().name("State Index Type")
-        .displayName("State Index Type").description("Type of index to determine state for next set of documents.")
-        .required(true).expressionLanguageSupported(ExpressionLanguageScope.NONE).allowableValues(IndexTypes.allValues).defaultValue(IndexTypes.JSON_PROPERTY.getValue())
+        .displayName("State Index Type").description("Type of index to determine state for next set of documents")
+        .required(true).expressionLanguageSupported(ExpressionLanguageScope.NONE)
+        .allowableValues(IndexTypes.allValues).defaultValue(IndexTypes.JSON_PROPERTY.getValue())
         .addValidator(StandardValidators.NON_EMPTY_VALIDATOR).build();
 
     public static final PropertyDescriptor COLLECTIONS = new PropertyDescriptor.Builder().name("Collections")
         .displayName("Collections")
         .description(
-            "**Deprecated: Use Query Type and Query** Comma-separated list of collections to query from a MarkLogic server")
+            "Deprecated; use Query Type and Query instead. Comma-separated list of collections to query.")
         .required(false).addValidator(Validator.VALID).build();
 
     protected static final Relationship SUCCESS = new Relationship.Builder().name("success")
-        .description("For each record retrieved for the query, a FlowFile is sent to this relationship").build();
+        .description("For each document matching the query, a FlowFile is sent to this relationship").build();
 
     protected static final Relationship FAILURE = new Relationship.Builder().name("failure")
         .description("If an error occurs while retrieving a batch of records for a query, a FlowFile will be sent to this relationship").build();
@@ -130,7 +150,7 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
         // In 1.16.3.2, this is set to true so ApplyTransformMarkLogic can include it without breaking existing
         // instances of that processor
         .autoTerminateDefault(true)
-        .description("If this processor receives a FlowFile, it will be routed to this relationship").build();
+        .description("Receives the incoming FlowFile, or a new FlowFile if no incoming one exists").build();
 
     // Keeps track of the server timestamp at the point in time in which the query was issued. Only applies for when the
     // user has configured the inputs for keeping track of the latest dateTime so that it can be used the next time
@@ -626,16 +646,17 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
     public static class ReturnTypes {
         public static final String URIS_ONLY_STR = "URIs Only";
         public static final AllowableValue URIS_ONLY = new AllowableValue(URIS_ONLY_STR, URIS_ONLY_STR,
-            "Only return document URIs for matching documents in FlowFile attribute");
+            "Each FlowFile will have its 'filename' attribute set to a URI matching the query");
         public static final String DOCUMENTS_STR = "Documents";
         public static final AllowableValue DOCUMENTS = new AllowableValue(DOCUMENTS_STR, DOCUMENTS_STR,
-            "Return documents in FlowFile contents");
+            "Each FlowFile will have a document matching the query as its content");
         public static final String DOCUMENTS_AND_META_STR = "Documents + Metadata";
-        public static final AllowableValue DOCUMENTS_AND_META = new AllowableValue(DOCUMENTS_AND_META_STR,
-            DOCUMENTS_AND_META_STR, "Return documents in FlowFile contents and metadata in FlowFile attributes");
+        public static final AllowableValue DOCUMENTS_AND_META = new AllowableValue(DOCUMENTS_AND_META_STR, DOCUMENTS_AND_META_STR,
+            "Each FlowFile will have a documenting matching the query as its content and attributes added containing " +
+                "metadata for the document");
         public static final String META_STR = "Metadata";
         public static final AllowableValue META = new AllowableValue(META_STR, META_STR,
-            "Return metadata in FlowFile attributes");
+            "Each FlowFile will have attributes added containing metadata for a document matching the query");
 
         public static final AllowableValue[] allValues = new AllowableValue[]{URIS_ONLY, DOCUMENTS,
             DOCUMENTS_AND_META, META};
@@ -645,13 +666,17 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
     public static class IndexTypes {
         public static final String ELEMENT_STR = "Element Index";
         public static final AllowableValue ELEMENT = new AllowableValue(ELEMENT_STR, ELEMENT_STR,
-            "Index on an element. (Namespaces can be defined with dynamic properties prefixed with 'ns:'.)");
+            "Index on an element. Namespaces can be defined with dynamic properties prefixed with 'ns:'. For example, " +
+                "for a State Index value of 'xhtml:title', include a dynamic property named 'ns:xhtml' with a " +
+                "value of e.g. 'http://www.w3.org/1999/xhtml'.");
         public static final String JSON_PROPERTY_STR = "JSON Property Index";
         public static final AllowableValue JSON_PROPERTY = new AllowableValue(JSON_PROPERTY_STR, JSON_PROPERTY_STR,
-            "Index on a JSON property.");
+            "Index on a JSON property. A State Index value will simply have the name of a JSON property.");
         public static final String PATH_STR = "Path Index";
         public static final AllowableValue PATH = new AllowableValue(PATH_STR, PATH_STR,
-            "Index on a Path. (Namespaces can be defined with dynamic properties prefixed with 'ns:'.)");
+            "Index on a path. Namespaces can be defined with dynamic properties prefixed with 'ns:'. For " +
+                "example, for a State Index value of '/xhtml:html/xhtml:title', include a dynamic property named " +
+                "'ns:xhtml' with a value of e.g. 'http://www.w3.org/1999/xhtml'.");
 
         public static final AllowableValue[] allValues = new AllowableValue[]{ELEMENT, JSON_PROPERTY, PATH};
 

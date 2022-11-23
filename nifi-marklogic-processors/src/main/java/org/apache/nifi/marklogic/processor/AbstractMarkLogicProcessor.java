@@ -54,7 +54,7 @@ public abstract class AbstractMarkLogicProcessor extends AbstractSessionFactoryP
         .displayName("Batch Size")
         .required(true)
         .defaultValue("100")
-        .description("The number of documents per batch - sets the batch size on the Batcher")
+        .description("The number of documents per batch")
         .addValidator(StandardValidators.POSITIVE_INTEGER_VALIDATOR)
         .build();
 
@@ -63,14 +63,14 @@ public abstract class AbstractMarkLogicProcessor extends AbstractSessionFactoryP
         .displayName("Thread Count")
         .required(false)
         .defaultValue("3")
-        .description("The number of threads - sets the thread count on the Batcher")
+        .description("The number of threads to use for making calls to MarkLogic")
         .addValidator(StandardValidators.POSITIVE_INTEGER_VALIDATOR)
         .build();
 
     public static final PropertyDescriptor TRANSFORM = new PropertyDescriptor.Builder()
         .name("Server Transform")
         .displayName("Server Transform")
-        .description("The name of REST server transform to apply to every document")
+        .description("The name of a REST server transform to apply to each document")
         .addValidator(Validator.VALID)
         .required(false)
         .build();

@@ -44,17 +44,27 @@ import java.util.*;
 @SystemResourceConsideration(resource = SystemResource.MEMORY)
 @CapabilityDescription("Creates FlowFiles from batches of documents, matching the given criteria,"
     + " transformed from a MarkLogic server using the MarkLogic Data Movement SDK (DMSDK)")
-@DynamicProperty(name = "Server transform parameter name", value = "Value of the server transform parameter",
-    description = "Adds server transform parameters to be passed to the server transform specified. "
-        + "Server transform parameter name should start with the string 'trans:'.",
-    expressionLanguageScope = ExpressionLanguageScope.VARIABLE_REGISTRY)
-@WritesAttributes({
-    @WritesAttribute(attribute = "filename", description = "The filename is set to the uri of the document deleted from MarkLogic")})
+@DynamicProperties({
+    @DynamicProperty(
+        name = "ns:{prefix}",
+        value = "A namespace URI",
+        description = "Define namespace prefixes and URIs that can be used to construct State Index values when " +
+            "State Index type is either ELEMENT or PATH",
+        expressionLanguageScope = ExpressionLanguageScope.FLOWFILE_ATTRIBUTES
+    ),
+    @DynamicProperty(
+        name = "trans:{name}",
+        value = "The value of a parameter to be passed to a REST server transform",
+        description = "A transform parameter with name equal to that of '{name}' will be passed to the REST server " +
+            "transform identified by the optional 'Server Transform' property",
+        expressionLanguageScope = ExpressionLanguageScope.VARIABLE_REGISTRY
+    )
+})
 @Stateful(description = "Can keep state of a range index value to restrict future queries.", scopes = {Scope.CLUSTER})
 public class ApplyTransformMarkLogic extends QueryMarkLogic {
     public static final PropertyDescriptor APPLY_RESULT_TYPE = new PropertyDescriptor.Builder()
         .name("Apply Result Type").displayName("Apply Result Type").defaultValue(ApplyResultTypes.REPLACE.getValue())
-        .description("Whether to REPLACE each document with the result of the transform, or run the transform with each document as input, but IGNORE the result.").required(true)
+        .description("Whether to replace each document with the result of the transform, or run the transform with each document as input, but ignore the result").required(true)
         .allowableValues(ApplyResultTypes.allValues)
         .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
         .required(true)
@@ -62,7 +72,7 @@ public class ApplyTransformMarkLogic extends QueryMarkLogic {
     public static final PropertyDescriptor TRANSFORM = new PropertyDescriptor.Builder()
         .name("Server Transform")
         .displayName("Server Transform")
-        .description("The name of REST server transform to apply to every document")
+        .description("The name of a REST server transform to apply to each document")
         .addValidator(Validator.VALID)
         .required(true)
         .build();
@@ -128,7 +138,7 @@ public class ApplyTransformMarkLogic extends QueryMarkLogic {
                 "to an external REST service or perhaps write multiple additional documents.");
         public static final String REPLACE_STR = "Replace";
         public static final AllowableValue REPLACE = new AllowableValue(REPLACE_STR, REPLACE_STR,
-            "Overwrites documents with the value returned by the transform, just like REST write transforms. This is the default behavior.");
+            "Replace a document with the output produced by running the transform on the document");
 
         public static final AllowableValue[] allValues = new AllowableValue[]{IGNORE, REPLACE};
 

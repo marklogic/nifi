@@ -23,6 +23,7 @@ import org.apache.nifi.annotation.documentation.CapabilityDescription;
 import org.apache.nifi.annotation.documentation.Tags;
 import org.apache.nifi.components.PropertyDescriptor;
 import org.apache.nifi.components.state.Scope;
+import org.apache.nifi.expression.ExpressionLanguageScope;
 import org.apache.nifi.flowfile.FlowFile;
 import org.apache.nifi.flowfile.attributes.CoreAttributes;
 import org.apache.nifi.processor.ProcessContext;
@@ -37,9 +38,15 @@ import java.util.*;
 @SystemResourceConsideration(resource = SystemResource.MEMORY)
 @CapabilityDescription("Creates FlowFiles from batches of documents, matching the given criteria,"
     + " deleted from a MarkLogic server using the MarkLogic Data Movement SDK (DMSDK)")
-@WritesAttributes({
-    @WritesAttribute(attribute = "filename", description = "The filename is set to the uri of the document deleted from MarkLogic")})
-@Stateful(description = "Can keep state of a range index value to restrict future queries.", scopes = {Scope.CLUSTER})
+@DynamicProperties({
+    @DynamicProperty(
+        name = "ns:{prefix}",
+        value = "A namespace URI",
+        description = "Define namespace prefixes and URIs that can be used to construct State Index values when " +
+            "State Index type is either ELEMENT or PATH",
+        expressionLanguageScope = ExpressionLanguageScope.FLOWFILE_ATTRIBUTES
+    )
+})
 public class DeleteMarkLogic extends QueryMarkLogic {
 
     @Override
