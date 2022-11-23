@@ -1,0 +1,9 @@
+{
+  "user-name": "nifi-writer",
+  "description": "test user for marklogic-nifi",
+  "role": [
+    "rest-reader",
+    "rest-writer"
+  ],
+  "password": "x"
+}

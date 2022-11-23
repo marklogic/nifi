@@ -33,7 +33,7 @@ public class ExtensionCallMarkLogicIT extends AbstractMarkLogicIT {
 
     @Test
     void simpleGet() {
-        TestRunner runner = super.getNewTestRunner(ExtensionCallMarkLogic.class);
+        TestRunner runner = newReaderTestRunner(ExtensionCallMarkLogic.class);
         runner.setValidateExpressionUsage(false);
         runner.setProperty(ExtensionCallMarkLogic.EXTENSION_NAME, "replay");
         runner.setProperty(ExtensionCallMarkLogic.METHOD_TYPE, ExtensionCallMarkLogic.MethodTypes.GET_STR);
@@ -72,7 +72,7 @@ public class ExtensionCallMarkLogicIT extends AbstractMarkLogicIT {
 
     @Test
     void simplePost() {
-        TestRunner runner = getNewTestRunner(ExtensionCallMarkLogic.class);
+        TestRunner runner = newWriterTestRunner(ExtensionCallMarkLogic.class);
         runner.setValidateExpressionUsage(false);
         runner.setProperty(ExtensionCallMarkLogic.EXTENSION_NAME, "replay");
         runner.setProperty(ExtensionCallMarkLogic.METHOD_TYPE, ExtensionCallMarkLogic.MethodTypes.POST_STR);
@@ -98,7 +98,7 @@ public class ExtensionCallMarkLogicIT extends AbstractMarkLogicIT {
 
     @Test
     void resourceReturns500() {
-        TestRunner runner = getNewTestRunner(ExtensionCallMarkLogic.class);
+        TestRunner runner = newReaderTestRunner(ExtensionCallMarkLogic.class);
         runner.setValidateExpressionUsage(false);
         runner.setProperty(ExtensionCallMarkLogic.EXTENSION_NAME, "throwsError");
         runner.setProperty(ExtensionCallMarkLogic.METHOD_TYPE, ExtensionCallMarkLogic.MethodTypes.GET_STR);
@@ -162,7 +162,7 @@ public class ExtensionCallMarkLogicIT extends AbstractMarkLogicIT {
     }
 
     private TestRunner newEmptyEndpointsTestRunner(String methodType) {
-        TestRunner runner = getNewTestRunner(ExtensionCallMarkLogic.class);
+        TestRunner runner = newWriterTestRunner(ExtensionCallMarkLogic.class);
         runner.setValidateExpressionUsage(false);
         runner.setProperty(ExtensionCallMarkLogic.EXTENSION_NAME, "emptyEndpoints");
         runner.setProperty(ExtensionCallMarkLogic.METHOD_TYPE, methodType);

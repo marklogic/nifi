@@ -36,7 +36,8 @@ import java.util.*;
     "has already been ingested into MarkLogic. Ingestion steps depend on access to local files, which isn't a common " +
     "use case for NiFi in production. Note that a given version of the Data Hub Java API is not yet guaranteed to work " +
     "with any other version of Data Hub. It is thus recommended to only use this against a Data Hub 5.7.2 installation, " +
-    "though it may work with other versions of Data Hub.")
+    "though it may work with other versions of Data Hub. Requires a MarkLogic user that is able to run the flow; " +
+    "consult your Data Hub Framework documentation for guidelines on what Data Hub roles are required.")
 public class RunFlowMarkLogic extends AbstractMarkLogicProcessor {
 
     public static final PropertyDescriptor FINAL_PORT = new PropertyDescriptor.Builder()

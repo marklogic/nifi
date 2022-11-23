@@ -20,7 +20,8 @@ public class QueryRowsMarkLogicIT extends AbstractMarkLogicIT {
     @BeforeEach
     public void setup() {
         JSONDocumentManager mgr = getDatabaseClient().newJSONDocumentManager();
-        DocumentMetadataHandle metadata = new DocumentMetadataHandle();
+        DocumentMetadataHandle metadata = new DocumentMetadataHandle()
+            .withPermission("rest-reader", DocumentMetadataHandle.Capability.READ, DocumentMetadataHandle.Capability.UPDATE);
         metadata.withCollections("example");
         for (int i = 0; i < 5; i++) {
             mgr.write("/example/" + i + ".json", metadata, new StringHandle(format("{\"Id\":\"%d\"}", i)));
@@ -32,7 +33,7 @@ public class QueryRowsMarkLogicIT extends AbstractMarkLogicIT {
         // Generated via require('/MarkLogic/optic').fromView("Example","default").orderBy("Id").export()
         final String serializedPlan = "{\"$optic\":{\"ns\":\"op\", \"fn\":\"operators\", \"args\":[{\"ns\":\"op\", \"fn\":\"from-view\", \"args\":[\"Example\", \"default\", null, null]}, {\"ns\":\"op\", \"fn\":\"order-by\", \"args\":[[{\"ns\":\"op\", \"fn\":\"col\", \"args\":[\"Id\"]}]]}]}}";
 
-        TestRunner runner = getNewTestRunner(QueryRowsMarkLogic.class);
+        TestRunner runner = newReaderTestRunner(QueryRowsMarkLogic.class);
         runner.setProperty(QueryRowsMarkLogic.PLAN, serializedPlan);
         runner.run();
 
@@ -61,7 +62,7 @@ public class QueryRowsMarkLogicIT extends AbstractMarkLogicIT {
     public void testWithIncomingFlowFile() {
         final String serializedPlan = "{\"$optic\":{\"ns\":\"op\", \"fn\":\"operators\", \"args\":[{\"ns\":\"op\", \"fn\":\"from-view\", \"args\":[\"Example\", \"default\", null, null]}, {\"ns\":\"op\", \"fn\":\"order-by\", \"args\":[[{\"ns\":\"op\", \"fn\":\"col\", \"args\":[\"Id\"]}]]}]}}";
 
-        TestRunner runner = getNewTestRunner(QueryRowsMarkLogic.class);
+        TestRunner runner = newReaderTestRunner(QueryRowsMarkLogic.class);
         runner.setProperty(QueryRowsMarkLogic.PLAN, serializedPlan);
 
         MockFlowFile mockFlowFile = new MockFlowFile(System.currentTimeMillis());
@@ -93,7 +94,7 @@ public class QueryRowsMarkLogicIT extends AbstractMarkLogicIT {
     public void invalidPlan() {
         final String serializedPlan = "invalid Plan";
         final String expectedErrorMessage = "Local message: failed to apply resource at rows: Bad Request. Server Message: XDMP-JSONDOC: xdmp.getRequestBody(\"json\") -- Document is not JSON";
-        TestRunner runner = getNewTestRunner(QueryRowsMarkLogic.class);
+        TestRunner runner = newReaderTestRunner(QueryRowsMarkLogic.class);
         runner.setProperty(QueryRowsMarkLogic.PLAN, serializedPlan);
 
         runner.run();
@@ -146,7 +147,7 @@ public class QueryRowsMarkLogicIT extends AbstractMarkLogicIT {
             "  }\n" +
             "}";
 
-        TestRunner runner = getNewTestRunner(QueryRowsMarkLogic.class);
+        TestRunner runner = newReaderTestRunner(QueryRowsMarkLogic.class);
         runner.setProperty(QueryRowsMarkLogic.PLAN, serializedPlan);
         runner.run();
 

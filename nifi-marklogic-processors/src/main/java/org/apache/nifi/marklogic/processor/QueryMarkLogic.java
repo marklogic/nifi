@@ -64,7 +64,8 @@ import java.util.concurrent.atomic.AtomicLong;
 @InputRequirement(Requirement.INPUT_ALLOWED)
 @SystemResourceConsideration(resource = SystemResource.MEMORY)
 @CapabilityDescription("Creates FlowFiles from batches of documents, matching the given criteria,"
-    + " retrieved from a MarkLogic server using the MarkLogic Data Movement SDK (DMSDK)")
+    + " retrieved from a MarkLogic server using the MarkLogic Data Movement SDK (DMSDK). Requires a MarkLogic user with " +
+    "the 'rest-reader' privilege.")
 @DynamicProperties({
     @DynamicProperty(
         name = "ns:{prefix}",

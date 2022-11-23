@@ -56,7 +56,7 @@ public class ApplyTransformMarkLogicIT extends AbstractMarkLogicIT {
 
     @Test
     public void testApplyTransform() {
-        TestRunner runner = getNewTestRunner(ApplyTransformMarkLogic.class);
+        TestRunner runner = newWriterTestRunner(ApplyTransformMarkLogic.class);
         runner.setValidateExpressionUsage(false);
         String queryStr = "<cts:element-value-query xmlns:cts=\"http://marklogic.com/cts\">\n" +
             "  <cts:element>sample</cts:element>\n" +
@@ -105,7 +105,7 @@ public class ApplyTransformMarkLogicIT extends AbstractMarkLogicIT {
      */
     @Test
     public void invalidTransform() {
-        TestRunner runner = getNewTestRunner(ApplyTransformMarkLogic.class);
+        TestRunner runner = newReaderTestRunner(ApplyTransformMarkLogic.class);
         runner.setValidateExpressionUsage(false);
         String queryStr = "<cts:element-value-query xmlns:cts=\"http://marklogic.com/cts\">\n" +
             "  <cts:element>sample</cts:element>\n" +
@@ -143,7 +143,8 @@ public class ApplyTransformMarkLogicIT extends AbstractMarkLogicIT {
             .withThreadCount(3);
         dataMovementManager.startJob(writeBatcher);
         for (IngestDoc document : documents) {
-            DocumentMetadataHandle handle = new DocumentMetadataHandle();
+            DocumentMetadataHandle handle = new DocumentMetadataHandle()
+                .withPermission("rest-reader", DocumentMetadataHandle.Capability.READ, DocumentMetadataHandle.Capability.UPDATE);
             handle.withCollections(collection);
             writeBatcher.add(document.getFileName(), handle, new StringHandle(document.getContent()));
         }

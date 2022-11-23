@@ -16,7 +16,7 @@ public class CallRestExtensionMarkLogicIT extends AbstractMarkLogicIT {
 
     @Test
     void noIncomingFlowFile() {
-        TestRunner runner = super.getNewTestRunner(CallRestExtensionMarkLogic.class);
+        TestRunner runner = newReaderTestRunner(CallRestExtensionMarkLogic.class);
         runner.setValidateExpressionUsage(false);
         runner.setProperty(CallRestExtensionMarkLogic.EXTENSION_NAME, "multipleItems");
         runner.setProperty(CallRestExtensionMarkLogic.METHOD_TYPE, CallRestExtensionMarkLogic.MethodTypes.GET_STR);
@@ -41,7 +41,7 @@ public class CallRestExtensionMarkLogicIT extends AbstractMarkLogicIT {
 
     @Test
     void withIncomingFlowFile() {
-        TestRunner runner = super.getNewTestRunner(CallRestExtensionMarkLogic.class);
+        TestRunner runner = newReaderTestRunner(CallRestExtensionMarkLogic.class);
         runner.setValidateExpressionUsage(false);
         runner.setProperty(CallRestExtensionMarkLogic.EXTENSION_NAME, "multipleItems");
         runner.setProperty(CallRestExtensionMarkLogic.METHOD_TYPE, CallRestExtensionMarkLogic.MethodTypes.GET_STR);
@@ -77,7 +77,7 @@ public class CallRestExtensionMarkLogicIT extends AbstractMarkLogicIT {
 
     @Test
     void callFails() {
-        TestRunner runner = super.getNewTestRunner(CallRestExtensionMarkLogic.class);
+        TestRunner runner = newReaderTestRunner(CallRestExtensionMarkLogic.class);
         runner.setValidateExpressionUsage(false);
         runner.setProperty(CallRestExtensionMarkLogic.EXTENSION_NAME, "multipleItems");
         runner.setProperty(CallRestExtensionMarkLogic.METHOD_TYPE, CallRestExtensionMarkLogic.MethodTypes.POST_STR);

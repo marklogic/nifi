@@ -40,7 +40,7 @@ public class PutMarkLogicIT extends AbstractMarkLogicIT {
     }
 
     public TestRunner getNewTestRunner(Class<? extends Processor> processor) {
-        TestRunner runner = super.getNewTestRunner(processor);
+        TestRunner runner = newWriterTestRunner(processor);
         runner.setProperty(PutMarkLogic.URI_ATTRIBUTE_NAME, "filename");
         return runner;
     }
@@ -84,7 +84,7 @@ public class PutMarkLogicIT extends AbstractMarkLogicIT {
                 "  return document;\n" +
                 "};\n" +
                 "exports.transform = transform_function;");
-        service.getDatabaseClient().newServerConfigManager().newTransformExtensionsManager().writeJavascriptTransform(
+        newAdminDatabaseClient().newServerConfigManager().newTransformExtensionsManager().writeJavascriptTransform(
             transform, stringHandle);
         String content = "{ \"testProperty\": \"oldValue\" }";
         for (int i = 0; i < numDocs; i++) {

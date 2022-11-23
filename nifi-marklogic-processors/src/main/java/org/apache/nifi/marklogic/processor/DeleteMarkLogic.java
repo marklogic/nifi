@@ -36,7 +36,8 @@ import java.util.*;
 @Tags({"MarkLogic", "Delete"})
 @InputRequirement(Requirement.INPUT_ALLOWED)
 @CapabilityDescription("Creates FlowFiles from batches of documents, matching the given criteria,"
-    + " deleted from a MarkLogic server using the MarkLogic Data Movement SDK (DMSDK)")
+    + " deleted from a MarkLogic server using the MarkLogic Data Movement SDK (DMSDK). Requires a MarkLogic user " +
+    "with the 'rest-reader' privilege to read documents and the 'rest-writer' privilege in delete documents.")
 @DynamicProperties({
     @DynamicProperty(
         name = "ns:{prefix}",

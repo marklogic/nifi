@@ -21,6 +21,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.marklogic.client.datamovement.QueryBatcher;
 import com.marklogic.client.document.DocumentWriteSet;
 import com.marklogic.client.document.GenericDocumentManager;
+import com.marklogic.client.ext.util.DefaultDocumentPermissionsParser;
 import com.marklogic.client.io.DocumentMetadataHandle;
 import com.marklogic.client.io.JacksonHandle;
 import com.marklogic.client.io.StringHandle;
@@ -71,7 +72,7 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
 
     @Override
     protected TestRunner getNewTestRunner(Class<? extends Processor> processor) {
-        TestRunner runner = super.getNewTestRunner(processor);
+        TestRunner runner = newReaderTestRunner(processor);
         runner.assertNotValid();
         runner.setProperty(QueryMarkLogic.CONSISTENT_SNAPSHOT, "true");
         return runner;
@@ -484,7 +485,9 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
         final String uniqueString = "thisShouldOnlyAppearHere";
         try {
             ObjectNode content = new ObjectMapper().createObjectNode().put("hello", uniqueString);
-            getDatabaseClient().newJSONDocumentManager().write(uri, new DocumentMetadataHandle(), new JacksonHandle(content));
+            getDatabaseClient().newJSONDocumentManager().write(uri,
+                new DocumentMetadataHandle().withPermission("rest-reader", DocumentMetadataHandle.Capability.UPDATE, DocumentMetadataHandle.Capability.READ),
+                new JacksonHandle(content));
 
             TestRunner runner = getNewTestRunner(QueryMarkLogic.class);
             runner.setProperty(QueryMarkLogic.RETURN_TYPE, QueryMarkLogic.ReturnTypes.META);
@@ -496,9 +499,16 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
             List<MockFlowFile> flowFiles = runner.getFlowFilesForRelationship(QueryMarkLogic.SUCCESS);
             assertEquals(1, flowFiles.size());
             MockFlowFile flowFile = flowFiles.get(0);
-            System.out.println(flowFile.getAttributes());
             assertEquals("", flowFile.getAttribute("marklogic-collections"));
-            assertEquals("", flowFile.getAttribute("marklogic-permissions"));
+
+            final String permissions = flowFile.getAttribute("marklogic-permissions");
+            DocumentMetadataHandle metadata = new DocumentMetadataHandle();
+            new DefaultDocumentPermissionsParser().parsePermissions(permissions, metadata.getPermissions());
+            assertEquals(1, metadata.getPermissions().size());
+            assertEquals(2, metadata.getPermissions().get("rest-reader").size());
+            assertTrue(metadata.getPermissions().get("rest-reader").contains(DocumentMetadataHandle.Capability.READ));
+            assertTrue(metadata.getPermissions().get("rest-reader").contains(DocumentMetadataHandle.Capability.UPDATE));
+
             assertEquals("0", flowFile.getAttribute("marklogic-quality"));
 
             Set<String> attributeNames = flowFile.getAttributes().keySet();
