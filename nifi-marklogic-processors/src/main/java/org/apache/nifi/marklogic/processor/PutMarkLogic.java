@@ -322,15 +322,15 @@ public class PutMarkLogic extends AbstractMarkLogicProcessor {
                     synchronized (session) {
                         session.transfer(batchFlowFile, BATCH_SUCCESS);
                     }
-                    for (WriteEvent writeEvent : writeBatch.getItems()) {
-                        routeDocumentToRelationship(writeEvent, SUCCESS);
-                        duplicateFlowFileMap.remove(writeEvent.getTargetUri());
-                    }
+                }
+                for (WriteEvent writeEvent : writeBatch.getItems()) {
+                    transferFlowFile(writeEvent, SUCCESS);
+                    duplicateFlowFileMap.remove(writeEvent.getTargetUri());
                 }
             }
         }).onBatchFailure((writeBatch, throwable) -> {
             for (WriteEvent writeEvent : writeBatch.getItems()) {
-                routeDocumentToRelationship(writeEvent, FAILURE);
+                transferFlowFile(writeEvent, FAILURE);
                 duplicateFlowFileMap.remove(writeEvent.getTargetUri());
             }
         });
@@ -343,16 +343,25 @@ public class PutMarkLogic extends AbstractMarkLogicProcessor {
         return uriFlowFileMap.get(flowFileUUID);
     }
 
-    protected void routeDocumentToRelationship(WriteEvent writeEvent, Relationship relationship) {
+    /**
+     * Convenience method for transferring the FlowFile associated with the given WriteEvent to the given Relationship.
+     * This depends on an entry existing in the underlying uriFlowFileMap map that is associated with the given
+     * WriteEvent. If no entry is found, no action can be taken - though this is not expected as the only way an entry
+     * is removed from that map is via this method.
+     *
+     * @param writeEvent
+     * @param relationship
+     */
+    protected void transferFlowFile(WriteEvent writeEvent, Relationship relationship) {
         FlowFileInfo flowFile = getFlowFileInfoForWriteEvent(writeEvent);
         if (flowFile != null) {
+            if (getLogger().isDebugEnabled()) {
+                getLogger().debug("Routing " + writeEvent.getTargetUri() + " to " + relationship.getName());
+            }
             synchronized (flowFile.session) {
                 flowFile.session.getProvenanceReporter().send(flowFile.flowFile, writeEvent.getTargetUri());
                 flowFile.session.transfer(flowFile.flowFile, relationship);
                 flowFile.session.commitAsync();
-            }
-            if (getLogger().isDebugEnabled()) {
-                getLogger().debug("Routing " + writeEvent.getTargetUri() + " to " + relationship.getName());
             }
             uriFlowFileMap.remove(flowFile.flowFile.getAttribute(CoreAttributes.UUID.key()));
         }
@@ -399,7 +408,7 @@ public class PutMarkLogic extends AbstractMarkLogicProcessor {
                     case FAIL_URI:
                         if (previousUUID != null && !previousUUID.equals(currentUUID)) {
                             uriFlowFileMap.put(currentUUID, new FlowFileInfo(flowFile, session, writeEvent));
-                            routeDocumentToRelationship(writeEvent, DUPLICATE_URI);
+                            transferFlowFile(writeEvent, DUPLICATE_URI);
 
                         } else {
                             uriFlowFileMap.put(currentUUID, new FlowFileInfo(flowFile, session, writeEvent));
