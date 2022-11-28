@@ -16,6 +16,8 @@
  */
 package org.apache.nifi.marklogic.processor;
 
+import com.marklogic.client.DatabaseClient;
+import com.marklogic.client.DatabaseClientFactory;
 import com.marklogic.client.datamovement.DataMovementManager;
 import com.marklogic.client.datamovement.QueryBatcher;
 import com.marklogic.client.query.StructuredQueryBuilder;
@@ -127,6 +129,10 @@ public abstract class AbstractMarkLogicIT extends AbstractSpringMarkLogicTest {
     }
 
     private void addDatabaseClientService(TestRunner runner, String username, String password) {
+        if ("admin".equals(username)) {
+            throw new IllegalArgumentException("Do not run any processor tests with the 'admin' user; choose a user " +
+                "with the minimal set of required MarkLogic privileges necessary to use the processor.");
+        }
         service = new DefaultMarkLogicDatabaseClientService();
         try {
             runner.addControllerService(databaseClientServiceIdentifier, service);
@@ -142,6 +148,18 @@ public abstract class AbstractMarkLogicIT extends AbstractSpringMarkLogicTest {
 
     protected TestRunner getNewTestRunner(Class<? extends Processor> processor) {
         return getNewTestRunner(processor, testConfig.getUsername(), testConfig.getPassword());
+    }
+
+    protected final TestRunner newReaderTestRunner(Class<? extends Processor> processor) {
+        return getNewTestRunner(processor, "nifi-reader", "x");
+    }
+
+    protected final TestRunner newWriterTestRunner(Class<? extends Processor> processor) {
+        return getNewTestRunner(processor, "nifi-writer", "x");
+    }
+
+    protected final TestRunner newEvaluatorTestRunner(Class<? extends Processor> processor) {
+        return getNewTestRunner(processor, "nifi-evaluator", "x");
     }
 
     protected TestRunner getNewTestRunner(Class<? extends Processor> processor, String username, String password) {
@@ -164,5 +182,15 @@ public abstract class AbstractMarkLogicIT extends AbstractSpringMarkLogicTest {
         queryBatcher.awaitCompletion();
         dataMovementManager.stopJob(queryBatcher);
         return actualNumberOfDocs.get();
+    }
+
+    /**
+     * The default username/password are expected to be for an admin or admin-like user.
+     *
+     * @return
+     */
+    protected DatabaseClient newAdminDatabaseClient() {
+        return DatabaseClientFactory.newClient(testConfig.getHost(), testConfig.getRestPort(),
+            new DatabaseClientFactory.DigestAuthContext(testConfig.getUsername(), testConfig.getPassword()));
     }
 }

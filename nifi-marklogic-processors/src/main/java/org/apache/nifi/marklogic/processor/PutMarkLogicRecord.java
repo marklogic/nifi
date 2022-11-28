@@ -50,7 +50,7 @@ import java.util.*;
 @Tags({"MarkLogic", "Put", "Bulk", "Insert"})
 @InputRequirement(InputRequirement.Requirement.INPUT_REQUIRED)
 @CapabilityDescription("Breaks down FlowFiles into batches of Records and inserts documents to a MarkLogic server using the " +
-    "MarkLogic Data Movement SDK (DMSDK)")
+    "MarkLogic Data Movement SDK (DMSDK). Requires a MarkLogic user with the 'rest-writer' privilege.")
 public class PutMarkLogicRecord extends PutMarkLogic {
     static final PropertyDescriptor RECORD_READER = new PropertyDescriptor.Builder()
         .name("record-reader")

@@ -46,7 +46,9 @@ import java.util.regex.Pattern;
 @InputRequirement(Requirement.INPUT_ALLOWED)
 @CapabilityDescription("DEPRECATED as of 1.16.3.1; allows MarkLogic REST extensions to be called. Deprecated due to the " +
     "output from the call to MarkLogic being appended to the incoming FlowFile which is unlikely to be desirable " +
-    "behavior. CallRestExtensionMarkLogic should be used instead.")
+    "behavior. CallRestExtensionMarkLogic should be used instead.  Requires a MarkLogic user with the " +
+    "appropriate privileges based on the HTTP method; see https://docs.marklogic.com/REST/client/service-extension for " +
+    "details on the required privileges.")
 @SystemResourceConsideration(resource = SystemResource.MEMORY)
 @DynamicProperties({
     @DynamicProperty(name = "param:{name}",

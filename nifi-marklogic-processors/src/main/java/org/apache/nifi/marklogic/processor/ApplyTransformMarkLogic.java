@@ -42,7 +42,8 @@ import java.util.*;
 @Tags({"MarkLogic", "Transform", "ApplyTransform", "Update"})
 @InputRequirement(Requirement.INPUT_ALLOWED)
 @CapabilityDescription("Creates FlowFiles from batches of documents, matching the given criteria,"
-    + " transformed from a MarkLogic server using the MarkLogic Data Movement SDK (DMSDK)")
+    + " transformed from a MarkLogic server using the MarkLogic Data Movement SDK (DMSDK). Requires a MarkLogic user " +
+    "with the 'rest-reader' privilege to read documents and the 'rest-writer' privilege to update transformed documents.")
 @DynamicProperties({
     @DynamicProperty(
         name = "ns:{prefix}",

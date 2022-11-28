@@ -21,7 +21,8 @@ import java.util.*;
 
 @Tags({"MarkLogic", "Query", "Read", "Rows"})
 @InputRequirement(InputRequirement.Requirement.INPUT_ALLOWED)
-@CapabilityDescription("Executes a serialized Optic query plan and writes the returned rows to a FlowFile")
+@CapabilityDescription("Executes a serialized Optic query plan and writes the returned rows to a FlowFile. " +
+    "Requires a MarkLogic user with the 'rest-reader' privilege.")
 public class QueryRowsMarkLogic extends AbstractMarkLogicProcessor {
 
     public static final PropertyDescriptor PLAN = new PropertyDescriptor.Builder()

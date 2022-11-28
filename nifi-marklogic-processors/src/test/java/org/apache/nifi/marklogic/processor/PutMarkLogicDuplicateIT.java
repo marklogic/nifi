@@ -44,7 +44,7 @@ public class PutMarkLogicDuplicateIT extends AbstractMarkLogicIT {
     }
 
     public TestRunner getNewTestRunner(Class<? extends Processor> processor) {
-        TestRunner runner = super.getNewTestRunner(processor);
+        TestRunner runner = newWriterTestRunner(processor);
         runner.setThreadCount(4);//Change this to higher value than 1 and likely will fail with XDMP-CONFLICTINGUPDATE
         runner.setProperty(PutMarkLogic.URI_ATTRIBUTE_NAME, "filename");
         runner.setProperty(PutMarkLogic.BATCH_SIZE, "600");

@@ -29,7 +29,9 @@ import java.util.HashSet;
 import java.util.Set;
 
 @CapabilityDescription("Allows for MarkLogic REST extensions to be called with results being sent to new FlowFiles. " +
-    "This is intended to replace ExtensionCallMarkLogic, which is now deprecated.")
+    "This is intended to replace ExtensionCallMarkLogic, which is now deprecated. Requires a MarkLogic user with the " +
+    "appropriate privileges based on the HTTP method; see https://docs.marklogic.com/REST/client/service-extension for " +
+    "details on the required privileges.")
 public class CallRestExtensionMarkLogic extends ExtensionCallMarkLogic {
 
     protected static final Relationship RESULTS = new Relationship.Builder().name("results")

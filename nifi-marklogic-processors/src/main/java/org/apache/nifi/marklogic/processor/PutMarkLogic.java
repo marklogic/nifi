@@ -57,7 +57,10 @@ import java.util.stream.Stream;
  */
 @Tags({"MarkLogic", "Put", "Write", "Insert"})
 @CapabilityDescription("Write batches of FlowFiles as documents to a MarkLogic server using the " +
-    "MarkLogic Data Movement SDK (DMSDK)")
+    "MarkLogic Data Movement SDK (DMSDK). Requires a MarkLogic user with the 'rest-writer' privilege. This processor " +
+    "uses NiFi's TriggerWhenEmpty support so that it can run when no upstream FlowFiles are available. This ensures " +
+    "that partial batches can be written without having to wait for more FlowFiles. Use NiFi's 'Yield Duration' " +
+    "setting to control how often this processor will check for new FlowFiles and flush partial batches.")
 @SystemResourceConsideration(resource = SystemResource.MEMORY)
 @DynamicProperties({
     @DynamicProperty(
@@ -366,10 +369,9 @@ public class PutMarkLogic extends AbstractMarkLogicProcessor {
      * When a FlowFile is received, hand it off to the WriteBatcher so it can be written to MarkLogic.
      * <p>
      * If a FlowFile is not set (possible because of the TriggerWhenEmpty annotation), then yield is called on the
-     * ProcessContext so that Nifi doesn't invoke this method repeatedly when nothing is available. Then, a check is
-     * made to determine if flushAsync should be called on the WriteBatcher. This ensures that any batch of documents
-     * that is smaller than the WriteBatcher's batch size will be flushed immediately and not have to wait for more
-     * FlowFiles to arrive to fill out the batch.
+     * ProcessContext so that Nifi doesn't invoke this method repeatedly when nothing is available. The WriteBatcher
+     * is flushed asynchronously as well, ensuring that any batch of document that is smaller than the WriteBatcher's
+     * batch size will be flushed immediately and not have to wait for more FlowFiles to arrive to fill out the batch.
      */
     public void onTrigger(ProcessContext context, ProcessSession session) throws ProcessException {
         try {

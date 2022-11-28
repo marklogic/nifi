@@ -42,7 +42,8 @@ import java.util.Map.Entry;
 
 @Tags({"MarkLogic", "database", "XQuery", "JavaScript", "module", "server-side"})
 @CapabilityDescription("Executes server-side code in MarkLogic, either in JavaScript or XQuery. "
-    + "Code can be given in a Script Body property or can be invoked as a path to a module installed on the server.")
+    + "Code can be given in a Script Body property or can be invoked as a path to a module installed on the server. " +
+    "Requires a MarkLogic user with the privileges listed at https://docs.marklogic.com/REST/POST/v1/eval .")
 @DynamicProperty(
     name = "Any name",
     value = "Any value",

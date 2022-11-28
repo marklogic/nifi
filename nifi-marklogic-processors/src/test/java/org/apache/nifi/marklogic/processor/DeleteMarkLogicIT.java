@@ -58,7 +58,7 @@ public class DeleteMarkLogicIT extends AbstractMarkLogicIT {
 
     @Test
     public void testSimpleCollectionDelete() {
-        TestRunner runner = getNewTestRunner(DeleteMarkLogic.class);
+        TestRunner runner = newWriterTestRunner(DeleteMarkLogic.class);
         runner.setProperty(QueryMarkLogic.QUERY, COLLECTION);
         runner.setProperty(QueryMarkLogic.QUERY_TYPE, QueryTypes.COLLECTION);
         runner.assertValid();
@@ -89,7 +89,7 @@ public class DeleteMarkLogicIT extends AbstractMarkLogicIT {
 
     @Test
     public void deleteWithNoIncomingFlowFile() {
-        TestRunner runner = getNewTestRunner(DeleteMarkLogic.class);
+        TestRunner runner = newWriterTestRunner(DeleteMarkLogic.class);
         runner.setProperty(QueryMarkLogic.QUERY, COLLECTION);
         runner.setProperty(QueryMarkLogic.QUERY_TYPE, QueryTypes.COLLECTION);
         runner.assertValid();
@@ -112,7 +112,7 @@ public class DeleteMarkLogicIT extends AbstractMarkLogicIT {
 
     @Test
     public void userCanReadButNotUpdate() {
-        TestRunner runner = getNewTestRunner(DeleteMarkLogic.class, "nifi-reader", "x");
+        TestRunner runner = newReaderTestRunner(DeleteMarkLogic.class);
         runner.setProperty(QueryMarkLogic.QUERY, COLLECTION);
         runner.setProperty(QueryMarkLogic.QUERY_TYPE, QueryTypes.COLLECTION);
         runner.assertValid();

@@ -37,7 +37,7 @@ public class ExecuteScriptMarkLogicIT extends AbstractMarkLogicIT {
 
     @Test
     public void validJavascript() {
-        TestRunner runner = super.getNewTestRunner(ExecuteScriptMarkLogic.class);
+        TestRunner runner = newEvaluatorTestRunner(ExecuteScriptMarkLogic.class);
         runner.setValidateExpressionUsage(false);
         runner.setProperty(ExecuteScriptMarkLogic.EXECUTION_TYPE, ExecuteScriptMarkLogic.AV_JAVASCRIPT);
         runner.setProperty(ExecuteScriptMarkLogic.RESULTS_DESTINATION, ExecuteScriptMarkLogic.AV_CONTENT);
@@ -68,7 +68,7 @@ public class ExecuteScriptMarkLogicIT extends AbstractMarkLogicIT {
 
     @Test
     public void noIncomingFlowFileAndModulePath() {
-        TestRunner runner = super.getNewTestRunner(ExecuteScriptMarkLogic.class);
+        TestRunner runner = newEvaluatorTestRunner(ExecuteScriptMarkLogic.class);
         runner.setValidateExpressionUsage(false);
         runner.setProperty(ExecuteScriptMarkLogic.EXECUTION_TYPE, ExecuteScriptMarkLogic.AV_MODULE_PATH);
         runner.setProperty(ExecuteScriptMarkLogic.RESULTS_DESTINATION, ExecuteScriptMarkLogic.AV_CONTENT);
@@ -91,7 +91,7 @@ public class ExecuteScriptMarkLogicIT extends AbstractMarkLogicIT {
 
     @Test
     public void invalidJavascript() {
-        TestRunner runner = super.getNewTestRunner(ExecuteScriptMarkLogic.class);
+        TestRunner runner = newEvaluatorTestRunner(ExecuteScriptMarkLogic.class);
         runner.setValidateExpressionUsage(false);
         runner.setProperty(ExecuteScriptMarkLogic.EXECUTION_TYPE, ExecuteScriptMarkLogic.AV_JAVASCRIPT);
         runner.setProperty(ExecuteScriptMarkLogic.RESULTS_DESTINATION, ExecuteScriptMarkLogic.AV_CONTENT);
