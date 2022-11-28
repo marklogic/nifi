@@ -214,16 +214,16 @@ public class PutMarkLogicRecord extends PutMarkLogic {
     }
 
     @Override
-    protected void routeDocumentToRelationship(WriteEvent writeEvent, Relationship relationship) {
+    protected void transferFlowFile(WriteEvent writeEvent, Relationship relationship) {
         FlowFileInfo flowFileInfo = getFlowFileInfoForWriteEvent(writeEvent);
         if (flowFileInfo != null) {
+            if (getLogger().isDebugEnabled()) {
+                getLogger().debug("Routing " + writeEvent.getTargetUri() + " to " + relationship.getName());
+            }
             synchronized (flowFileInfo.session) {
                 FlowFile flowFile = flowFileInfo.session.create();
                 flowFileInfo.session.getProvenanceReporter().send(flowFile, writeEvent.getTargetUri());
                 flowFileInfo.session.transfer(flowFile, relationship);
-            }
-            if (getLogger().isDebugEnabled()) {
-                getLogger().debug("Routing " + writeEvent.getTargetUri() + " to " + relationship.getName());
             }
         }
     }

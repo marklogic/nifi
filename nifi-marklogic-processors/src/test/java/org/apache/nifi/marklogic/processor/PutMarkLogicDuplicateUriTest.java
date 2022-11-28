@@ -153,7 +153,7 @@ class TestDuplicatePutMarkLogic extends PutMarkLogic {
     }
 
     @Override
-    protected void routeDocumentToRelationship(WriteEvent writeEvent, Relationship relationship) {
+    protected void transferFlowFile(WriteEvent writeEvent, Relationship relationship) {
         String relName = relationship.getName();
         FlowFileInfo fileInfo = getFlowFileInfoForWriteEvent(writeEvent);
         int relCtr = relationsMap.get(relName) != null ? relationsMap.get(relName) : 0;
@@ -163,7 +163,7 @@ class TestDuplicatePutMarkLogic extends PutMarkLogic {
             lastSupersededUUID = fileInfo.flowFile.getAttribute(CoreAttributes.UUID.key());
         }
         //Just route to super to ensure it works properly
-        super.routeDocumentToRelationship(writeEvent, relationship);
+        super.transferFlowFile(writeEvent, relationship);
     }
 
     @Override
