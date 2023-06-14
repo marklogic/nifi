@@ -84,7 +84,10 @@ import java.util.stream.Stream;
     )
 })
 @TriggerWhenEmpty
-@WritesAttribute(attribute = "URIs", description = "On batch_success, writes successful URIs as coma-separated list")
+@WritesAttributes(value = {
+    @WritesAttribute(attribute = "URIs", description = "On batch_success, writes successful URIs as coma-separated list"),
+    @WritesAttribute(attribute = "optionsJson", description = "Deprecated; see https://github.com/marklogic/nifi/issues/194 for more information.")
+})
 public class PutMarkLogic extends AbstractMarkLogicProcessor {
     class FlowFileInfo {
         FlowFile flowFile;
@@ -308,17 +311,8 @@ public class PutMarkLogic extends AbstractMarkLogicProcessor {
                     ProcessSession session = flowFileInfo.session;
                     String uriList = Stream.of(writeBatch.getItems()).map(WriteEvent::getTargetUri).collect(Collectors.joining(","));
                     FlowFile batchFlowFile = session.create();
-
-                    JsonObject optionsJSONObj = new JsonObject();
-                    JsonArray jsonArray = new JsonArray();
-                    for (String uri : uriList.split(",")) {
-                        jsonArray.add(uri);
-                    }
-
-                    optionsJSONObj.add("uris", jsonArray);
-
                     session.putAttribute(batchFlowFile, "URIs", uriList);
-                    session.putAttribute(batchFlowFile, "optionsJson", optionsJSONObj.toString());
+                    addDeprecatedOptionsJsonAttribute(session, batchFlowFile, uriList);
                     synchronized (session) {
                         session.transfer(batchFlowFile, BATCH_SUCCESS);
                     }
@@ -335,6 +329,26 @@ public class PutMarkLogic extends AbstractMarkLogicProcessor {
             }
         });
         dataMovementManager.startJob(writeBatcher);
+    }
+
+    /**
+     * "optionsJson" was added by the marklogic-nifi-incubator project. The intent was to pass it to an internal DHF
+     * endpoint, but that's not supported. It should be removed in the next major release.
+     * https://github.com/marklogic/nifi/issues/194 shows an example of how to construct a DHF sourceQuery using the
+     * documented "URIs" attribute.
+     *
+     * @param batchFlowFile
+     * @param uriList
+     */
+    @Deprecated
+    private void addDeprecatedOptionsJsonAttribute(ProcessSession session, FlowFile batchFlowFile, String uriList) {
+        JsonObject optionsJSONObj = new JsonObject();
+        JsonArray jsonArray = new JsonArray();
+        for (String uri : uriList.split(",")) {
+            jsonArray.add(uri);
+        }
+        optionsJSONObj.add("uris", jsonArray);
+        session.putAttribute(batchFlowFile, "optionsJson", optionsJSONObj.toString());
     }
 
     protected FlowFileInfo getFlowFileInfoForWriteEvent(WriteEvent writeEvent) {
