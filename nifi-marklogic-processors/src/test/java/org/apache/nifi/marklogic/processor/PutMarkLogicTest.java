@@ -23,6 +23,9 @@ import com.marklogic.client.io.DocumentMetadataHandle;
 import com.marklogic.client.io.Format;
 import org.apache.nifi.components.PropertyDescriptor;
 import org.apache.nifi.expression.ExpressionLanguageScope;
+import org.apache.nifi.flowfile.FlowFile;
+import org.apache.nifi.processor.ProcessContext;
+import org.apache.nifi.processor.ProcessSession;
 import org.apache.nifi.reporting.InitializationException;
 import org.apache.nifi.util.MockFlowFile;
 import org.junit.Before;
@@ -415,6 +418,30 @@ public class PutMarkLogicTest extends AbstractMarkLogicProcessorTest {
         DocumentMetadataHandle metadata = (DocumentMetadataHandle) processor.writeEvent.getMetadata();
         assertEquals(-10, metadata.getQuality());
     }
+
+    @Test
+    public void failureOutsideOfWritingABatch() {
+        processor.throwErrorInBuildWriteEvent = true;
+
+        processContext.setProperty(PutMarkLogic.COLLECTIONS, " collection1, collection2,collection3,   collection4   ");
+        processContext.setProperty(PutMarkLogic.FORMAT, Format.JSON.name());
+        processor.initialize(initializationContext);
+
+        addFlowFile("{\"hello\":\"nifi rocks\"}");
+
+        processor.onTrigger(processContext, mockProcessSessionFactory);
+
+        processSession.assertAllFlowFilesTransferred(PutMarkLogic.FAILURE);
+        processSession.assertAllFlowFiles(flowFile -> {
+            String message = flowFile.getAttribute("markLogicErrorMessage");
+            assertTrue("When an error occurs anywhere in PutMarkLogic that's outside the context of writing a batch to " +
+                    "MarkLogic, the error should be caught and the incoming FlowFile should be sent to the " +
+                    "FAILURE relationship. And the error message should be stored on the FlowFile. " +
+                    "Unexpected error: " + message,
+                message.contains("Intentional error from buildWriteEvent")
+            );
+        });
+    }
 }
 
 /**
@@ -423,6 +450,7 @@ public class PutMarkLogicTest extends AbstractMarkLogicProcessorTest {
 class TestPutMarkLogic extends PutMarkLogic {
 
     public boolean flushAsyncCalled = false;
+    public boolean throwErrorInBuildWriteEvent = false;
     public WriteEvent writeEvent;
 
     @Override
@@ -433,5 +461,13 @@ class TestPutMarkLogic extends PutMarkLogic {
     @Override
     protected void addWriteEvent(WriteBatcher writeBatcher, WriteEvent writeEvent) {
         this.writeEvent = writeEvent;
+    }
+
+    @Override
+    protected WriteEvent buildWriteEvent(ProcessContext context, ProcessSession session, FlowFile flowFile) {
+        if (throwErrorInBuildWriteEvent) {
+            throw new RuntimeException("Intentional error from buildWriteEvent");
+        }
+        return super.buildWriteEvent(context, session, flowFile);
     }
 }

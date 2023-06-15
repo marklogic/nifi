@@ -375,7 +375,7 @@ public class PutMarkLogic extends AbstractMarkLogicProcessor {
     }
 
     /**
-     * When a FlowFile is received, hand it off to the WriteBatcher so it can be written to MarkLogic.
+     * When a FlowFile is received, hand it off to the WriteBatcher so that it can be written to MarkLogic.
      * <p>
      * If a FlowFile is not set (possible because of the TriggerWhenEmpty annotation), then yield is called on the
      * ProcessContext so that Nifi doesn't invoke this method repeatedly when nothing is available. The WriteBatcher
@@ -383,14 +383,14 @@ public class PutMarkLogic extends AbstractMarkLogicProcessor {
      * batch size will be flushed immediately and not have to wait for more FlowFiles to arrive to fill out the batch.
      */
     public void onTrigger(ProcessContext context, ProcessSession session) throws ProcessException {
-        try {
-            FlowFile flowFile = session.get();
-            if (flowFile == null) {
-                getLogger().debug("Flushing the WriteBatcher asynchronously in case a number of documents less than batchSize are waiting to be written");
-                flushWriteBatcherAsync(this.writeBatcher);
-                getLogger().debug("Calling yield() on the ProcessContext");
-                context.yield();
-            } else {
+        FlowFile flowFile = session.get();
+        if (flowFile == null) {
+            getLogger().debug("Flushing the WriteBatcher asynchronously in case a number of documents less than batchSize are waiting to be written");
+            flushWriteBatcherAsync(this.writeBatcher);
+            getLogger().debug("Calling yield() on the ProcessContext");
+            context.yield();
+        } else {
+            try {
                 String duplicateHandler = context.getProperty(DUPLICATE_URI_HANDLING).getValue();
                 WriteEvent writeEvent = buildWriteEvent(context, session, flowFile);
 
@@ -430,9 +430,12 @@ public class PutMarkLogic extends AbstractMarkLogicProcessor {
                 if (getLogger().isDebugEnabled()) {
                     getLogger().debug("Writing URI: " + writeEvent.getTargetUri());
                 }
+            } catch (final Throwable t) {
+                // Catches any exception that occurs outside of writing a batch. We don't have a way of reproducing
+                // this in a test as there's not a way to force an error outside of writing a batch. So exceptions
+                // here will be rare and unexpected, but still need to route them to the failure relationship.
+                logErrorAndTransfer(t, flowFile, session, FAILURE);
             }
-        } catch (final Throwable t) {
-            this.logErrorAndRollbackSession(t, session);
         }
     }
 
