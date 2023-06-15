@@ -260,4 +260,8 @@ class TestQueryBatcher implements QueryBatcher {
         return 1;
     }
 
+    @Override
+    public Long getServerTimestamp() {
+        return null;
+    }
 }

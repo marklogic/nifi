@@ -31,7 +31,7 @@ class TestMLDatabaseClient extends DatabaseClientImpl {
     private ServerEvaluationCall serverEval = new TestServerEvaluationCall();
 
     public TestMLDatabaseClient() {
-        super(services, "", 0, "", null, ConnectionType.DIRECT);
+        super(services, "", 0, "", null, null, ConnectionType.DIRECT);
     }
 
     @Override

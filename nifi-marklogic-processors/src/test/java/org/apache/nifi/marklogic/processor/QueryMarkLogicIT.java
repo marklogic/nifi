@@ -25,6 +25,7 @@ import com.marklogic.client.ext.util.DefaultDocumentPermissionsParser;
 import com.marklogic.client.io.DocumentMetadataHandle;
 import com.marklogic.client.io.JacksonHandle;
 import com.marklogic.client.io.StringHandle;
+import com.marklogic.rest.util.Fragment;
 import org.apache.nifi.components.state.Scope;
 import org.apache.nifi.flowfile.FlowFile;
 import org.apache.nifi.flowfile.attributes.CoreAttributes;
@@ -32,6 +33,7 @@ import org.apache.nifi.marklogic.processor.util.QueryTypes;
 import org.apache.nifi.processor.Processor;
 import org.apache.nifi.util.MockFlowFile;
 import org.apache.nifi.util.TestRunner;
+import org.jdom2.Namespace;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -42,9 +44,18 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.util.*;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class QueryMarkLogicIT extends AbstractMarkLogicIT {
 
@@ -116,8 +127,11 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
      */
     private void verifySimpleCollectionQueryResult(TestRunner runner) {
         MockFlowFile originalFlowFile = runner.getFlowFilesForRelationship(QueryMarkLogic.ORIGINAL).get(0);
+
         final String query = originalFlowFile.getAttribute("marklogic-query");
-        assertTrue(query.contains("<collection-query><uri>" + TEST_COLLECTION + "</uri></collection-query>"),
+        Fragment xmlQuery = new Fragment(query, Namespace.getNamespace("search", "http://marklogic.com/appservices/search"));
+
+        assertEquals(TEST_COLLECTION, xmlQuery.getElementValue("/search:query/search:collection-query/search:uri"),
             "The query should be saved as an attribute so that the user has evidence of what query was actually used; " +
                 "query: " + query);
 
