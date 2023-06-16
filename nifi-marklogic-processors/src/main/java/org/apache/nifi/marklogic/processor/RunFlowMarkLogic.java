@@ -20,7 +20,11 @@ import org.apache.nifi.components.Validator;
 import org.apache.nifi.expression.ExpressionLanguageScope;
 import org.apache.nifi.flowfile.FlowFile;
 import org.apache.nifi.marklogic.controller.MarkLogicDatabaseClientService;
-import org.apache.nifi.processor.*;
+import org.apache.nifi.processor.ProcessContext;
+import org.apache.nifi.processor.ProcessSession;
+import org.apache.nifi.processor.ProcessSessionFactory;
+import org.apache.nifi.processor.ProcessorInitializationContext;
+import org.apache.nifi.processor.Relationship;
 import org.apache.nifi.processor.exception.ProcessException;
 import org.apache.nifi.processor.util.StandardValidators;
 import org.apache.nifi.util.StringUtils;
@@ -28,7 +32,14 @@ import org.apache.nifi.util.StringUtils;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.X509TrustManager;
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
 
 @Tags({"MarkLogic", "Data Hub Framework"})
 @InputRequirement(InputRequirement.Requirement.INPUT_ALLOWED)
@@ -95,6 +106,13 @@ public class RunFlowMarkLogic extends AbstractMarkLogicProcessor {
         .expressionLanguageSupported(ExpressionLanguageScope.FLOWFILE_ATTRIBUTES)
         .build();
 
+    protected static final Relationship FAILURE = new Relationship.Builder()
+        .name("failure")
+        // This is set to true for the 1.16.3.3 release so as to not break any existing instances of this processor.
+        .autoTerminateDefault(true)
+        .description("Captures any error that occurs in this processor.")
+        .build();
+
     public static final Relationship FINISHED = new Relationship.Builder()
         .name("finished")
         .description("If the flow finishes, then regardless of its outcome, the JSON response will be sent to this relationship. " +
@@ -117,6 +135,7 @@ public class RunFlowMarkLogic extends AbstractMarkLogicProcessor {
 
         Set<Relationship> set = new HashSet<>();
         set.add(FINISHED);
+        set.add(FAILURE);
         relationships = Collections.unmodifiableSet(set);
     }
 
@@ -166,7 +185,7 @@ public class RunFlowMarkLogic extends AbstractMarkLogicProcessor {
             session.write(incomingFlowFile, out -> out.write(response.toJson().getBytes()));
             transferAndCommit(session, incomingFlowFile, FINISHED);
         } catch (Throwable t) {
-            this.logErrorAndRollbackSession(t, session);
+            logErrorAndTransfer(t, incomingFlowFile, session, FAILURE);
         }
     }
 

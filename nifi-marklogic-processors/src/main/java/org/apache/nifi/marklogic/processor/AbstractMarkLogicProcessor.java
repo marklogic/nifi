@@ -16,7 +16,11 @@
  */
 package org.apache.nifi.marklogic.processor;
 
-import com.marklogic.client.*;
+import com.marklogic.client.DatabaseClient;
+import com.marklogic.client.ForbiddenUserException;
+import com.marklogic.client.MarkLogicBindingException;
+import com.marklogic.client.ResourceNotFoundException;
+import com.marklogic.client.UnauthorizedUserException;
 import com.marklogic.client.document.ServerTransform;
 import org.apache.nifi.components.PropertyDescriptor;
 import org.apache.nifi.components.Validator;
@@ -24,11 +28,19 @@ import org.apache.nifi.expression.ExpressionLanguageScope;
 import org.apache.nifi.flowfile.FlowFile;
 import org.apache.nifi.flowfile.attributes.CoreAttributes;
 import org.apache.nifi.marklogic.controller.MarkLogicDatabaseClientService;
-import org.apache.nifi.processor.*;
-import org.apache.nifi.processor.exception.ProcessException;
+import org.apache.nifi.processor.AbstractSessionFactoryProcessor;
+import org.apache.nifi.processor.ProcessContext;
+import org.apache.nifi.processor.ProcessSession;
+import org.apache.nifi.processor.ProcessorInitializationContext;
+import org.apache.nifi.processor.Relationship;
 import org.apache.nifi.processor.util.StandardValidators;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.regex.Pattern;
@@ -216,21 +228,6 @@ public abstract class AbstractMarkLogicProcessor extends AbstractSessionFactoryP
     @Override
     protected List<PropertyDescriptor> getSupportedPropertyDescriptors() {
         return properties;
-    }
-
-    /**
-     * Use this when you want an error to result in the session being rolled back and a ProcessException being
-     * thrown. Note that this should result in an incoming FlowFile being left in the queue before the processor. This
-     * may not be desirable to a user; it may be better to route the FlowFile to a failure relationship.
-     *
-     * @param t
-     * @param session
-     */
-    protected void logErrorAndRollbackSession(final Throwable t, final ProcessSession session) {
-        logError(t);
-        getLogger().info("Rolling back session");
-        session.rollback(true);
-        throw new ProcessException(t);
     }
 
     /**
