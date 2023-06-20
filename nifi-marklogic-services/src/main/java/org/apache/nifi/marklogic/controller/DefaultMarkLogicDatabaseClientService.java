@@ -60,7 +60,7 @@ public class DefaultMarkLogicDatabaseClientService extends AbstractControllerSer
         .displayName("Host")
         .required(true)
         .defaultValue("localhost")
-        .description("The host with the REST server for which a DatabaseClient instance needs to be created")
+        .description("The hostname of the MarkLogic server or load balancer to connect to.")
         .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
         .expressionLanguageSupported(ExpressionLanguageScope.VARIABLE_REGISTRY)
         .build();
@@ -70,7 +70,7 @@ public class DefaultMarkLogicDatabaseClientService extends AbstractControllerSer
         .displayName("Port")
         .required(true)
         .defaultValue("8000")
-        .description("The port on which the REST server is hosted")
+        .description("The port of the MarkLogic app server that supports the MarkLogic Client REST API.")
         .addValidator(StandardValidators.PORT_VALIDATOR)
         .expressionLanguageSupported(ExpressionLanguageScope.VARIABLE_REGISTRY)
         .build();
@@ -78,20 +78,35 @@ public class DefaultMarkLogicDatabaseClientService extends AbstractControllerSer
     public static final PropertyDescriptor LOAD_BALANCER = new PropertyDescriptor.Builder()
         .name("Load Balancer")
         .displayName("Load Balancer")
-        .description("Is the host specified a load balancer?")
+        .description("Set to 'true' if the host defined by the 'Host' property is a load balancer; otherwise, set to 'false' or leave blank.")
         .allowableValues("true", "false")
         .defaultValue("false")
         .addValidator(Validator.VALID)
         .expressionLanguageSupported(ExpressionLanguageScope.VARIABLE_REGISTRY)
         .build();
 
+    public static final PropertyDescriptor BASE_PATH = new PropertyDescriptor.Builder()
+        .name("Base Path")
+        .displayName("Base Path")
+        .required(false)
+        .description("Base path to prepend for all calls to MarkLogic REST API; typically set when using a load balancer in front of MarkLogic.")
+        .expressionLanguageSupported(ExpressionLanguageScope.VARIABLE_REGISTRY)
+        .addValidator(Validator.VALID)
+        .build();
+
     public static final PropertyDescriptor SECURITY_CONTEXT_TYPE = new PropertyDescriptor.Builder()
         .name("Security Context Type")
         .displayName("Security Context Type")
         .required(true)
-        .allowableValues(SecurityContextType.values())
-        .description("The type of the Security Context that needs to be used for authentication")
-        .allowableValues(SecurityContextType.BASIC.name(), SecurityContextType.DIGEST.name(), SecurityContextType.CERTIFICATE.name(), SecurityContextType.KERBEROS.name())
+        .description("The type of the Security Context that needs to be used for authentication; " +
+            "must be one of 'BASIC', 'DIGEST', 'CLOUD', 'CERTIFICATE', or 'KERBEROS'.")
+        .allowableValues(
+            SecurityContextType.BASIC.name(),
+            SecurityContextType.DIGEST.name(),
+            SecurityContextType.CLOUD.name(),
+            SecurityContextType.CERTIFICATE.name(),
+            SecurityContextType.KERBEROS.name()
+        )
         .defaultValue(SecurityContextType.DIGEST.name())
         .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
         .expressionLanguageSupported(ExpressionLanguageScope.VARIABLE_REGISTRY)
@@ -100,7 +115,7 @@ public class DefaultMarkLogicDatabaseClientService extends AbstractControllerSer
     public static final PropertyDescriptor USERNAME = new PropertyDescriptor.Builder()
         .name("Username")
         .displayName("Username")
-        .description("The user with read, write, or admin privileges - Required for Basic and Digest authentication")
+        .description("The MarkLogic user with sufficient privileges for using the MarkLogic Client REST API; required for Basic and Digest authentication.")
         .addValidator(Validator.VALID)
         .expressionLanguageSupported(ExpressionLanguageScope.VARIABLE_REGISTRY)
         .build();
@@ -108,7 +123,15 @@ public class DefaultMarkLogicDatabaseClientService extends AbstractControllerSer
     public static final PropertyDescriptor PASSWORD = new PropertyDescriptor.Builder()
         .name("Password")
         .displayName("Password")
-        .description("The password for the user - Required for Basic and Digest authentication")
+        .description("The password for the Marklogic user identified by 'Username'; required for Basic and Digest authentication.")
+        .sensitive(true)
+        .addValidator(Validator.VALID)
+        .build();
+
+    public static final PropertyDescriptor CLOUD_API_KEY = new PropertyDescriptor.Builder()
+        .name("Cloud API Key")
+        .displayName("Cloud API Key")
+        .description("The API key for authenticating with a MarkLogic Cloud instance; typically requires setting 'Load Balancer' to 'true' as well.")
         .sensitive(true)
         .addValidator(Validator.VALID)
         .build();
@@ -116,7 +139,7 @@ public class DefaultMarkLogicDatabaseClientService extends AbstractControllerSer
     public static final PropertyDescriptor DATABASE = new PropertyDescriptor.Builder()
         .name("Database")
         .displayName("Database")
-        .description("The database to access. By default, the configured database for the REST server would be accessed")
+        .description("The database to access, if not the one associated with the MarkLogic app server identified by 'Port'.")
         .addValidator(Validator.VALID)
         .expressionLanguageSupported(ExpressionLanguageScope.VARIABLE_REGISTRY)
         .build();
@@ -124,7 +147,7 @@ public class DefaultMarkLogicDatabaseClientService extends AbstractControllerSer
     public static final PropertyDescriptor EXTERNAL_NAME = new PropertyDescriptor.Builder()
         .name("External name")
         .displayName("External name")
-        .description("External name of the Kerberos Client - Required for Kerberos authentication")
+        .description("External name of the Kerberos Client; required for Kerberos authentication.")
         .addValidator(Validator.VALID)
         .expressionLanguageSupported(ExpressionLanguageScope.VARIABLE_REGISTRY)
         .build();
@@ -132,7 +155,7 @@ public class DefaultMarkLogicDatabaseClientService extends AbstractControllerSer
     public static final PropertyDescriptor SSL_CONTEXT_SERVICE = new PropertyDescriptor.Builder()
         .name("SSL Context Service")
         .displayName("SSL Context Service")
-        .description("The SSL Context Service used to provide KeyStore and TrustManager information for secure connections")
+        .description("The SSL Context Service used to provide KeyStore and TrustManager information for secure connections.")
         .required(false)
         .identifiesControllerService(SSLContextService.class)
         .build();
@@ -140,8 +163,8 @@ public class DefaultMarkLogicDatabaseClientService extends AbstractControllerSer
     public static final PropertyDescriptor CLIENT_AUTH = new PropertyDescriptor.Builder()
         .name("Client Authentication")
         .displayName("Client Authentication")
-        .description("Client authentication policy when connecting via a secure connection. This property is only used when an SSL Context "
-            + "has been defined and enabled")
+        .description("Client authentication policy when connecting via a secure connection; only used when an 'SSL Context Service' "
+            + "has been defined. Must be one of 'Required', 'Want', or 'None', or left blank.")
         .required(false)
         .allowableValues(ClientAuth.values())
         .expressionLanguageSupported(ExpressionLanguageScope.VARIABLE_REGISTRY)
@@ -152,9 +175,11 @@ public class DefaultMarkLogicDatabaseClientService extends AbstractControllerSer
         list.add(HOST);
         list.add(PORT);
         list.add(LOAD_BALANCER);
+        list.add(BASE_PATH);
         list.add(SECURITY_CONTEXT_TYPE);
         list.add(USERNAME);
         list.add(PASSWORD);
+        list.add(CLOUD_API_KEY);
         list.add(DATABASE);
         list.add(EXTERNAL_NAME);
         list.add(SSL_CONTEXT_SERVICE);
@@ -181,11 +206,13 @@ public class DefaultMarkLogicDatabaseClientService extends AbstractControllerSer
         DatabaseClientConfig config = new DatabaseClientConfig();
         config.setHost(context.getProperty(HOST).evaluateAttributeExpressions().getValue());
         config.setPort(context.getProperty(PORT).evaluateAttributeExpressions().asInteger());
+        config.setBasePath(context.getProperty(BASE_PATH).evaluateAttributeExpressions().getValue());
         config.setSecurityContextType(SecurityContextType.valueOf(
             context.getProperty(SECURITY_CONTEXT_TYPE).evaluateAttributeExpressions().getValue())
         );
         config.setUsername(context.getProperty(USERNAME).evaluateAttributeExpressions().getValue());
         config.setPassword(context.getProperty(PASSWORD).getValue());
+        config.setCloudApiKey(context.getProperty(CLOUD_API_KEY).getValue());
         config.setDatabase(context.getProperty(DATABASE).evaluateAttributeExpressions().getValue());
 
         if (context.getProperty(LOAD_BALANCER) != null && context.getProperty(LOAD_BALANCER).evaluateAttributeExpressions().asBoolean()) {

@@ -16,11 +16,17 @@
  */
 package org.apache.nifi.marklogic.controller;
 
+import com.marklogic.client.ext.DatabaseClientConfig;
+import com.marklogic.client.ext.SecurityContextType;
 import org.apache.nifi.reporting.InitializationException;
 import org.apache.nifi.util.TestRunner;
 import org.apache.nifi.util.TestRunners;
-import org.junit.Assert;
 import org.junit.Test;
+import org.opentest4j.AssertionFailedError;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class DefaultMarkLogicDatabaseClientServiceTest {
 
@@ -45,8 +51,37 @@ public class DefaultMarkLogicDatabaseClientServiceTest {
         runner.assertValid(service);
 
         runner.disableControllerService(service);
-        Assert.assertNull("When the processor is disabled, the DatabaseClient should be released and set to null",
-            service.getDatabaseClient());
+        assertNull(service.getDatabaseClient(),
+            "When the processor is disabled, the DatabaseClient should be released and set to null");
     }
 
+    @Test
+    public void cloudAuth() throws InitializationException {
+        final TestRunner runner = TestRunners.newTestRunner(TestProcessor.class);
+        final DefaultMarkLogicDatabaseClientService service = new DefaultMarkLogicDatabaseClientService();
+        runner.addControllerService("test-good", service);
+        runner.setProperty(service, DefaultMarkLogicDatabaseClientService.HOST, "localhost");
+        runner.setProperty(service, DefaultMarkLogicDatabaseClientService.PORT, "443");
+        runner.setProperty(service, DefaultMarkLogicDatabaseClientService.CLOUD_API_KEY, "doesntmatter");
+        runner.setProperty(service, DefaultMarkLogicDatabaseClientService.BASE_PATH, "/some/path");
+        runner.setProperty(service, DefaultMarkLogicDatabaseClientService.SECURITY_CONTEXT_TYPE, "CLOUD");
+
+        runner.assertValid(service);
+
+        try {
+            runner.enableControllerService(service);
+        } catch (AssertionFailedError ex) {
+            assertTrue(ex.getMessage().contains("Unable to call token endpoint at https://localhost/token"),
+                "enableControllerService should fail because it tries to authenticate with MarkLogic Cloud, but the " +
+                    "inputs aren't valid. Which is good - the goal of this is to verify that it attempts to use " +
+                    "cloud authentication. Actual error: " + ex.getMessage());
+        }
+
+        DatabaseClientConfig config = service.getDatabaseClientConfig();
+        assertEquals("localhost", config.getHost());
+        assertEquals(443, config.getPort());
+        assertEquals("doesntmatter", config.getCloudApiKey());
+        assertEquals("/some/path", config.getBasePath());
+        assertEquals(SecurityContextType.CLOUD, config.getSecurityContextType());
+    }
 }
