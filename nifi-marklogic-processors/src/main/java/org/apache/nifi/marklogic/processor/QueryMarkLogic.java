@@ -345,6 +345,8 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
         @Override
         public void processEvent(QueryBatch batch) {
             super.processEvent(batch);
+            // Ensures that the session is committed after all docs in a batch have been exported. Note that in the
+            // event of a batch failure, this will be called twice, which does not seem to have any negative effects.
             synchronized (session) {
                 this.session.commitAsync();
             }
@@ -376,7 +378,11 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
                     getLogger().debug("Routing " + doc.getUri() + " to " + SUCCESS.getName());
                 }
             }
+        }).onFailure((batch, throwable) -> {
+            getLogger().error("Unable to export batch of URIs; cause: " + throwable.getMessage());
+            transferBatch(session, incomingAttributes, batch, FAILURE, throwable);
         });
+
         if (retrieveMetadata) {
             exportListener.withMetadataCategory(Metadata.ALL);
         }
@@ -391,6 +397,23 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
     }
 
     /**
+     * Convenience method for transferring a batch to a relationship, with an optional Throwable supported.
+     */
+    protected final void transferBatch(ProcessSession session, Map<String, String> incomingAttributes, QueryBatch batch, Relationship relationship, Throwable throwable) {
+        synchronized (session) {
+            for (String uri : batch.getItems()) {
+                FlowFile flowFile = createFlowFileWithAttributes(session, incomingAttributes);
+                session.putAttribute(flowFile, CoreAttributes.FILENAME.key(), uri);
+                if (throwable != null) {
+                    session.putAttribute(flowFile, "markLogicErrorMessage", throwable.getMessage());
+                }
+                session.transfer(flowFile, relationship);
+            }
+            session.commitAsync();
+        }
+    }
+
+    /**
      * Used for when the user asks for URIs only or just URIs and document metadata.
      *
      * @param context
@@ -401,20 +424,29 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
         final boolean consistentSnapshot = Boolean.TRUE.equals(context.getProperty(CONSISTENT_SNAPSHOT).asBoolean());
         return batch -> {
             synchronized (session) {
-                Arrays.stream(batch.getItems()).forEach((uri) -> {
-                    FlowFile flowFile = createFlowFileWithAttributes(session, incomingAttributes);
-                    session.putAttribute(flowFile, CoreAttributes.FILENAME.key(), uri);
-                    if (shouldRetrieveMetadata(context)) {
-                        DocumentMetadataHandle metadata = new DocumentMetadataHandle();
-                        if (consistentSnapshot) {
-                            metadata.setServerTimestamp(batch.getServerTimestamp());
+                Arrays.stream(batch.getItems()).forEach(uri -> {
+                    try {
+                        FlowFile flowFile = createFlowFileWithAttributes(session, incomingAttributes);
+                        session.putAttribute(flowFile, CoreAttributes.FILENAME.key(), uri);
+                        if (shouldRetrieveMetadata(context)) {
+                            DocumentMetadataHandle metadata = new DocumentMetadataHandle();
+                            if (consistentSnapshot) {
+                                metadata.setServerTimestamp(batch.getServerTimestamp());
+                            }
+                            batch.getClient().newDocumentManager().readMetadata(uri, metadata);
+                            addDocumentMetadata(context, session, flowFile, metadata);
                         }
-                        batch.getClient().newDocumentManager().readMetadata(uri, metadata);
-                        addDocumentMetadata(context, session, flowFile, metadata);
-                    }
-                    session.transfer(flowFile, SUCCESS);
-                    if (getLogger().isDebugEnabled()) {
-                        getLogger().debug("Routing " + uri + " to " + SUCCESS.getName());
+                        session.transfer(flowFile, SUCCESS);
+                        if (getLogger().isDebugEnabled()) {
+                            getLogger().debug("Routing " + uri + " to " + SUCCESS.getName());
+                        }
+                    } catch (Throwable throwable) {
+                        // Does not yet have test coverage as there's not yet a way of forcing an error in the code
+                        // within the "try" block.
+                        FlowFile flowFile = createFlowFileWithAttributes(session, incomingAttributes);
+                        session.putAttribute(flowFile, CoreAttributes.FILENAME.key(), uri);
+                        session.putAttribute(flowFile, "markLogicErrorMessage", throwable.getMessage());
+                        session.transfer(flowFile, FAILURE);
                     }
                 });
                 session.commitAsync();
