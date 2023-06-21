@@ -584,6 +584,51 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
         runner.shutdown();
     }
 
+    @Test
+    public void restTransformThrowsErrorForAllDocuments() {
+        TestRunner runner = getNewTestRunner(QueryMarkLogic.class);
+        runner.setProperty(QueryMarkLogic.RETURN_TYPE, QueryMarkLogic.ReturnTypes.DOCUMENTS);
+        runner.setProperty(QueryMarkLogic.QUERY, "xmlcontent");
+        runner.setProperty(QueryMarkLogic.QUERY_TYPE, QueryTypes.STRING);
+        runner.setProperty(QueryMarkLogic.TRANSFORM, "throwsError");
+        runner.assertValid();
+        runner.run();
+
+        runner.assertTransferCount(QueryMarkLogic.FAILURE, expectedXmlCount);
+        runner.assertTransferCount(QueryMarkLogic.SUCCESS, 0);
+
+        runner.assertAllFlowFiles(QueryMarkLogic.FAILURE, flowFile -> {
+            String message = flowFile.getAttribute("markLogicErrorMessage");
+            assertTrue(message.contains("Intentional error"), "Expecting each FlowFile to have the error from the " +
+                "throwsError REST transform; actual error: " + message);
+        });
+    }
+
+    @Test
+    public void restTransformThrowsErrorForOneDocument() {
+        TestRunner runner = getNewTestRunner(QueryMarkLogic.class);
+        runner.setProperty(QueryMarkLogic.RETURN_TYPE, QueryMarkLogic.ReturnTypes.DOCUMENTS);
+        runner.setProperty(QueryMarkLogic.QUERY, "xmlcontent");
+        runner.setProperty(QueryMarkLogic.QUERY_TYPE, QueryTypes.STRING);
+        runner.setProperty(QueryMarkLogic.TRANSFORM, "throwsError");
+        runner.setProperty(QueryMarkLogic.BATCH_SIZE, "3");
+        runner.setProperty("trans:throwErrorForUri", "/PutMarkLogicTest/0.xml");
+        runner.assertValid();
+        runner.run();
+
+        // With a batch size of 3, there should be two batches, one of which fails due to the throwErrorForUri
+        // transform property. Because the processor doesn't know that only 1 document caused the failure, it sends
+        // each of the 3 URIs to the FAILURE relationship.
+        runner.assertTransferCount(QueryMarkLogic.FAILURE, 3);
+        runner.assertTransferCount(QueryMarkLogic.SUCCESS, expectedXmlCount - 3);
+
+        runner.assertAllFlowFiles(QueryMarkLogic.FAILURE, flowFile -> {
+            String message = flowFile.getAttribute("markLogicErrorMessage");
+            assertTrue(message.contains("Intentional error from throwsError transform"),
+                "Unexpected error message; it should contain the error from the REST transform: " + message);
+        });
+    }
+
     /**
      * Verify everything except the existence of document properties, as that differs between the two tests that
      * use this method.

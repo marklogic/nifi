@@ -210,14 +210,27 @@ public abstract class AbstractMarkLogicProcessor extends AbstractSessionFactoryP
             final List<PropertyDescriptor> transformProperties = propertiesByPrefix.get(transformPrefix);
             if (transformProperties != null) {
                 for (final PropertyDescriptor descriptor : transformProperties) {
-                    serverTransform.addParameter(
-                        descriptor.getName().substring(transformPrefix.length() + 1),
-                        context.getProperty(descriptor).evaluateAttributeExpressions(context.getAllProperties()).getValue()
-                    );
+                    String value = getTransformParamValue(context, descriptor);
+                    serverTransform.addParameter(descriptor.getName().substring(transformPrefix.length() + 1), value);
                 }
             }
         }
         return serverTransform;
+    }
+
+    private String getTransformParamValue(ProcessContext context, PropertyDescriptor descriptor) {
+        try {
+            // During 1.16.3.3 development, found that while this works fine when run in NiFi 1.18 through 1.22, it
+            // fails within a NiFi test runner - which perhaps is a bug in NiFi's test runner?
+            // The exception is: "Attempting to evaluate expression language for trans:throwErrorForUri using flow file attributes but the scope evaluation is set to VARIABLE_REGISTRY.",
+            // which seems erroneous as the descriptor is not evaluated against a FlowFile here.
+            // To allow for this to work in a test, a try/catch is used on this exception with the catch block
+            // simply not evaluating any expressions.
+            return context.getProperty(descriptor).evaluateAttributeExpressions(context.getAllProperties()).getValue();
+        } catch (IllegalStateException ex) {
+            getLogger().debug("Unexpected error while getting transform param value: descriptor: " + descriptor + "; error: " + ex.getMessage());
+            return context.getProperty(descriptor).getValue();
+        }
     }
 
     @Override

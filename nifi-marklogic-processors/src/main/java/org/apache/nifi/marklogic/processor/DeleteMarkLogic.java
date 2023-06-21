@@ -86,31 +86,12 @@ public class DeleteMarkLogic extends QueryMarkLogic {
     protected QueryBatchListener buildQueryBatchListener(final ProcessContext context, final ProcessSession session,
                                                          Map<String, String> incomingAttributes) {
         return batch -> {
-            boolean succeeded = false;
             try {
                 batch.getClient().newDocumentManager().delete(batch.getItems());
-                succeeded = true;
+                transferBatch(session, incomingAttributes, batch, SUCCESS, null);
             } catch (Throwable t) {
-                synchronized (session) {
-                    getLogger().error("Unable to delete batch of URIs; cause: " + t.getMessage());
-                    for (String uri : batch.getItems()) {
-                        FlowFile flowFile = createFlowFileWithAttributes(session, incomingAttributes);
-                        session.putAttribute(flowFile, CoreAttributes.FILENAME.key(), uri);
-                        session.putAttribute(flowFile, "markLogicErrorMessage", t.getMessage());
-                        session.transfer(flowFile, FAILURE);
-                    }
-                    session.commitAsync();
-                }
-            }
-            if (succeeded) {
-                synchronized (session) {
-                    for (String uri : batch.getItems()) {
-                        FlowFile flowFile = createFlowFileWithAttributes(session, incomingAttributes);
-                        session.putAttribute(flowFile, CoreAttributes.FILENAME.key(), uri);
-                        session.transfer(flowFile, SUCCESS);
-                    }
-                    session.commitAsync();
-                }
+                getLogger().error("Unable to delete batch of URIs; cause: " + t.getMessage());
+                transferBatch(session, incomingAttributes, batch, FAILURE, t);
             }
         };
     }

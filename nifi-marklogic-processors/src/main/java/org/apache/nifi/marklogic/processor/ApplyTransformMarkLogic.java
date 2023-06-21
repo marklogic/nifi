@@ -116,18 +116,11 @@ public class ApplyTransformMarkLogic extends QueryMarkLogic {
                 ApplyResultTypes.INGORE_STR.equals(context.getProperty(APPLY_RESULT_TYPE).getValue()) ? ApplyResult.IGNORE : ApplyResult.REPLACE
             )
             .withTransform(this.buildServerTransform(context))
-            .onSuccess(batch -> sendBatchToRelationship(session, batch, incomingAttributes, SUCCESS))
-            .onFailure((batch, throwable) -> sendBatchToRelationship(session, batch, incomingAttributes, FAILURE));
-    }
-
-    private void sendBatchToRelationship(ProcessSession session, QueryBatch batch, Map<String, String> incomingAttributes, Relationship relationship) {
-        synchronized (session) {
-            for (String uri : batch.getItems()) {
-                final FlowFile flowFile = createFlowFileWithAttributes(session, incomingAttributes);
-                session.putAttribute(flowFile, CoreAttributes.FILENAME.key(), uri);
-                session.transfer(flowFile, relationship);
-            }
-        }
+            .onSuccess(batch -> transferBatch(session, incomingAttributes, batch, SUCCESS, null))
+            .onFailure((batch, throwable) -> {
+                getLogger().error("Unable to apply transform to batch of URIs; cause: " + throwable.getMessage());
+                transferBatch(session, incomingAttributes, batch, FAILURE, throwable);
+            });
     }
 
     public static class ApplyResultTypes {
