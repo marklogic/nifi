@@ -1,0 +1,16 @@
+title: MarkLogic NiFi Connector
+remote_theme: just-the-docs/just-the-docs
+plugins:
+  - jekyll-remote-theme
+
+heading_anchors: true
+
+# Aux links for the upper right navigation
+aux_links:
+  "marklogic/nifi":
+    - "https://github.com/marklogic/nifi"
+
+# Makes Aux links open in a new tab. Default is false
+aux_links_new_tab: false
+
+enable_copy_code_button: true
