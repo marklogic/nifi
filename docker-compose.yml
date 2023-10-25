@@ -1,0 +1,30 @@
+version: '3.8'
+name: marklogic_nifi
+
+services:
+
+  marklogic:
+    image: "marklogicdb/marklogic-db:11.1.0-centos-1.1.0"
+    container_name: "marklogic"
+    platform: linux/amd64
+    restart: always
+    environment:
+      - MARKLOGIC_INIT=true
+      - MARKLOGIC_ADMIN_USERNAME=admin
+      - MARKLOGIC_ADMIN_PASSWORD=admin
+    volumes:
+      - ./docker/marklogic/logs:/var/opt/MarkLogic/Logs
+    ports:
+      - 8000-8006:8000-8006
+
+  nifi:
+    image: apache/nifi
+    container_name: nifi
+    ports:
+      - "8443:8443/tcp"
+    volumes:
+      - "./nifi-marklogic-nar/target/nifi-marklogic-nar-${VERSION}.nar:/opt/nifi/nifi-current/lib/nifi-marklogic-nar-${VERSION}.nar"
+      - "./nifi-marklogic-services-api-nar/target/nifi-marklogic-services-api-nar-${VERSION}.nar:/opt/nifi/nifi-current/lib/nifi-marklogic-services-api-nar-${VERSION}.nar"
+      - ./docker/nifi/logs:/opt/nifi/nifi-current/logs
+      - ./docker/nifi/conf/login-identity-providers.xml:/opt/nifi/nifi-current/conf/login-identity-providers.xml
+    restart: unless-stopped

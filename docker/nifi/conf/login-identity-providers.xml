@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!--
+Defines an admin user for local testing. This file is mapped to the NiFi conf directory via docker-compose.yml.
+-->
+<loginIdentityProviders>
+  <provider>
+    <identifier>single-user-provider</identifier>
+    <class>org.apache.nifi.authentication.single.user.SingleUserLoginIdentityProvider</class>
+    <property name="Username">admin</property>
+    <!-- Password = password1234 -->
+    <property name="Password">$2b$12$.BrbiXLHMUEWcJYg0iSI7uMJDmchRsrOP0zGNRae9vIUONUXpPhNa</property>
+  </provider>
+</loginIdentityProviders>

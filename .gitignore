@@ -16,3 +16,6 @@ nb-configuration.xml
 
 bin/
 .vscode/
+
+docker/nifi/logs
+docker/marklogic/logs

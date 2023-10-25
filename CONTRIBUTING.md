@@ -3,17 +3,9 @@ develop and test the connector, and then addresses how to submit a pull request.
 
 # Developing and testing the connector
 
-## Installing NiFi
-
-See [the NiFi installation docs](https://nifi.apache.org/docs.html) for instructions on installing NiFi. For Mac users,
-the homebrew installation approach is recommended.
-
-After installing NiFi, set the `NIFI_HOME` environment variable to the directory where you've installed NiFi. This
-environment variable will be referred to frequently in this guide. 
-
 ## Building and installing the connector
 
-You'll first need to [download and install Apache Maven](https://maven.apache.org/) if you do not already have it 
+You'll first need to [download and install Apache Maven](https://maven.apache.org/) if you do not already have it
 installed.
 
 As of the 1.15.3.2 release, Java 11 should be used to run the Maven commands below. The Maven pom.xml file now ensures
@@ -26,18 +18,42 @@ Next, clone this repository (if you haven't already) and run the following comma
     mvn clean install -DskipTests
 
 It is recommended to use "-DskipTests" when building the NARs for the purpose of testing them in NiFi. The tests should
-certainly be run throughout the development process and before submitting a pull request. But for manually testing the 
-connector via NiFi, it's usually acceptable to skip running the tests to avoid the delay associated with running them. 
+certainly be run throughout the development process and before submitting a pull request. But for manually testing the
+connector via NiFi, it's usually acceptable to skip running the tests to avoid the delay associated with running them.
 
 After `install` completes, the below NARs will have been created:
 
 - ./nifi-marklogic-nar/target/nifi-marklogic-nar-(version).nar
 - ./nifi-marklogic-services-api-nar/target/nifi-marklogic-services-api-nar-(version).nar
 
+## Getting setup via Docker
+
+If you have Docker Desktop installed, just run the following (make sure you've already built the nar files though as 
+described above):
+
+    docker-compose up -d --build
+
+This will create a "marklogic_nifi" service with "marklogic" and "nifi" containers. You can then go to 
+https://localhost:8443/nifi and login as admin/password1234. The nar files that you built above will be mapped to NiFi's
+"lib" directory so you don't need to do anything further to start using the connector in NiFi.
+
+The NiFi log files are mapped to `./docker/nifi/logs`. You can run the following to tail the NiFi log files:
+
+    tail -f docker/nifi/logs/nifi-bootstrap.log docker/nifi/logs/nifi-app.log
+
+
+## Getting setup with a local NiFi
+
+If you don't want to use docker-compose, follow these instructions.
+
+See [the NiFi installation docs](https://nifi.apache.org/docs.html) for instructions on installing NiFi. For Mac users,
+the homebrew installation approach is recommended.
+
+After installing NiFi, set the `NIFI_HOME` environment variable to the directory where you've installed NiFi. This
+environment variable will be referred to frequently in this guide. 
+
 You can then copy these NAR files into your NiFi installation as described in the
 [Getting Started guide](https://marklogic.github.io/nifi/getting-started).
-
-## Starting NiFi and logging in
 
 Before starting NiFi for the first time, you should set an admin password that will be used when logging into the 
 NiFi web interface. See [these NiFi docs](https://nifi.apache.org/docs/nifi-docs/html/getting-started.html#i-started-nifi-now-what) 
@@ -55,18 +71,35 @@ processor to examine the contents of `FlowFiles`. You can do so via the followin
 After starting NiFi, you can access its web interface at https://localhost:8443/nifi . You can login with the username
 and password that you configured above.
 
+## Using NiFi
+
 If you have not used NiFi before or are fairly new to it, you may find it helpful to walk through
 [the NiFi Getting Started guide](https://nifi.apache.org/docs.html) and some of the 
 [connector's recipes](https://marklogic.github.io/nifi/cookbook-recipes) to learn the basics of NiFi and the
 connector. 
 
+## Test flows
+
+Our internal Wiki has a "Test flows for NiFi connector" page that has a NiFi template with several test flows. 
+Follow the instructions at that page to load the template so you can easily test several common use cases with the
+connector.
+
+As noted on that page, if you're using Docker, change the "Host" for the MarkLogic controller service to be 
+"marklogic" instead of "localhost".
+
 ## Updating the connector
 
 After any modification to the connector source code, the connector NAR files must be rebuilt, copied to the NiFi 
-installation directory, and then NiFi must be restarted. Because this process happens so often, it is recommended to 
-automate it via a shell function (or script) like the one below, which requires the connector version number as an 
-input (you can name this whatever you'd like, or implement it in a different fashion, it's simply excluded for sake of
-example):
+installation directory, and then NiFi must be restarted. 
+
+If you are using Docker, you can run the following to rebuild the connector and restart the NiFi container:
+
+    mvn clean install -DskipTests
+    docker container restart nifi
+
+For a local NiFi installation, it is recommended to automate the process via a shell function (or script) like the one 
+below, which requires the connector version number as an input (you can name this whatever you'd like, or implement it 
+in a different fashion, it's simply excluded for sake of example):
 
 ```
 function nifirebuild {
