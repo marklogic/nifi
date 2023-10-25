@@ -128,12 +128,13 @@ This project contains both unit and integration tests. The integration tests dep
 that must first be deployed to MarkLogic via [ml-gradle](https://github.com/marklogic-community/ml-gradle). The 
 application is deployed via the following steps:
 
-1. `cd nifi-marklogic-processors`
-2. Put your ML admin username/password in gradle-local.properties (a gitignored file, so you'll need to create it)
+1. `cd test-app`
+2. `echo "mlPassword=admin" > gradle-local.properties` (Change this as needed to have the correct admin password).
 3. Run `./gradlew -i mldeploy`
 
-You can then run all tests in the project via the following:
+You can then run all tests in the project by returning to the parent directory and running `verify`:
 
+    cd .. 
     mvn verify
 
 Or run `mvn clean verify` to first perform a clean build.

@@ -1,0 +1,10 @@
+{
+  "user-name": "nifi-test-runner",
+  "description": "Main user for running NiFi connector tests",
+  "role": [
+    "rest-writer",
+    "rest-admin",
+    "nifi-evaluator-role"
+  ],
+  "password": "x"
+}

@@ -17,16 +17,12 @@ pipeline{
       steps{
         copyRPM 'Release','10.0-9.4'
         setUpML '$WORKSPACE/xdmp/src/Mark*.rpm'
-        sh label:'setup', script: '''#!/bin/bash
-        cd nifi-connector/nifi-marklogic-processors
-        echo mlUsername=admin >> gradle-local.properties
-        echo mlPassword=admin >> gradle-local.properties
-        '''
         sh label:'deploy project', script: '''#!/bin/bash
           export JAVA_HOME=$JAVA_HOME_DIR
           export GRADLE_USER_HOME=$WORKSPACE/$GRADLE_DIR
           export PATH=$GRADLE_USER_HOME:$JAVA_HOME/bin:$PATH
-          cd nifi-connector/nifi-marklogic-processors
+          cd nifi-connector/test-app
+          echo mlPassword=admin >> gradle-local.properties
           ./gradlew mlDeploy
         '''
         sh label:'test', script: '''#!/bin/bash
