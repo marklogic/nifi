@@ -31,7 +31,10 @@
   <packaging>pom</packaging>
 
   <properties>
-    <!-- Ensure that the NARs will work on Java 8, as NiFi requires either Java 8 or 11 -->
+    <!--
+    Ensure that the NARs will work on Java 8, as NiFi requires either Java 8 or 11.
+    This flag requires building with Java 11 or higher.
+    -->
     <maven.compiler.release>8</maven.compiler.release>
     <nifi.version>1.16.3</nifi.version>
     <marklogicnar.version>1.16.3.3</marklogicnar.version>
