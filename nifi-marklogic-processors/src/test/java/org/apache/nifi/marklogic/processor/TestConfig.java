@@ -1,7 +1,6 @@
 package org.apache.nifi.marklogic.processor;
 
 import com.marklogic.junit5.spring.SimpleTestConfig;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
 
@@ -11,16 +10,13 @@ import org.springframework.context.annotation.PropertySource;
  */
 @Configuration
 @PropertySource(
-    value = {"file:gradle.properties", "file:gradle-local.properties"},
+    value = {"classpath:test.properties"},
     ignoreResourceNotFound = true
 )
 public class TestConfig extends SimpleTestConfig {
 
-    @Value("${mlRestPort:0}")
-    private Integer restPort;
-
     @Override
     public Integer getRestPort() {
-        return restPort;
+        return 8006;
     }
 }

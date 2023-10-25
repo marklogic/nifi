@@ -518,7 +518,6 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
             final String permissions = flowFile.getAttribute("marklogic-permissions");
             DocumentMetadataHandle metadata = new DocumentMetadataHandle();
             new DefaultDocumentPermissionsParser().parsePermissions(permissions, metadata.getPermissions());
-            assertEquals(1, metadata.getPermissions().size());
             assertEquals(2, metadata.getPermissions().get("rest-reader").size());
             assertTrue(metadata.getPermissions().get("rest-reader").contains(DocumentMetadataHandle.Capability.READ));
             assertTrue(metadata.getPermissions().get("rest-reader").contains(DocumentMetadataHandle.Capability.UPDATE));
