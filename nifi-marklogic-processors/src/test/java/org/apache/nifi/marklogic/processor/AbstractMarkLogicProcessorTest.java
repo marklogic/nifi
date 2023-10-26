@@ -23,7 +23,6 @@ import org.apache.nifi.processor.ProcessSessionFactory;
 import org.apache.nifi.processor.Processor;
 import org.apache.nifi.reporting.InitializationException;
 import org.apache.nifi.util.*;
-import org.junit.Assert;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
@@ -31,7 +30,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
-public abstract class AbstractMarkLogicProcessorTest extends Assert {
+public abstract class AbstractMarkLogicProcessorTest {
     Processor processor;
     protected MockProcessContext processContext;
     protected MockProcessorInitializationContext initializationContext;

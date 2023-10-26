@@ -80,12 +80,21 @@ connector.
 
 ## Test flows
 
-Our internal Wiki has a "Test flows for NiFi connector" page that has a NiFi template with several test flows. 
-Follow the instructions at that page to load the template so you can easily test several common use cases with the
-connector.
+The file `./nifi-marklogic-processors/flows-for-manual-testing.json` file contains several flows that can be used
+for manual testing. To try these flows out, perform the following steps:
 
-As noted on that page, if you're using Docker, change the "Host" for the MarkLogic controller service to be 
-"marklogic" instead of "localhost".
+1. In NiFi, click on the "Process Group" icon in the header (it has a box with two smaller boxes in it) and drag it
+onto the canvas.
+2. Click on the "Browse" icon in the "Process Group Name" selector.
+3. Select the `flows-for-manual-testing.json` file.
+4. Open the "flows-for-manual-testing" process group that is now on the NiFi canvas.
+5. Click on the "Configuration" cog icon in the "Operate" panel on the left.
+6. Click on the "Controller Services" tab.
+7. Click on the "Configure" cog icon for the "test-marklogic-nifi-8006" controller service.
+8. Enter "admin" for the "Password" field.
+9. Click on the "Enable" icon for the controller service.
+
+You can now try each of the flows in the process group. Each flow has a note in it to help with testing.
 
 ## Updating the connector
 
@@ -129,7 +138,8 @@ that must first be deployed to MarkLogic via [ml-gradle](https://github.com/mark
 application is deployed via the following steps:
 
 1. `cd test-app`
-2. `echo "mlPassword=admin" > gradle-local.properties` (Change this as needed to have the correct admin password).
+2. If running a native MarkLogic install, verify that the admin password in the `gradle.properties` file is correct,
+overriding it in `gradle-local.properties` as needed.
 3. Run `./gradlew -i mldeploy`
 
 You can then run all tests in the project by returning to the parent directory and running `verify`:

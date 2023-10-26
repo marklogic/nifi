@@ -19,14 +19,16 @@ package org.apache.nifi.marklogic.processor;
 import com.marklogic.client.DatabaseClient;
 import org.apache.nifi.processor.ProcessContext;
 import org.apache.nifi.reporting.InitializationException;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class ExecuteScriptMarkLogicTest extends AbstractMarkLogicProcessorTest {
 
     private TestExecuteScriptMarkLogic processor;
 
-    @Before
+    @BeforeEach
     public void setup() throws InitializationException {
         processor = new TestExecuteScriptMarkLogic();
         initialize(processor);

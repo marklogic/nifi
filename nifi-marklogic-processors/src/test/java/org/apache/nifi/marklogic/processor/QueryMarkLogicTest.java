@@ -25,14 +25,17 @@ import com.marklogic.client.query.StructuredQueryDefinition;
 import org.apache.nifi.marklogic.processor.util.QueryTypes;
 import org.apache.nifi.processor.ProcessContext;
 import org.apache.nifi.reporting.InitializationException;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class QueryMarkLogicTest extends AbstractMarkLogicProcessorTest {
 
     private TestQueryMarkLogic processor;
 
-    @Before
+    @BeforeEach
     public void setup() throws InitializationException {
         processor = new TestQueryMarkLogic();
         initialize(processor);
