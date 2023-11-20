@@ -7,7 +7,6 @@ services:
     image: "marklogicdb/marklogic-db:11.1.0-centos-1.1.0"
     container_name: "marklogic"
     platform: linux/amd64
-    restart: always
     environment:
       - MARKLOGIC_INIT=true
       - MARKLOGIC_ADMIN_USERNAME=admin
@@ -27,4 +26,3 @@ services:
       - "./nifi-marklogic-services-api-nar/target/nifi-marklogic-services-api-nar-${VERSION}.nar:/opt/nifi/nifi-current/lib/nifi-marklogic-services-api-nar-${VERSION}.nar"
       - ./docker/nifi/logs:/opt/nifi/nifi-current/logs
       - ./docker/nifi/conf/login-identity-providers.xml:/opt/nifi/nifi-current/conf/login-identity-providers.xml
-    restart: unless-stopped
