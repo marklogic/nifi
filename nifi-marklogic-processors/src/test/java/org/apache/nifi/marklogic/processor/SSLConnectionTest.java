@@ -21,15 +21,15 @@ import org.apache.nifi.processor.ProcessContext;
 import org.apache.nifi.processor.ProcessSessionFactory;
 import org.apache.nifi.processor.exception.ProcessException;
 import org.apache.nifi.ssl.StandardSSLContextService;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
 import java.util.Map;
 
 public class SSLConnectionTest extends AbstractMarkLogicProcessorTest {
 
-    @Before
+    @BeforeEach
     public void setUp() {
         initialize(new MockAbstractMarkLogicProcessor());
     }

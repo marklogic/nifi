@@ -9,18 +9,20 @@ import com.marklogic.client.ext.modulesloader.ssl.SimpleX509TrustManager;
 import com.marklogic.hub.DatabaseKind;
 import com.marklogic.hub.flow.FlowInputs;
 import com.marklogic.hub.impl.HubConfigImpl;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.X509TrustManager;
 import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 public class RunFlowMarkLogicTest extends AbstractMarkLogicProcessorTest {
 
     private RunFlowMarkLogic processor;
 
-    @Before
+    @BeforeEach
     public void setup() {
         processor = new RunFlowMarkLogic();
         initialize(processor);
@@ -115,9 +117,9 @@ public class RunFlowMarkLogicTest extends AbstractMarkLogicProcessorTest {
         assertEquals(DatabaseClientFactory.SSLHostnameVerifier.STRICT, hubConfig.getSslHostnameVerifier(DatabaseKind.JOB));
 
         String message = "Since no trust manager was provided, a simple trust-everything one should be used";
-        assertTrue(message, hubConfig.getTrustManager(DatabaseKind.STAGING) instanceof SimpleX509TrustManager);
-        assertTrue(message, hubConfig.getTrustManager(DatabaseKind.FINAL) instanceof SimpleX509TrustManager);
-        assertTrue(message, hubConfig.getTrustManager(DatabaseKind.JOB) instanceof SimpleX509TrustManager);
+        assertTrue(hubConfig.getTrustManager(DatabaseKind.STAGING) instanceof SimpleX509TrustManager, message);
+        assertTrue(hubConfig.getTrustManager(DatabaseKind.FINAL) instanceof SimpleX509TrustManager, message);
+        assertTrue(hubConfig.getTrustManager(DatabaseKind.JOB) instanceof SimpleX509TrustManager, message);
     }
 
     @Test
@@ -140,8 +142,8 @@ public class RunFlowMarkLogicTest extends AbstractMarkLogicProcessorTest {
 
         String message = "Should use the trust manager in the DatabaseClientConfig, which will have been configured " +
             "by the user in the NiFi SSL service";
-        assertSame(message, trustManager, hubConfig.getTrustManager(DatabaseKind.STAGING));
-        assertSame(message, trustManager, hubConfig.getTrustManager(DatabaseKind.FINAL));
-        assertSame(message, trustManager, hubConfig.getTrustManager(DatabaseKind.JOB));
+        assertSame(trustManager, hubConfig.getTrustManager(DatabaseKind.STAGING), message);
+        assertSame(trustManager, hubConfig.getTrustManager(DatabaseKind.FINAL), message);
+        assertSame(trustManager, hubConfig.getTrustManager(DatabaseKind.JOB), message);
     }
 }
