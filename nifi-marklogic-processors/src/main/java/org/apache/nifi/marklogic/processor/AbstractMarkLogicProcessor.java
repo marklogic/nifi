@@ -82,7 +82,8 @@ public abstract class AbstractMarkLogicProcessor extends AbstractSessionFactoryP
     public static final PropertyDescriptor TRANSFORM = new PropertyDescriptor.Builder()
         .name("Server Transform")
         .displayName("Server Transform")
-        .description("The name of a REST server transform to apply to each document")
+        .description("The name of a REST server transform to apply to each document; " +
+            "see https://docs.marklogic.com/guide/rest-dev/transforms for more information on REST transforms.")
         .addValidator(Validator.VALID)
         .required(false)
         .build();

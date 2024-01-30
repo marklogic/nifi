@@ -42,7 +42,7 @@ import java.util.*;
 @Tags({"MarkLogic", "Transform", "ApplyTransform", "Update"})
 @InputRequirement(Requirement.INPUT_ALLOWED)
 @CapabilityDescription("Creates FlowFiles from batches of documents, matching the given criteria,"
-    + " transformed from a MarkLogic server using the MarkLogic Data Movement SDK (DMSDK). Requires a MarkLogic user " +
+    + " with each document transformed via a MarkLogic REST server transform. Requires a MarkLogic user " +
     "with the 'rest-reader' privilege to read documents and the 'rest-writer' privilege to update transformed documents.")
 @DynamicProperties({
     @DynamicProperty(
@@ -72,7 +72,8 @@ public class ApplyTransformMarkLogic extends QueryMarkLogic {
     public static final PropertyDescriptor TRANSFORM = new PropertyDescriptor.Builder()
         .name("Server Transform")
         .displayName("Server Transform")
-        .description("The name of a REST server transform to apply to each document")
+        .description("The name of a REST server transform to apply to each document; " +
+            "see https://docs.marklogic.com/guide/rest-dev/transforms for more information on REST transforms.")
         .addValidator(Validator.VALID)
         .required(true)
         .build();
