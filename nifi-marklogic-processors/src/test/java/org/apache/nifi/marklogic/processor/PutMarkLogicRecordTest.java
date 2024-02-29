@@ -31,9 +31,9 @@ import org.apache.nifi.serialization.SimpleRecordSchema;
 import org.apache.nifi.serialization.record.Record;
 import org.apache.nifi.serialization.record.*;
 import org.apache.nifi.util.MockFlowFile;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -41,13 +41,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 public class PutMarkLogicRecordTest extends AbstractMarkLogicProcessorTest {
 
     private TestPutMarkLogicRecord processor;
     private MockRecordParser recordReader;
     private MockRecordWriter recordWriter;
 
-    @Before
+    @BeforeEach
     public void setup() throws InitializationException {
         processor = new TestPutMarkLogicRecord();
         initialize(processor);
@@ -57,7 +59,7 @@ public class PutMarkLogicRecordTest extends AbstractMarkLogicProcessorTest {
         recordWriter = new MockRecordWriter("\"docID\"");
     }
 
-    @After
+    @AfterEach
     public void reset() {
         processor.writeEvents.clear();
     }
@@ -77,8 +79,10 @@ public class PutMarkLogicRecordTest extends AbstractMarkLogicProcessorTest {
         runner.enqueue(new byte[0]);
         runner.run();
 
-        assertTrue("Defaults to true to match what RecordReader does by default", testRecordReaderFactory.testRecordReader.coerceRecordTypes);
-        assertTrue("Defaults to true to match what RecordReader does by default", testRecordReaderFactory.testRecordReader.dropUnknownFields);
+        assertTrue(testRecordReaderFactory.testRecordReader.coerceRecordTypes,
+            "Defaults to true to match what RecordReader does by default");
+        assertTrue(testRecordReaderFactory.testRecordReader.dropUnknownFields,
+            "Defaults to true to match what RecordReader does by default");
     }
 
     @Test
@@ -135,8 +139,9 @@ public class PutMarkLogicRecordTest extends AbstractMarkLogicProcessorTest {
         runner.assertTransferCount("success", 2);
 
         MockFlowFile mockFile = runner.getFlowFilesForRelationship("batch_success").get(0);
-        assertEquals("The FF sent to batch_success is expected to contain each of the URIs in that batch",
-            "/prefix/123/suffix.txt,/prefix/456/suffix.txt", mockFile.getAttribute("URIs"));
+        assertEquals(
+            "/prefix/123/suffix.txt,/prefix/456/suffix.txt", mockFile.getAttribute("URIs"),
+            "The FF sent to batch_success is expected to contain each of the URIs in that batch");
     }
 
     private void configureRecordReaderFactory(ControllerService recordReaderFactory) {

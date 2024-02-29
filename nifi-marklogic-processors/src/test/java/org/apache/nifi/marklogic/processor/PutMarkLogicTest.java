@@ -28,19 +28,21 @@ import org.apache.nifi.processor.ProcessContext;
 import org.apache.nifi.processor.ProcessSession;
 import org.apache.nifi.reporting.InitializationException;
 import org.apache.nifi.util.MockFlowFile;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 public class PutMarkLogicTest extends AbstractMarkLogicProcessorTest {
 
     private TestPutMarkLogic processor;
 
-    @Before
+    @BeforeEach
     public void setup() throws InitializationException {
         processor = new TestPutMarkLogic();
         initialize(processor);
@@ -57,7 +59,8 @@ public class PutMarkLogicTest extends AbstractMarkLogicProcessorTest {
         processor.onTrigger(processContext, mockProcessSessionFactory);
 
         assertEquals(4, processor.relationships.size());
-        assertFalse("flushAsync should not have been called yet since a FlowFile existed in the session", processor.flushAsyncCalled);
+        assertFalse(processor.flushAsyncCalled,
+            "flushAsync should not have been called yet since a FlowFile existed in the session");
 
         BytesHandle content = (BytesHandle) processor.writeEvent.getContent();
         assertEquals(Format.JSON, content.getFormat());
@@ -82,7 +85,8 @@ public class PutMarkLogicTest extends AbstractMarkLogicProcessorTest {
         processor.onTrigger(processContext, mockProcessSessionFactory);
 
         assertEquals(4, processor.relationships.size());
-        assertFalse("flushAsync should not have been called yet since a FlowFile existed in the session", processor.flushAsyncCalled);
+        assertFalse(processor.flushAsyncCalled,
+            "flushAsync should not have been called yet since a FlowFile existed in the session");
 
         BytesHandle content = (BytesHandle) processor.writeEvent.getContent();
         assertEquals(Format.JSON, content.getFormat());
@@ -103,7 +107,8 @@ public class PutMarkLogicTest extends AbstractMarkLogicProcessorTest {
         processor.onTrigger(processContext, mockProcessSessionFactory);
 
         assertEquals(4, processor.relationships.size());
-        assertFalse("flushAsync should not have been called yet since a FlowFile existed in the session", processor.flushAsyncCalled);
+        assertFalse(processor.flushAsyncCalled,
+            "flushAsync should not have been called yet since a FlowFile existed in the session");
 
         BytesHandle content = (BytesHandle) processor.writeEvent.getContent();
         assertEquals(Format.JSON, content.getFormat());
@@ -124,7 +129,8 @@ public class PutMarkLogicTest extends AbstractMarkLogicProcessorTest {
         processor.onTrigger(processContext, mockProcessSessionFactory);
 
         assertEquals(4, processor.relationships.size());
-        assertFalse("flushAsync should not have been called yet since a FlowFile existed in the session", processor.flushAsyncCalled);
+        assertFalse(processor.flushAsyncCalled,
+            "flushAsync should not have been called yet since a FlowFile existed in the session");
 
         BytesHandle content = (BytesHandle) processor.writeEvent.getContent();
         assertEquals(Format.JSON, content.getFormat());
@@ -151,7 +157,8 @@ public class PutMarkLogicTest extends AbstractMarkLogicProcessorTest {
         processor.onTrigger(processContext, mockProcessSessionFactory);
 
         assertEquals(4, processor.relationships.size());
-        assertFalse("flushAsync should not have been called yet since a FlowFile existed in the session", processor.flushAsyncCalled);
+        assertFalse(processor.flushAsyncCalled,
+            "flushAsync should not have been called yet since a FlowFile existed in the session");
 
         BytesHandle content = (BytesHandle) processor.writeEvent.getContent();
         assertEquals(Format.JSON, content.getFormat());
@@ -172,7 +179,8 @@ public class PutMarkLogicTest extends AbstractMarkLogicProcessorTest {
         processor.onTrigger(processContext, mockProcessSessionFactory);
 
         assertEquals(4, processor.relationships.size());
-        assertFalse("flushAsync should not have been called yet since a FlowFile existed in the session", processor.flushAsyncCalled);
+        assertFalse(processor.flushAsyncCalled,
+            "flushAsync should not have been called yet since a FlowFile existed in the session");
 
         BytesHandle content = (BytesHandle) processor.writeEvent.getContent();
         assertEquals(Format.JSON, content.getFormat());
@@ -264,7 +272,8 @@ public class PutMarkLogicTest extends AbstractMarkLogicProcessorTest {
 
         BytesHandle content = (BytesHandle) processor.writeEvent.getContent();
         assertEquals("text/xml", content.getMimetype());
-        assertEquals("The format defaults to UNKNOWN when it's not set", Format.UNKNOWN, content.getFormat());
+        assertEquals(Format.UNKNOWN, content.getFormat(),
+            "The format defaults to UNKNOWN when it's not set");
     }
 
     @Test
@@ -293,10 +302,10 @@ public class PutMarkLogicTest extends AbstractMarkLogicProcessorTest {
     public void noFlowFileExists() {
         processor.onTrigger(processContext, mockProcessSessionFactory);
         assertTrue(
+            processor.flushAsyncCalled,
             "When no FlowFile exists in the session, flushAsync should be called on the WriteBatcher so that any documents that " +
-                "haven't been written to ML yet can be flushed",
-            processor.flushAsyncCalled
-        );
+                "haven't been written to ML yet can be flushed"
+            );
     }
 
     private void addFlowFileWithName(String content, String fileName) {
@@ -365,20 +374,24 @@ public class PutMarkLogicTest extends AbstractMarkLogicProcessorTest {
     @Test
     public void getSupportedDynamicPropertyDescriptor() {
         PropertyDescriptor descriptor = processor.getSupportedDynamicPropertyDescriptor("trans:test");
-        assertEquals("Transform params are not specific to a document/FlowFile",
-            ExpressionLanguageScope.VARIABLE_REGISTRY, descriptor.getExpressionLanguageScope());
+        assertEquals(
+            ExpressionLanguageScope.VARIABLE_REGISTRY, descriptor.getExpressionLanguageScope(),
+            "Transform params are not specific to a document/FlowFile");
 
         descriptor = processor.getSupportedDynamicPropertyDescriptor("ns:test");
-        assertEquals("Namespace prefixes are not specific to a document/FlowFile",
-            ExpressionLanguageScope.VARIABLE_REGISTRY, descriptor.getExpressionLanguageScope());
+        assertEquals(
+            ExpressionLanguageScope.VARIABLE_REGISTRY, descriptor.getExpressionLanguageScope(),
+            "Namespace prefixes are not specific to a document/FlowFile");
 
         descriptor = processor.getSupportedDynamicPropertyDescriptor("meta:test");
-        assertEquals("Document metadata keys are specific to a document/FlowFile",
-            ExpressionLanguageScope.FLOWFILE_ATTRIBUTES, descriptor.getExpressionLanguageScope());
+        assertEquals(
+            ExpressionLanguageScope.FLOWFILE_ATTRIBUTES, descriptor.getExpressionLanguageScope(),
+            "Document metadata keys are specific to a document/FlowFile");
 
         descriptor = processor.getSupportedDynamicPropertyDescriptor("property:test");
-        assertEquals("FlowFile metadata keys are specific to a document/FlowFile",
-            ExpressionLanguageScope.FLOWFILE_ATTRIBUTES, descriptor.getExpressionLanguageScope());
+        assertEquals(
+            ExpressionLanguageScope.FLOWFILE_ATTRIBUTES, descriptor.getExpressionLanguageScope(),
+            "FlowFile metadata keys are specific to a document/FlowFile");
     }
 
     @Test
@@ -434,11 +447,12 @@ public class PutMarkLogicTest extends AbstractMarkLogicProcessorTest {
         processSession.assertAllFlowFilesTransferred(PutMarkLogic.FAILURE);
         processSession.assertAllFlowFiles(flowFile -> {
             String message = flowFile.getAttribute("markLogicErrorMessage");
-            assertTrue("When an error occurs anywhere in PutMarkLogic that's outside the context of writing a batch to " +
+            assertTrue(
+                message.contains("Intentional error from buildWriteEvent"),
+                "When an error occurs anywhere in PutMarkLogic that's outside the context of writing a batch to " +
                     "MarkLogic, the error should be caught and the incoming FlowFile should be sent to the " +
                     "FAILURE relationship. And the error message should be stored on the FlowFile. " +
-                    "Unexpected error: " + message,
-                message.contains("Intentional error from buildWriteEvent")
+                    "Unexpected error: " + message
             );
         });
     }

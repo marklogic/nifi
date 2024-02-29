@@ -22,20 +22,23 @@
   <parent>
     <groupId>org.apache.nifi</groupId>
     <artifactId>nifi-nar-bundles</artifactId>
-    <version>1.16.3</version>
+    <version>1.24.0</version>
   </parent>
 
-  <version>1.16.3.3</version>
+  <version>1.24.0</version>
 
   <artifactId>nifi-marklogic-bundle</artifactId>
   <packaging>pom</packaging>
 
   <properties>
-    <!-- Ensure that the NARs will work on Java 8, as NiFi requires either Java 8 or 11 -->
+    <!--
+    Ensure that the NARs will work on Java 8, as NiFi requires either Java 8 or 11.
+    This flag requires building with Java 11 or higher.
+    -->
     <maven.compiler.release>8</maven.compiler.release>
-    <nifi.version>1.16.3</nifi.version>
-    <marklogicnar.version>1.16.3.3</marklogicnar.version>
-    <marklogicclientapi.version>6.2.1</marklogicclientapi.version>
+    <nifi.version>1.24.0</nifi.version>
+    <marklogicnar.version>1.24.0</marklogicnar.version>
+    <marklogicclientapi.version>6.4.1</marklogicclientapi.version>
   </properties>
 
   <modules>

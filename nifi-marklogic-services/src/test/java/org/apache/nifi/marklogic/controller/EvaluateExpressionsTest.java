@@ -8,21 +8,22 @@ import org.apache.nifi.registry.VariableDescriptor;
 import org.apache.nifi.security.util.ClientAuth;
 import org.apache.nifi.util.MockConfigurationContext;
 import org.apache.nifi.util.MockVariableRegistry;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
 import java.util.Map;
 
-public class EvaluateExpressionsTest extends Assert {
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+public class EvaluateExpressionsTest {
 
     private DefaultMarkLogicDatabaseClientService service;
     private Map<PropertyDescriptor, String> properties;
     private MockVariableRegistry variableRegistry;
     private MockConfigurationContext context;
 
-    @Before
+    @BeforeEach
     public void setup() {
         service = new DefaultMarkLogicDatabaseClientService();
         properties = new HashMap<>();
@@ -68,8 +69,9 @@ public class EvaluateExpressionsTest extends Assert {
         assertEquals(ExpressionLanguageScope.NONE, DefaultMarkLogicDatabaseClientService.PASSWORD.getExpressionLanguageScope());
         variableRegistry.setVariable(new VariableDescriptor("myPassword"), "something");
         properties.put(DefaultMarkLogicDatabaseClientService.PASSWORD, "${myPassword}");
-        assertEquals("Passwords should not be evaluated against the variable registry since variables only support plain texft",
-            "${myPassword}", service.buildDatabaseClientConfig(context).getPassword());
+        assertEquals(
+            "${myPassword}", service.buildDatabaseClientConfig(context).getPassword(),
+            "Passwords should not be evaluated against the variable registry since variables only support plain text");
     }
 
     @Test
