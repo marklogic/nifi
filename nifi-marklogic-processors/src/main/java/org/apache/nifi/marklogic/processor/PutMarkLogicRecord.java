@@ -203,7 +203,7 @@ public class PutMarkLogicRecord extends PutMarkLogic {
                 String url = client != null
                     ? client.getHost() + ":" + client.getPort()
                     : "MarkLogic cluster";
-                writeBatcher.flushAndWait();
+                flushAndWaitWithoutFailing(writeBatcher);
                 session.getProvenanceReporter().send(flowFile, url, String.format("Added %d documents to MarkLogic.", added));
                 session.transfer(flowFile, ORIGINAL);
                 uriFlowFileMap.remove(flowFile.getAttribute(CoreAttributes.UUID.key()));

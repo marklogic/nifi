@@ -457,7 +457,7 @@ public class PutMarkLogic extends AbstractMarkLogicProcessor {
      * Protected so that it can be overridden for unit testing purposes.
      */
     protected void flushWriteBatcherAsync(WriteBatcher writeBatcher) {
-        writeBatcher.flushAsync();
+        flushAsyncWithoutFailing(writeBatcher);
     }
 
     /*
@@ -587,9 +587,7 @@ public class PutMarkLogic extends AbstractMarkLogicProcessor {
 
     // Protected instead of private so that it can be overridden for testing purposes
     protected void flushAndWait() {
-        if (writeBatcher != null) {
-            writeBatcher.flushAndWait();
-        }
+        flushAndWaitWithoutFailing(writeBatcher);
     }
 
     @OnShutdown
@@ -610,10 +608,16 @@ public class PutMarkLogic extends AbstractMarkLogicProcessor {
         completeWriteBatcherJob();
     }
 
-    private void completeWriteBatcherJob() {
+    /**
+     * Synchronizing this as of 1.24.1. Testing shows that even with more than 1 task assigned to an instance of this
+     * processor, this method should only be invoked once by NiFi. So synchronizing should not have an impact - but
+     * if it is in fact possible for two or more threads to invoke this by NiFi, this will ensure we do not have race
+     * conditions between those two threads.
+     */
+    private synchronized void completeWriteBatcherJob() {
         if (writeBatcher != null) {
             getLogger().info("Calling flushAndWait on WriteBatcher");
-            writeBatcher.flushAndWait();
+            flushAndWaitWithoutFailing(writeBatcher);
             getLogger().info("Awaiting completion");
             writeBatcher.awaitCompletion();
             getLogger().info("Stopping WriteBatcher job");
@@ -622,5 +626,41 @@ public class PutMarkLogic extends AbstractMarkLogicProcessor {
         }
         writeBatcher = null;
         dataMovementManager = null;
+    }
+
+    /**
+     * Added in 1.24.1 in response to https://github.com/marklogic/nifi/issues/217 , where a call is made to flush
+     * the batcher when it has been stopped for unknown reasons.
+     */
+    protected final void flushAndWaitWithoutFailing(WriteBatcher batcher) {
+        if (batcher != null) {
+            if (batcher.isStopped()) {
+                getLogger().warn("Not calling flushAndWait as batcher has already been stopped.");
+                return;
+            }
+            try {
+                batcher.flushAndWait();
+            } catch (IllegalStateException e) {
+                getLogger().error("Received error while flushing batch: " + e.getMessage(), e);
+            }
+        }
+    }
+
+    /**
+     * Added in 1.24.1 in response to https://github.com/marklogic/nifi/issues/217 , where a call is made to flush
+     * the batcher when it has been stopped for unknown reasons.
+     */
+    protected final void flushAsyncWithoutFailing(WriteBatcher batcher) {
+        if (batcher != null) {
+            if (batcher.isStopped()) {
+                getLogger().warn("Not calling flushAsync as batcher has already been stopped.");
+                return;
+            }
+            try {
+                batcher.flushAsync();
+            } catch (IllegalStateException e) {
+                getLogger().error("Received error while flushing batch: " + e.getMessage(), e);
+            }
+        }
     }
 }
