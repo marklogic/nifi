@@ -18,6 +18,7 @@ package org.apache.nifi.marklogic.processor;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import com.marklogic.client.DatabaseClient;
 import com.marklogic.client.datamovement.DataMovementManager;
 import com.marklogic.client.datamovement.WriteBatcher;
 import com.marklogic.client.datamovement.WriteEvent;
@@ -226,6 +227,17 @@ public class PutMarkLogic extends AbstractMarkLogicProcessor {
         .defaultValue(DUPLICATE_IGNORE.getValue())
         .build();
 
+    public static final PropertyDescriptor RESTART_FAILED_BATCHER = new PropertyDescriptor.Builder()
+        .name("Restart Failed Batcher")
+        .displayName("Restart Failed Batcher")
+        .description("Set to 'true' if the processor should try to restart when the underlying batcher fails. Can " +
+            "assist in a scenario where MarkLogic is temporarily unavailable, as the batcher will stop but then start " +
+            "back up once it can successfully connect to MarkLogic.")
+        .allowableValues("true", "false")
+        .defaultValue("false")
+        .required(false)
+        .build();
+
     protected static final Relationship BATCH_SUCCESS = new Relationship.Builder()
         .name("batch_success")
         .description("A FlowFile is created and written to this relationship for each batch. " +
@@ -271,6 +283,7 @@ public class PutMarkLogic extends AbstractMarkLogicProcessor {
         list.add(URI_PREFIX);
         list.add(URI_SUFFIX);
         list.add(DUPLICATE_URI_HANDLING);
+        list.add(RESTART_FAILED_BATCHER);
         properties = Collections.unmodifiableList(list);
 
         Set<Relationship> set = new HashSet<>();
@@ -285,49 +298,60 @@ public class PutMarkLogic extends AbstractMarkLogicProcessor {
     public void onScheduled(ProcessContext context) {
         getLogger().info("OnScheduled");
         super.populatePropertiesByPrefix(context);
+        dataMovementManager = getDatabaseClient(context).newDataMovementManager();
+        createAndStartWriteBatcher(context);
+    }
+
+    private void createAndStartWriteBatcher(ProcessContext context) {
+        DatabaseClient client = getDatabaseClient(context);
+        DatabaseClient.ConnectionResult result = client.checkConnection();
+        if (!result.isConnected()) {
+            throw new ProcessException("Unable to connect to MarkLogic; cause: " + result.getErrorMessage());
+        }
+
         try {
-            dataMovementManager = getDatabaseClient(context).newDataMovementManager();
             writeBatcher = dataMovementManager.newWriteBatcher()
                 .withJobId(context.getProperty(JOB_ID).getValue())
                 .withJobName(context.getProperty(JOB_NAME).getValue())
                 .withBatchSize(context.getProperty(BATCH_SIZE).asInteger())
                 .withTemporalCollection(context.getProperty(TEMPORAL_COLLECTION).getValue());
+
+            ServerTransform serverTransform = buildServerTransform(context);
+            if (serverTransform != null) {
+                writeBatcher.withTransform(serverTransform);
+            }
+            Integer threadCount = context.getProperty(THREAD_COUNT).asInteger();
+            if (threadCount != null) {
+                writeBatcher.withThreadCount(threadCount);
+            }
+            this.writeBatcher.onBatchSuccess(writeBatch -> {
+                if (writeBatch.getItems().length > 0) {
+                    FlowFileInfo flowFileInfo = getFlowFileInfoForWriteEvent(writeBatch.getItems()[0]);
+                    if (flowFileInfo != null) {
+                        ProcessSession session = flowFileInfo.session;
+                        String uriList = Stream.of(writeBatch.getItems()).map(WriteEvent::getTargetUri).collect(Collectors.joining(","));
+                        FlowFile batchFlowFile = session.create();
+                        session.putAttribute(batchFlowFile, "URIs", uriList);
+                        addDeprecatedOptionsJsonAttribute(session, batchFlowFile, uriList);
+                        synchronized (session) {
+                            session.transfer(batchFlowFile, BATCH_SUCCESS);
+                        }
+                    }
+                    for (WriteEvent writeEvent : writeBatch.getItems()) {
+                        transferFlowFile(writeEvent, SUCCESS);
+                        duplicateFlowFileMap.remove(writeEvent.getTargetUri());
+                    }
+                }
+            }).onBatchFailure((writeBatch, throwable) -> {
+                for (WriteEvent writeEvent : writeBatch.getItems()) {
+                    transferFlowFile(writeEvent, FAILURE);
+                    duplicateFlowFileMap.remove(writeEvent.getTargetUri());
+                }
+            });
         } catch (Exception ex) {
             throw new RuntimeException("Unable to create WriteBatcher, cause: " + ex.getMessage(), ex);
         }
 
-        ServerTransform serverTransform = buildServerTransform(context);
-        if (serverTransform != null) {
-            writeBatcher.withTransform(serverTransform);
-        }
-        Integer threadCount = context.getProperty(THREAD_COUNT).asInteger();
-        if (threadCount != null) {
-            writeBatcher.withThreadCount(threadCount);
-        }
-        this.writeBatcher.onBatchSuccess(writeBatch -> {
-            if (writeBatch.getItems().length > 0) {
-                FlowFileInfo flowFileInfo = getFlowFileInfoForWriteEvent(writeBatch.getItems()[0]);
-                if (flowFileInfo != null) {
-                    ProcessSession session = flowFileInfo.session;
-                    String uriList = Stream.of(writeBatch.getItems()).map(WriteEvent::getTargetUri).collect(Collectors.joining(","));
-                    FlowFile batchFlowFile = session.create();
-                    session.putAttribute(batchFlowFile, "URIs", uriList);
-                    addDeprecatedOptionsJsonAttribute(session, batchFlowFile, uriList);
-                    synchronized (session) {
-                        session.transfer(batchFlowFile, BATCH_SUCCESS);
-                    }
-                }
-                for (WriteEvent writeEvent : writeBatch.getItems()) {
-                    transferFlowFile(writeEvent, SUCCESS);
-                    duplicateFlowFileMap.remove(writeEvent.getTargetUri());
-                }
-            }
-        }).onBatchFailure((writeBatch, throwable) -> {
-            for (WriteEvent writeEvent : writeBatch.getItems()) {
-                transferFlowFile(writeEvent, FAILURE);
-                duplicateFlowFileMap.remove(writeEvent.getTargetUri());
-            }
-        });
         dataMovementManager.startJob(writeBatcher);
     }
 
@@ -397,23 +421,48 @@ public class PutMarkLogic extends AbstractMarkLogicProcessor {
      * batch size will be flushed immediately and not have to wait for more FlowFiles to arrive to fill out the batch.
      */
     public void onTrigger(ProcessContext context, ProcessSession session) throws ProcessException {
-        FlowFile flowFile = session.get();
+        final FlowFile flowFile = session.get();
         if (flowFile == null) {
             getLogger().debug("Flushing the WriteBatcher asynchronously in case a number of documents less than batchSize are waiting to be written");
             flushWriteBatcherAsync(this.writeBatcher);
             getLogger().debug("Calling yield() on the ProcessContext");
             context.yield();
-        } else {
-            try {
-                String duplicateHandler = context.getProperty(DUPLICATE_URI_HANDLING).getValue();
-                WriteEvent writeEvent = buildWriteEvent(context, session, flowFile);
+            return;
+        }
 
-                String currentUrl = writeEvent.getTargetUri();
-                String currentUUID = flowFile.getAttribute(CoreAttributes.UUID.key());
-                String previousUUID = duplicateFlowFileMap.get(currentUrl);
+        if (this.writeBatcher != null && this.writeBatcher.isStopped()) {
+            if ("true".equals(context.getProperty(RESTART_FAILED_BATCHER).getValue())) {
+                // Ensure that if the process has multiple tasks assigned to it, only one triggers this block.
+                synchronized (this.dataMovementManager) {
+                    if (this.writeBatcher.isStopped()) {
+                        getLogger().info("Batcher is stopped; attempting to create and start a new batcher.");
+                        if (!createAndStartNewBatcher(flowFile, context, session)) {
+                            // Delay scheduling the processor to give MarkLogic time to become available again before we
+                            // try to start a new batcher again.
+                            getLogger().info("Couldn't start new batcher, so going to yield.");
+                            context.yield();
+                            return;
+                        }
+                    }
+                }
+            } else {
+                addErrorMessageToFlowFile("The batcher is stopped.", flowFile, session);
+                transferAndCommit(session, flowFile, FAILURE);
+                context.yield();
+                return;
+            }
+        }
 
-                //Looks like the best place to detect duplicates and handle action because we have access to computed url by this point,
-                switch (duplicateHandler) {
+        try {
+            String duplicateHandler = context.getProperty(DUPLICATE_URI_HANDLING).getValue();
+            WriteEvent writeEvent = buildWriteEvent(context, session, flowFile);
+
+            String currentUrl = writeEvent.getTargetUri();
+            String currentUUID = flowFile.getAttribute(CoreAttributes.UUID.key());
+            String previousUUID = duplicateFlowFileMap.get(currentUrl);
+
+            //Looks like the best place to detect duplicates and handle action because we have access to computed url by this point,
+            switch (duplicateHandler) {
                 case IGNORE:
                     //Just write the event knowing it will fail during batch write process
                     uriFlowFileMap.put(currentUUID, new FlowFileInfo(flowFile, session, writeEvent));
@@ -424,37 +473,36 @@ public class PutMarkLogic extends AbstractMarkLogicProcessor {
                         uriFlowFileMap.put(currentUUID, new FlowFileInfo(flowFile, session, writeEvent));
                         transferFlowFile(writeEvent, DUPLICATE_URI);
 
-                        } else {
-                            uriFlowFileMap.put(currentUUID, new FlowFileInfo(flowFile, session, writeEvent));
-                            duplicateFlowFileMap.put(currentUrl, currentUUID);
-                            addWriteEvent(this.writeBatcher, writeEvent);
-                        }
-                        break;
+                    } else {
+                        uriFlowFileMap.put(currentUUID, new FlowFileInfo(flowFile, session, writeEvent));
+                        duplicateFlowFileMap.put(currentUrl, currentUUID);
+                        addWriteEvent(this.writeBatcher, writeEvent);
+                    }
+                    break;
 
                 case CLOSE_BATCH:
                     if (previousUUID != null) {
                         getLogger().info("Closing batch; duplicate URI:" + writeEvent.getTargetUri());
-                            this.flushAndWait();
-                        }
-                        uriFlowFileMap.put(currentUUID, new FlowFileInfo(flowFile, session, writeEvent));
-                        duplicateFlowFileMap.put(currentUrl, currentUUID);
-                        addWriteEvent(this.writeBatcher, writeEvent);
-                        break;
-                }
-                if (getLogger().isDebugEnabled()) {
-                    getLogger().debug("Writing URI: " + writeEvent.getTargetUri());
-                }
-            } catch (IllegalStateException ex) {
-                // An ISE is most likely to occur due to the WriteBatcher having stopped. In that scenario, we don't
-                // need a stacktrace logged. Just need to send the failed FlowFile to the FAILURE relationship.
-                addErrorMessageToFlowFile(ex, flowFile, session);
-                transferAndCommit(session, flowFile, FAILURE);
-            } catch (final Throwable t) {
-                // Catches any exception that occurs outside of writing a batch. We don't have a way of reproducing
-                // this in a test as there's not a way to force an error outside of writing a batch. So exceptions
-                // here will be rare and unexpected, but still need to route them to the failure relationship.
-                logErrorAndTransfer(t, flowFile, session, FAILURE);
+                        this.flushAndWait();
+                    }
+                    uriFlowFileMap.put(currentUUID, new FlowFileInfo(flowFile, session, writeEvent));
+                    duplicateFlowFileMap.put(currentUrl, currentUUID);
+                    addWriteEvent(this.writeBatcher, writeEvent);
+                    break;
             }
+            if (getLogger().isDebugEnabled()) {
+                getLogger().debug("Writing URI: " + writeEvent.getTargetUri());
+            }
+        } catch (IllegalStateException ex) {
+            // An ISE is most likely to occur due to the WriteBatcher having stopped. In that scenario, we don't
+            // need a stacktrace logged. Just need to send the failed FlowFile to the FAILURE relationship.
+            addErrorMessageToFlowFile(ex.getMessage(), flowFile, session);
+            transferAndCommit(session, flowFile, FAILURE);
+        } catch (final Throwable t) {
+            // Catches any exception that occurs outside of writing a batch. We don't have a way of reproducing
+            // this in a test as there's not a way to force an error outside of writing a batch. So exceptions
+            // here will be rare and unexpected, but still need to route them to the failure relationship.
+            logErrorAndTransfer(t, flowFile, session, FAILURE);
         }
     }
 
@@ -664,6 +712,27 @@ public class PutMarkLogic extends AbstractMarkLogicProcessor {
             } catch (IllegalStateException e) {
                 getLogger().error("Received error while asynchronously flushing batch: {}", e.getMessage());
             }
+        }
+    }
+
+    /**
+     * If the batcher is stopped - such as by the DMSDK HostAvailabilityListener - then the processor is effectively
+     * useless, even if MarkLogic becomes available again. That is due to a batcher not being usable once it has been
+     * stopped. This method then attempts to create and start a new batcher which allows the process to resume its
+     * normal operation. The method is synchronized to ensure that if the user has 2 or more tasks assigned to this
+     * processor, only one of them will attempt to do this (the caller of this method helps with that too).
+     */
+    private synchronized boolean createAndStartNewBatcher(FlowFile flowFile, ProcessContext context, ProcessSession session) {
+        getLogger().info("Attempting to create and start new batcher.");
+        try {
+            createAndStartWriteBatcher(context);
+            return true;
+        } catch (Exception e) {
+            String message = "Unable to create and start new batcher, cause: " + e.getMessage();
+            getLogger().error(message);
+            addErrorMessageToFlowFile(message, flowFile, session);
+            transferAndCommit(session, flowFile, FAILURE);
+            return false;
         }
     }
 }
