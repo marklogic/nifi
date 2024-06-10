@@ -414,15 +414,15 @@ public class PutMarkLogic extends AbstractMarkLogicProcessor {
 
                 //Looks like the best place to detect duplicates and handle action because we have access to computed url by this point,
                 switch (duplicateHandler) {
-                    case IGNORE:
-                        //Just write the event knowing it will fail during batch write process
+                case IGNORE:
+                    //Just write the event knowing it will fail during batch write process
+                    uriFlowFileMap.put(currentUUID, new FlowFileInfo(flowFile, session, writeEvent));
+                    addWriteEvent(this.writeBatcher, writeEvent);
+                    break;
+                case FAIL_URI:
+                    if (previousUUID != null && !previousUUID.equals(currentUUID)) {
                         uriFlowFileMap.put(currentUUID, new FlowFileInfo(flowFile, session, writeEvent));
-                        addWriteEvent(this.writeBatcher, writeEvent);
-                        break;
-                    case FAIL_URI:
-                        if (previousUUID != null && !previousUUID.equals(currentUUID)) {
-                            uriFlowFileMap.put(currentUUID, new FlowFileInfo(flowFile, session, writeEvent));
-                            transferFlowFile(writeEvent, DUPLICATE_URI);
+                        transferFlowFile(writeEvent, DUPLICATE_URI);
 
                         } else {
                             uriFlowFileMap.put(currentUUID, new FlowFileInfo(flowFile, session, writeEvent));
@@ -431,9 +431,9 @@ public class PutMarkLogic extends AbstractMarkLogicProcessor {
                         }
                         break;
 
-                    case CLOSE_BATCH:
-                        if (previousUUID != null) {
-                            getLogger().info("Closing batch; duplicate URI:" + writeEvent.getTargetUri());
+                case CLOSE_BATCH:
+                    if (previousUUID != null) {
+                        getLogger().info("Closing batch; duplicate URI:" + writeEvent.getTargetUri());
                             this.flushAndWait();
                         }
                         uriFlowFileMap.put(currentUUID, new FlowFileInfo(flowFile, session, writeEvent));
@@ -444,6 +444,11 @@ public class PutMarkLogic extends AbstractMarkLogicProcessor {
                 if (getLogger().isDebugEnabled()) {
                     getLogger().debug("Writing URI: " + writeEvent.getTargetUri());
                 }
+            } catch (IllegalStateException ex) {
+                // An ISE is most likely to occur due to the WriteBatcher having stopped. In that scenario, we don't
+                // need a stacktrace logged. Just need to send the failed FlowFile to the FAILURE relationship.
+                addErrorMessageToFlowFile(ex, flowFile, session);
+                transferAndCommit(session, flowFile, FAILURE);
             } catch (final Throwable t) {
                 // Catches any exception that occurs outside of writing a batch. We don't have a way of reproducing
                 // this in a test as there's not a way to force an error outside of writing a batch. So exceptions
@@ -635,13 +640,12 @@ public class PutMarkLogic extends AbstractMarkLogicProcessor {
     protected final void flushAndWaitWithoutFailing(WriteBatcher batcher) {
         if (batcher != null) {
             if (batcher.isStopped()) {
-                getLogger().warn("Not calling flushAndWait as batcher has already been stopped.");
                 return;
             }
             try {
                 batcher.flushAndWait();
             } catch (IllegalStateException e) {
-                getLogger().error("Received error while flushing batch: " + e.getMessage(), e);
+                getLogger().error("Received error while synchronously flushing batch: {}", e.getMessage());
             }
         }
     }
@@ -653,13 +657,12 @@ public class PutMarkLogic extends AbstractMarkLogicProcessor {
     protected final void flushAsyncWithoutFailing(WriteBatcher batcher) {
         if (batcher != null) {
             if (batcher.isStopped()) {
-                getLogger().warn("Not calling flushAsync as batcher has already been stopped.");
                 return;
             }
             try {
                 batcher.flushAsync();
             } catch (IllegalStateException e) {
-                getLogger().error("Received error while flushing batch: " + e.getMessage(), e);
+                getLogger().error("Received error while asynchronously flushing batch: {}", e.getMessage());
             }
         }
     }

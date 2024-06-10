@@ -254,12 +254,16 @@ public abstract class AbstractMarkLogicProcessor extends AbstractSessionFactoryP
      * @param session
      * @param relationship
      */
-    protected void logErrorAndTransfer(Throwable t, FlowFile flowFile, ProcessSession session, Relationship relationship) {
+    protected final void logErrorAndTransfer(Throwable t, FlowFile flowFile, ProcessSession session, Relationship relationship) {
         logError(t);
+        addErrorMessageToFlowFile(t, flowFile, session);
+        transferAndCommit(session, flowFile, relationship);
+    }
+
+    protected final void addErrorMessageToFlowFile(Throwable t, FlowFile flowFile, ProcessSession session) {
         if (t.getMessage() != null) {
             session.putAttribute(flowFile, "markLogicErrorMessage", t.getMessage());
         }
-        transferAndCommit(session, flowFile, relationship);
     }
 
     protected void logError(Throwable t) {
