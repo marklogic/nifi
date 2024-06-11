@@ -361,7 +361,7 @@
             "bundle": {
               "group": "org.apache.nifi",
               "artifact": "nifi-marklogic-nar",
-              "version": "1.24.1"
+              "version": "1.24.2"
             },
             "properties": {
               "Payload Source": "None",
@@ -820,7 +820,7 @@
             "bundle": {
               "group": "org.apache.nifi",
               "artifact": "nifi-marklogic-nar",
-              "version": "1.24.1"
+              "version": "1.24.2"
             },
             "properties": {
               "DatabaseClient Service": "a9cc748c-c567-3828-888d-d615d5c9d10d",
@@ -1259,7 +1259,7 @@
             "bundle": {
               "group": "org.apache.nifi",
               "artifact": "nifi-marklogic-nar",
-              "version": "1.24.1"
+              "version": "1.24.2"
             },
             "properties": {
               "URI Prefix": "/stuff/",
@@ -1641,7 +1641,7 @@
             "bundle": {
               "group": "org.apache.nifi",
               "artifact": "nifi-marklogic-nar",
-              "version": "1.24.1"
+              "version": "1.24.2"
             },
             "properties": {
               "Module Path": null,
@@ -2238,7 +2238,7 @@
         "bundle": {
           "group": "org.apache.nifi",
           "artifact": "nifi-marklogic-nar",
-          "version": "1.24.1"
+          "version": "1.24.2"
         },
         "properties": {
           "Base Path": null,
@@ -2332,7 +2332,7 @@
             "bundle": {
               "group": "org.apache.nifi",
               "artifact": "nifi-marklogic-services-api-nar",
-              "version": "1.24.1"
+              "version": "1.24.2"
             }
           }
         ],
