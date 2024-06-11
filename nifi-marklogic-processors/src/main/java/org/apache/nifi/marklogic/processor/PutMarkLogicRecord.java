@@ -129,6 +129,7 @@ public class PutMarkLogicRecord extends PutMarkLogic {
         list.add(URI_FIELD_NAME);
         list.add(URI_PREFIX);
         list.add(URI_SUFFIX);
+        list.add(RESTART_FAILED_BATCHER);
         properties = Collections.unmodifiableList(list);
 
         Set<Relationship> set = new HashSet<>();

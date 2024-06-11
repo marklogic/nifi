@@ -405,7 +405,7 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
                 FlowFile flowFile = createFlowFileWithAttributes(session, incomingAttributes);
                 session.putAttribute(flowFile, CoreAttributes.FILENAME.key(), uri);
                 if (throwable != null) {
-                    session.putAttribute(flowFile, "markLogicErrorMessage", throwable.getMessage());
+                    addErrorMessageToFlowFile(throwable.getMessage(), flowFile, session);
                 }
                 session.transfer(flowFile, relationship);
             }
@@ -445,7 +445,7 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
                         // within the "try" block.
                         FlowFile flowFile = createFlowFileWithAttributes(session, incomingAttributes);
                         session.putAttribute(flowFile, CoreAttributes.FILENAME.key(), uri);
-                        session.putAttribute(flowFile, "markLogicErrorMessage", throwable.getMessage());
+                        addErrorMessageToFlowFile(throwable.getMessage(), flowFile, session);
                         session.transfer(flowFile, FAILURE);
                     }
                 });
