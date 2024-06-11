@@ -21,3 +21,8 @@ An example of this processor in action can be found in the [Getting Started guid
 
 For full details on each property and relationship for this processor, add an instance of it to the NiFi canvas,
 right-click on it, and select "View Usage".
+
+## Restart support
+
+Please see the [`PutMarkLogic` documentation](put.md) for information on the restart support added in the 
+1.24.2 release of the connector.
