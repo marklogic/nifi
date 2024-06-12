@@ -4,7 +4,7 @@ name: marklogic_nifi
 services:
 
   marklogic:
-    image: "marklogicdb/marklogic-db:11.1.0-centos-1.1.0"
+    image: "marklogicdb/marklogic-db:11.2.0-centos-1.1.2"
     container_name: "marklogic"
     platform: linux/amd64
     environment:
