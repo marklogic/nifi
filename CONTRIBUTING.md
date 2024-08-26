@@ -140,7 +140,8 @@ application is deployed via the following steps:
 1. `cd test-app`
 2. If running a native MarkLogic install, verify that the admin password in the `gradle.properties` file is correct,
 overriding it in `gradle-local.properties` as needed.
-3. Run `./gradlew -i mldeploy`
+3. Run `./gradlew hubInit` to initialize the DHF project; a DHF project is needed in order to test the `RunFlowMarkLogic` processor.
+4. Run `./gradlew -i mldeploy`
 
 You can then run all tests in the project by returning to the parent directory and running `verify`:
 

@@ -4,7 +4,8 @@
   "role": [
     "rest-writer",
     "rest-admin",
-    "nifi-evaluator-role"
+    "nifi-evaluator-role",
+    "data-hub-developer"
   ],
   "password": "x"
 }

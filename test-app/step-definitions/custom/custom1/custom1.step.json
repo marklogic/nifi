@@ -1,0 +1,9 @@
+{
+  "lang": "zxx",
+  "name": "custom1",
+  "type": "CUSTOM",
+  "options": {
+    "outputFormat": "json"
+  },
+  "modulePath" : "/custom-modules/custom/custom1/main.sjs"
+}
