@@ -4,5 +4,5 @@
  */
 plugins {
   id 'net.saliman.properties' version '1.5.2'
-  id 'com.marklogic.ml-gradle' version '4.6.0'
+  id 'com.marklogic.ml-data-hub' version '5.8.1'
 }

@@ -72,6 +72,19 @@ public abstract class AbstractMarkLogicIT extends AbstractSpringMarkLogicTest {
 
     protected DataMovementManager dataMovementManager;
 
+    @Override
+    protected String getJavascriptForDeletingDocumentsBeforeTestRuns() {
+        return "declareUpdate(); " +
+            "cts.uris('', [], cts.notQuery(cts.collectionQuery([" +
+            "'hub-core-artifact', " +
+            "'http://marklogic.com/data-hub/flow', " +
+            "'http://marklogic.com/data-hub/step-definition', " +
+            "'http://marklogic.com/data-hub/steps'" +
+            "])))" +
+            ".toArray()" +
+            ".forEach(item => xdmp.documentDelete(item))";
+    }
+
     class IngestDoc {
         private Map<String, String> attributes;
         private String content;

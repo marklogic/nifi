@@ -1,0 +1,9 @@
+{
+  "name": "custom1",
+  "stepId": "custom1-custom",
+  "stepDefinitionName": "custom1",
+  "stepDefinitionType": "CUSTOM",
+  "sourceQuery": "cts.collectionQuery('staging-data')",
+  "sourceDatabase": "data-hub-STAGING",
+  "targetDatabase": "data-hub-STAGING"
+}
