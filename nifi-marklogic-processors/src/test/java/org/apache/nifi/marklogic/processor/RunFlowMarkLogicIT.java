@@ -29,10 +29,14 @@ public class RunFlowMarkLogicIT extends AbstractMarkLogicIT {
         runner.setProperty(RunFlowMarkLogic.FLOW_NAME, "testFlow");
         runner.run();
 
+        List<MockFlowFile> files = runner.getFlowFilesForRelationship(RunFlowMarkLogic.FINISHED);
+        assertEquals(1, files.size());
+
         JsonNode doc = getDatabaseClient().newJSONDocumentManager().read(uri, new JacksonHandle()).get();
-        assertTrue(doc.has("envelope"), "The custom step in the testFlow flow should have wrapped the document in an envelope.");
+        assertTrue(doc.has("envelope"), "The custom step in the testFlow flow should have wrapped the document " +
+            "in an envelope. Flow response: " + files.get(0).getContent());
     }
-    
+
     @Test
     void flowDoesntExist() {
         TestRunner runner = newReaderTestRunner(RunFlowMarkLogic.class);
