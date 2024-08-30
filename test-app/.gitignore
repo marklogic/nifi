@@ -1,3 +1,13 @@
 gradle-local.properties
 .gradle
 build
+
+# DHF folders
+src/main/hub-internal-config
+src/main/ml-config/database-fields
+src/main/ml-config/databases/final-database.json
+src/main/ml-config/databases/final-schemas-database.json
+src/main/ml-config/databases/final-triggers-database.json
+src/main/ml-config/databases/modules-database.json
+src/main/ml-config/servers/final-server.json
+src/main/entity-config

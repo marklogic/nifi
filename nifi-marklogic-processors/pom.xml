@@ -22,7 +22,7 @@
   <parent>
     <groupId>org.apache.nifi</groupId>
     <artifactId>nifi-marklogic-bundle</artifactId>
-    <version>1.24.2</version>
+    <version>1.27.0</version>
   </parent>
 
   <artifactId>nifi-marklogic-processors</artifactId>
@@ -40,13 +40,6 @@
       <artifactId>nifi-utils</artifactId>
       <version>${nifi.version}</version>
     </dependency>
-
-    <!-- Force usage of this version until DHF 5.8 is available -->
-    <dependency>
-      <groupId>com.marklogic</groupId>
-      <artifactId>ml-app-deployer</artifactId>
-      <version>4.8.0</version>
-    </dependency>
     <dependency>
       <groupId>com.marklogic</groupId>
       <artifactId>marklogic-client-api</artifactId>
@@ -55,7 +48,7 @@
     <dependency>
       <groupId>com.marklogic</groupId>
       <artifactId>marklogic-data-hub</artifactId>
-      <version>5.8.1</version>
+      <version>6.1.1</version>
     </dependency>
     <dependency>
       <groupId>org.apache.nifi</groupId>
@@ -68,7 +61,7 @@
     <dependency>
       <groupId>com.google.code.gson</groupId>
       <artifactId>gson</artifactId>
-      <version>2.10.1</version>
+      <version>2.11.0</version>
     </dependency>
 
     <dependency>

@@ -34,7 +34,7 @@
             "bundle": {
               "group": "org.apache.nifi",
               "artifact": "nifi-standard-nar",
-              "version": "1.24.0"
+              "version": "1.27.0"
             },
             "properties": {
               "Log prefix": "ORIGINAL",
@@ -143,7 +143,7 @@
             "bundle": {
               "group": "org.apache.nifi",
               "artifact": "nifi-standard-nar",
-              "version": "1.24.0"
+              "version": "1.27.0"
             },
             "properties": {
               "Log prefix": "FAILURE",
@@ -252,7 +252,7 @@
             "bundle": {
               "group": "org.apache.nifi",
               "artifact": "nifi-standard-nar",
-              "version": "1.24.0"
+              "version": "1.27.0"
             },
             "properties": {
               "Log prefix": "RESULTS",
@@ -361,7 +361,7 @@
             "bundle": {
               "group": "org.apache.nifi",
               "artifact": "nifi-marklogic-nar",
-              "version": "1.24.2"
+              "version": "1.27.0"
             },
             "properties": {
               "Payload Source": "None",
@@ -602,7 +602,7 @@
             "bundle": {
               "group": "org.apache.nifi",
               "artifact": "nifi-standard-nar",
-              "version": "1.24.0"
+              "version": "1.27.0"
             },
             "properties": {
               "Log prefix": "FAILURE!!!!",
@@ -711,7 +711,7 @@
             "bundle": {
               "group": "org.apache.nifi",
               "artifact": "nifi-standard-nar",
-              "version": "1.24.0"
+              "version": "1.27.0"
             },
             "properties": {
               "Log prefix": "QUERY RESULT",
@@ -820,7 +820,7 @@
             "bundle": {
               "group": "org.apache.nifi",
               "artifact": "nifi-marklogic-nar",
-              "version": "1.24.2"
+              "version": "1.27.0"
             },
             "properties": {
               "DatabaseClient Service": "a9cc748c-c567-3828-888d-d615d5c9d10d",
@@ -1062,7 +1062,7 @@
             "bundle": {
               "group": "org.apache.nifi",
               "artifact": "nifi-standard-nar",
-              "version": "1.24.0"
+              "version": "1.27.0"
             },
             "properties": {
               "character-set": "UTF-8",
@@ -1148,7 +1148,7 @@
             "bundle": {
               "group": "org.apache.nifi",
               "artifact": "nifi-standard-nar",
-              "version": "1.24.0"
+              "version": "1.27.0"
             },
             "properties": {
               "Log prefix": "AFTER:",
@@ -1259,7 +1259,7 @@
             "bundle": {
               "group": "org.apache.nifi",
               "artifact": "nifi-marklogic-nar",
-              "version": "1.24.2"
+              "version": "1.27.0"
             },
             "properties": {
               "URI Prefix": "/stuff/",
@@ -1530,7 +1530,7 @@
             "bundle": {
               "group": "org.apache.nifi",
               "artifact": "nifi-standard-nar",
-              "version": "1.24.0"
+              "version": "1.27.0"
             },
             "properties": {
               "Log prefix": "RESULTS",
@@ -1641,7 +1641,7 @@
             "bundle": {
               "group": "org.apache.nifi",
               "artifact": "nifi-marklogic-nar",
-              "version": "1.24.2"
+              "version": "1.27.0"
             },
             "properties": {
               "Module Path": null,
@@ -1730,7 +1730,7 @@
             "bundle": {
               "group": "org.apache.nifi",
               "artifact": "nifi-standard-nar",
-              "version": "1.24.0"
+              "version": "1.27.0"
             },
             "properties": {
               "Log prefix": "LOGERROR!!!",
@@ -1839,7 +1839,7 @@
             "bundle": {
               "group": "org.apache.nifi",
               "artifact": "nifi-standard-nar",
-              "version": "1.24.0"
+              "version": "1.27.0"
             },
             "properties": {
               "character-set": "UTF-8",
@@ -1925,7 +1925,7 @@
             "bundle": {
               "group": "org.apache.nifi",
               "artifact": "nifi-standard-nar",
-              "version": "1.24.0"
+              "version": "1.27.0"
             },
             "properties": {
               "Log prefix": "ORIGINAL",
@@ -2238,7 +2238,7 @@
         "bundle": {
           "group": "org.apache.nifi",
           "artifact": "nifi-marklogic-nar",
-          "version": "1.24.2"
+          "version": "1.27.0"
         },
         "properties": {
           "Base Path": null,
@@ -2332,7 +2332,7 @@
             "bundle": {
               "group": "org.apache.nifi",
               "artifact": "nifi-marklogic-services-api-nar",
-              "version": "1.24.2"
+              "version": "1.27.0"
             }
           }
         ],

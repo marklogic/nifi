@@ -1,6 +1,5 @@
 {
-  "database-name": "%%DATABASE%%",
-  "schema-database": "%%SCHEMAS_DATABASE%%",
+  "database-name": "%%mlStagingDbName%%",
   "range-element-index": [
     {
       "scalar-type": "dateTime",
@@ -27,6 +26,10 @@
     {
       "prefix": "t",
       "namespace-uri": "namespace-test"
+    },
+    {
+      "prefix": "es",
+      "namespace-uri": "http://marklogic.com/entity-services"
     }
   ],
   "range-path-index": [
