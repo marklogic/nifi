@@ -11,6 +11,8 @@ import com.marklogic.hub.flow.FlowRunner;
 import com.marklogic.hub.flow.RunFlowResponse;
 import com.marklogic.hub.flow.impl.FlowRunnerImpl;
 import com.marklogic.hub.impl.HubConfigImpl;
+import org.apache.nifi.annotation.behavior.DynamicProperties;
+import org.apache.nifi.annotation.behavior.DynamicProperty;
 import org.apache.nifi.annotation.behavior.InputRequirement;
 import org.apache.nifi.annotation.documentation.CapabilityDescription;
 import org.apache.nifi.annotation.documentation.Tags;
@@ -48,7 +50,18 @@ import java.util.Set;
     "use case for NiFi in production. Note that a given version of the Data Hub Java API is not yet guaranteed to work " +
     "with any other version of Data Hub. It is thus recommended to only use this against a Data Hub 6.1.0 or 6.1.1 installation, " +
     "though it may work with other versions of Data Hub. Requires a MarkLogic user that is able to run the flow; " +
-    "consult your Data Hub Framework documentation for guidelines on what Data Hub roles are required.")
+    "consult your Data Hub Framework documentation for guidelines on what Data Hub roles are required. As of the 1.27.1 " +
+    "release, you can now specify any Data Hub property via a dynamic property starting with 'dhf:', followed by the name " +
+    "of the Data Hub property you wish to set. ")
+@DynamicProperties({
+    @DynamicProperty(
+        name = "dhf:{name}",
+        value = "Name of a Data Hub property",
+        description = "A Data Hub property and value used to connect to a Data Hub instance. For example, 'dhf:mlStagingDbName=some-other-name' " +
+            "would configure the staging database name instead of the default of 'data-hub-STAGING'.",
+        expressionLanguageScope = ExpressionLanguageScope.VARIABLE_REGISTRY
+    )
+})
 public class RunFlowMarkLogic extends AbstractMarkLogicProcessor {
 
     public static final PropertyDescriptor FINAL_PORT = new PropertyDescriptor.Builder()
@@ -189,7 +202,7 @@ public class RunFlowMarkLogic extends AbstractMarkLogicProcessor {
         }
     }
 
-    protected HubConfigImpl initializeHubConfig(ProcessContext context, DatabaseClientConfig clientConfig) {
+    private Properties buildDhfProperties(ProcessContext context, DatabaseClientConfig clientConfig) {
         Properties props = new Properties();
         props.setProperty("mlHost", clientConfig.getHost());
         props.setProperty("mlStagingPort", clientConfig.getPort() + "");
@@ -202,6 +215,23 @@ public class RunFlowMarkLogic extends AbstractMarkLogicProcessor {
         props.setProperty("mlFinalAuth", clientConfig.getSecurityContextType().toString());
         props.setProperty("mlJobAuth", clientConfig.getSecurityContextType().toString());
 
+        final String dhfPrefix = "dhf";
+        List<PropertyDescriptor> dhfProperties = propertiesByPrefix.get(dhfPrefix);
+        if (dhfProperties != null) {
+            for (final PropertyDescriptor propertyDesc : dhfProperties) {
+                String propertyName = propertyDesc.getName().substring(dhfPrefix.length() + 1);
+                String propertyValue = context.getProperty(propertyDesc).evaluateAttributeExpressions().getValue();
+
+                props.setProperty(propertyName, propertyValue);
+            }
+        }
+
+        return props;
+    }
+
+    protected HubConfigImpl initializeHubConfig(ProcessContext context, DatabaseClientConfig clientConfig) {
+        super.populatePropertiesByPrefix(context);
+        Properties props = buildDhfProperties(context, clientConfig);
         HubConfigImpl hubConfig = HubConfigImpl.withProperties(props);
 
         SSLContext sslContext = clientConfig.getSslContext();
