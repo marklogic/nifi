@@ -66,6 +66,22 @@ public class RunFlowMarkLogicTest extends AbstractMarkLogicProcessorTest {
     }
 
     @Test
+    void initializeHubConfigWithCustomDhfProperties() {
+        processContext.setProperty("dhf:mlStagingDbName", "my-staging-db");
+        processContext.setProperty("dhf:mlFinalDbName", "my-final-db");
+        processContext.setProperty("dhf:mlStagingPort", "8888");
+
+        DatabaseClientConfig config = new DatabaseClientConfig("somehost", 8011, "someuser", "someword");
+        HubConfigImpl hubConfig = processor.initializeHubConfig(processContext, config);
+
+        assertEquals("my-staging-db", hubConfig.getStagingDbName());
+        assertEquals("my-final-db", hubConfig.getFinalDbName());
+        assertEquals(8888, hubConfig.getStagingPort(), "The staging port should default to the REST port in the " +
+            "DatabaseClientConfig. But a user can then override it via dhf:mlStagingPort, showing that these properties " +
+            "take precedence over what's in the DB controller service.");
+    }
+
+    @Test
     public void buildFlowInputs() {
         ObjectMapper mapper = new ObjectMapper();
         ObjectNode options = mapper.createObjectNode();
