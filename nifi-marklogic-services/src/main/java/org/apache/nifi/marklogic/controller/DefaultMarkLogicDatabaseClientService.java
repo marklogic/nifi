@@ -25,7 +25,6 @@ import org.apache.nifi.annotation.documentation.CapabilityDescription;
 import org.apache.nifi.annotation.documentation.Tags;
 import org.apache.nifi.annotation.lifecycle.OnDisabled;
 import org.apache.nifi.annotation.lifecycle.OnEnabled;
-import org.apache.nifi.authentication.exception.ProviderCreationException;
 import org.apache.nifi.components.PropertyDescriptor;
 import org.apache.nifi.components.Validator;
 import org.apache.nifi.controller.AbstractControllerService;
@@ -34,13 +33,15 @@ import org.apache.nifi.expression.ExpressionLanguageScope;
 import org.apache.nifi.processor.exception.ProcessException;
 import org.apache.nifi.processor.util.StandardValidators;
 import org.apache.nifi.security.util.ClientAuth;
-import org.apache.nifi.security.util.KeyStoreUtils;
 import org.apache.nifi.ssl.SSLContextService;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509TrustManager;
+import java.io.FileInputStream;
+import java.io.InputStream;
 import java.security.KeyStore;
+import java.security.ProviderException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -62,7 +63,7 @@ public class DefaultMarkLogicDatabaseClientService extends AbstractControllerSer
         .defaultValue("localhost")
         .description("The hostname of the MarkLogic server or load balancer to connect to.")
         .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
-        .expressionLanguageSupported(ExpressionLanguageScope.VARIABLE_REGISTRY)
+        .expressionLanguageSupported(ExpressionLanguageScope.ENVIRONMENT)
         .build();
 
     public static final PropertyDescriptor PORT = new PropertyDescriptor.Builder()
@@ -72,7 +73,7 @@ public class DefaultMarkLogicDatabaseClientService extends AbstractControllerSer
         .defaultValue("8000")
         .description("The port of the MarkLogic app server that supports the MarkLogic Client REST API.")
         .addValidator(StandardValidators.PORT_VALIDATOR)
-        .expressionLanguageSupported(ExpressionLanguageScope.VARIABLE_REGISTRY)
+        .expressionLanguageSupported(ExpressionLanguageScope.ENVIRONMENT)
         .build();
 
     public static final PropertyDescriptor LOAD_BALANCER = new PropertyDescriptor.Builder()
@@ -82,7 +83,7 @@ public class DefaultMarkLogicDatabaseClientService extends AbstractControllerSer
         .allowableValues("true", "false")
         .defaultValue("false")
         .addValidator(Validator.VALID)
-        .expressionLanguageSupported(ExpressionLanguageScope.VARIABLE_REGISTRY)
+        .expressionLanguageSupported(ExpressionLanguageScope.ENVIRONMENT)
         .build();
 
     public static final PropertyDescriptor BASE_PATH = new PropertyDescriptor.Builder()
@@ -90,7 +91,7 @@ public class DefaultMarkLogicDatabaseClientService extends AbstractControllerSer
         .displayName("Base Path")
         .required(false)
         .description("Base path to prepend for all calls to MarkLogic REST API; typically set when using a load balancer in front of MarkLogic.")
-        .expressionLanguageSupported(ExpressionLanguageScope.VARIABLE_REGISTRY)
+        .expressionLanguageSupported(ExpressionLanguageScope.ENVIRONMENT)
         .addValidator(Validator.VALID)
         .build();
 
@@ -109,7 +110,7 @@ public class DefaultMarkLogicDatabaseClientService extends AbstractControllerSer
         )
         .defaultValue(SecurityContextType.DIGEST.name())
         .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
-        .expressionLanguageSupported(ExpressionLanguageScope.VARIABLE_REGISTRY)
+        .expressionLanguageSupported(ExpressionLanguageScope.ENVIRONMENT)
         .build();
 
     public static final PropertyDescriptor USERNAME = new PropertyDescriptor.Builder()
@@ -117,7 +118,7 @@ public class DefaultMarkLogicDatabaseClientService extends AbstractControllerSer
         .displayName("Username")
         .description("The MarkLogic user with sufficient privileges for using the MarkLogic Client REST API; required for Basic and Digest authentication.")
         .addValidator(Validator.VALID)
-        .expressionLanguageSupported(ExpressionLanguageScope.VARIABLE_REGISTRY)
+        .expressionLanguageSupported(ExpressionLanguageScope.ENVIRONMENT)
         .build();
 
     public static final PropertyDescriptor PASSWORD = new PropertyDescriptor.Builder()
@@ -141,7 +142,7 @@ public class DefaultMarkLogicDatabaseClientService extends AbstractControllerSer
         .displayName("Database")
         .description("The database to access, if not the one associated with the MarkLogic app server identified by 'Port'.")
         .addValidator(Validator.VALID)
-        .expressionLanguageSupported(ExpressionLanguageScope.VARIABLE_REGISTRY)
+        .expressionLanguageSupported(ExpressionLanguageScope.ENVIRONMENT)
         .build();
 
     public static final PropertyDescriptor EXTERNAL_NAME = new PropertyDescriptor.Builder()
@@ -149,7 +150,7 @@ public class DefaultMarkLogicDatabaseClientService extends AbstractControllerSer
         .displayName("External name")
         .description("External name of the Kerberos Client; required for Kerberos authentication.")
         .addValidator(Validator.VALID)
-        .expressionLanguageSupported(ExpressionLanguageScope.VARIABLE_REGISTRY)
+        .expressionLanguageSupported(ExpressionLanguageScope.ENVIRONMENT)
         .build();
 
     public static final PropertyDescriptor SSL_CONTEXT_SERVICE = new PropertyDescriptor.Builder()
@@ -167,7 +168,7 @@ public class DefaultMarkLogicDatabaseClientService extends AbstractControllerSer
             + "has been defined. Must be one of 'Required', 'Want', or 'None', or left blank.")
         .required(false)
         .allowableValues(ClientAuth.values())
-        .expressionLanguageSupported(ExpressionLanguageScope.VARIABLE_REGISTRY)
+        .expressionLanguageSupported(ExpressionLanguageScope.ENVIRONMENT)
         .build();
 
     static {
@@ -231,15 +232,14 @@ public class DefaultMarkLogicDatabaseClientService extends AbstractControllerSer
                 if (sslService.isTrustStoreConfigured()) {
                     getLogger().info("Configuring TrustManager based on trust store found in SSLService");
                     final TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
-                    final KeyStore trustStore = KeyStoreUtils.loadTrustStore(
-                        sslService.getTrustStoreFile(),
-                        sslService.getTrustStorePassword().toCharArray(),
-                        sslService.getTrustStoreType()
-                    );
+                    final KeyStore trustStore = KeyStore.getInstance(sslService.getTrustStoreType());
+                    try (final InputStream trustStoreStream = new FileInputStream(sslService.getTrustStoreFile())) {
+                        trustStore.load(trustStoreStream, sslService.getTrustStorePassword().toCharArray());
+                    }
                     trustManagerFactory.init(trustStore);
                     config.setTrustManager((X509TrustManager) trustManagerFactory.getTrustManagers()[0]);
                 }
-                final SSLContext sslContext = sslService.createSSLContext(clientAuth);
+                final SSLContext sslContext = sslService.createContext();
                 config.setSslContext(sslContext);
                 config.setSslHostnameVerifier(DatabaseClientFactory.SSLHostnameVerifier.ANY);
             } catch (Exception e) {
@@ -253,10 +253,10 @@ public class DefaultMarkLogicDatabaseClientService extends AbstractControllerSer
 
     protected ClientAuth determineClientAuth(ConfigurationContext context) {
         try {
-            return context.getProperty(CLIENT_AUTH).getValue() == null ? ClientAuth.REQUIRED :
+            return context.getProperty(CLIENT_AUTH).evaluateAttributeExpressions().getValue() == null ? ClientAuth.REQUIRED :
                 ClientAuth.valueOf(context.getProperty(CLIENT_AUTH).evaluateAttributeExpressions().getValue());
         } catch (IllegalArgumentException exception) {
-            throw new ProviderCreationException("Client Authentication should be one of the following values : "
+            throw new ProviderException("Client Authentication should be one of the following values : "
                 + Arrays.toString(ClientAuth.values()));
         }
     }

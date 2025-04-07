@@ -69,7 +69,7 @@ public class ExtensionCallMarkLogic extends AbstractMarkLogicProcessor {
         .displayName("Extension Name")
         .required(true)
         .description("Name of MarkLogic REST extension")
-        .expressionLanguageSupported(ExpressionLanguageScope.VARIABLE_REGISTRY)
+        .expressionLanguageSupported(ExpressionLanguageScope.ENVIRONMENT)
         .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
         .build();
     public static final PropertyDescriptor PAYLOAD_SOURCE = new PropertyDescriptor.Builder()

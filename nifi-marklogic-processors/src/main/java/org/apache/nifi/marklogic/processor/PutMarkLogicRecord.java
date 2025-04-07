@@ -46,7 +46,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.*;
 
-@EventDriven
 @Tags({"MarkLogic", "Put", "Bulk", "Insert"})
 @InputRequirement(InputRequirement.Requirement.INPUT_REQUIRED)
 @CapabilityDescription("Breaks down FlowFiles into batches of Records and inserts documents to a MarkLogic server using the " +
@@ -179,7 +178,7 @@ public class PutMarkLogicRecord extends PutMarkLogic {
 
             while ((record = reader.nextRecord(coerceTypes, dropUnknownFields)) != null) {
                 baos.reset();
-                try (final RecordSetWriter writer = recordSetWriterFactory.createWriter(getLogger(), schema, baos)) {
+                try (final RecordSetWriter writer = recordSetWriterFactory.createWriter(getLogger(), schema, baos, flowFile)) {
                     writer.write(record);
                     writer.flush();
                     BytesHandle bytesHandle = new BytesHandle().with(baos.toByteArray());

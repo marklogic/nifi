@@ -58,7 +58,7 @@ public class RunFlowMarkLogic extends AbstractMarkLogicProcessor {
         .defaultValue("8011")
         .description("The port on which the Final REST server is hosted")
         .addValidator(StandardValidators.PORT_VALIDATOR)
-        .expressionLanguageSupported(ExpressionLanguageScope.VARIABLE_REGISTRY)
+        .expressionLanguageSupported(ExpressionLanguageScope.ENVIRONMENT)
         .build();
 
     public static final PropertyDescriptor JOB_PORT = new PropertyDescriptor.Builder()
@@ -68,7 +68,7 @@ public class RunFlowMarkLogic extends AbstractMarkLogicProcessor {
         .defaultValue("8013")
         .description("The port on which the Job REST server is hosted")
         .addValidator(StandardValidators.PORT_VALIDATOR)
-        .expressionLanguageSupported(ExpressionLanguageScope.VARIABLE_REGISTRY)
+        .expressionLanguageSupported(ExpressionLanguageScope.ENVIRONMENT)
         .build();
 
     public static final PropertyDescriptor FLOW_NAME = new PropertyDescriptor.Builder()

@@ -375,12 +375,12 @@ public class PutMarkLogicTest extends AbstractMarkLogicProcessorTest {
     public void getSupportedDynamicPropertyDescriptor() {
         PropertyDescriptor descriptor = processor.getSupportedDynamicPropertyDescriptor("trans:test");
         assertEquals(
-            ExpressionLanguageScope.VARIABLE_REGISTRY, descriptor.getExpressionLanguageScope(),
+            ExpressionLanguageScope.ENVIRONMENT, descriptor.getExpressionLanguageScope(),
             "Transform params are not specific to a document/FlowFile");
 
         descriptor = processor.getSupportedDynamicPropertyDescriptor("ns:test");
         assertEquals(
-            ExpressionLanguageScope.VARIABLE_REGISTRY, descriptor.getExpressionLanguageScope(),
+            ExpressionLanguageScope.ENVIRONMENT, descriptor.getExpressionLanguageScope(),
             "Namespace prefixes are not specific to a document/FlowFile");
 
         descriptor = processor.getSupportedDynamicPropertyDescriptor("meta:test");
