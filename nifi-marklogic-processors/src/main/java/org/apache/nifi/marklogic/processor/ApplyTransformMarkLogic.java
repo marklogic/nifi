@@ -57,7 +57,7 @@ import java.util.*;
         value = "The value of a parameter to be passed to a REST server transform",
         description = "A transform parameter with name equal to that of '{name}' will be passed to the REST server " +
             "transform identified by the optional 'Server Transform' property",
-        expressionLanguageScope = ExpressionLanguageScope.VARIABLE_REGISTRY
+        expressionLanguageScope = ExpressionLanguageScope.ENVIRONMENT
     )
 })
 @Stateful(description = "Can keep state of a range index value to restrict future queries.", scopes = {Scope.CLUSTER})

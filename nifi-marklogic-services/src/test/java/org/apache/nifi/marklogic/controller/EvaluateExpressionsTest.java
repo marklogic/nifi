@@ -4,10 +4,8 @@ import com.marklogic.client.DatabaseClient;
 import com.marklogic.client.ext.SecurityContextType;
 import org.apache.nifi.components.PropertyDescriptor;
 import org.apache.nifi.expression.ExpressionLanguageScope;
-import org.apache.nifi.registry.VariableDescriptor;
 import org.apache.nifi.security.util.ClientAuth;
 import org.apache.nifi.util.MockConfigurationContext;
-import org.apache.nifi.util.MockVariableRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -20,22 +18,22 @@ public class EvaluateExpressionsTest {
 
     private DefaultMarkLogicDatabaseClientService service;
     private Map<PropertyDescriptor, String> properties;
-    private MockVariableRegistry variableRegistry;
+    private Map<String, String> environmentVariables;
     private MockConfigurationContext context;
 
     @BeforeEach
     public void setup() {
         service = new DefaultMarkLogicDatabaseClientService();
         properties = new HashMap<>();
-        variableRegistry = new MockVariableRegistry();
-        context = new MockConfigurationContext(properties, null, variableRegistry);
+        environmentVariables = new HashMap<>();
+        context = new MockConfigurationContext(properties, null, environmentVariables);
     }
 
 
     @Test
     public void evaluateHost() {
         verifyScope(DefaultMarkLogicDatabaseClientService.HOST);
-        variableRegistry.setVariable(new VariableDescriptor("myHost"), "some-host");
+        environmentVariables.put("myHost", "some-host");
         properties.put(DefaultMarkLogicDatabaseClientService.HOST, "${myHost}");
         assertEquals("some-host", service.buildDatabaseClientConfig(context).getHost());
     }
@@ -43,7 +41,7 @@ public class EvaluateExpressionsTest {
     @Test
     public void evaluatePort() {
         verifyScope(DefaultMarkLogicDatabaseClientService.PORT);
-        variableRegistry.setVariable(new VariableDescriptor("myPort"), "8123");
+        environmentVariables.put("myPort", "8123");
         properties.put(DefaultMarkLogicDatabaseClientService.PORT, "${myPort}");
         assertEquals(8123, service.buildDatabaseClientConfig(context).getPort());
     }
@@ -51,7 +49,7 @@ public class EvaluateExpressionsTest {
     @Test
     public void evaluateSecurityContextType() {
         verifyScope(DefaultMarkLogicDatabaseClientService.SECURITY_CONTEXT_TYPE);
-        variableRegistry.setVariable(new VariableDescriptor("myType"), SecurityContextType.KERBEROS.name());
+        environmentVariables.put("myType", SecurityContextType.KERBEROS.name());
         properties.put(DefaultMarkLogicDatabaseClientService.SECURITY_CONTEXT_TYPE, "${myType}");
         assertEquals(SecurityContextType.KERBEROS, service.buildDatabaseClientConfig(context).getSecurityContextType());
     }
@@ -59,7 +57,7 @@ public class EvaluateExpressionsTest {
     @Test
     public void evaluateUsername() {
         verifyScope(DefaultMarkLogicDatabaseClientService.USERNAME);
-        variableRegistry.setVariable(new VariableDescriptor("myUsername"), "someone");
+        environmentVariables.put("myUsername", "someone");
         properties.put(DefaultMarkLogicDatabaseClientService.USERNAME, "${myUsername}");
         assertEquals("someone", service.buildDatabaseClientConfig(context).getUsername());
     }
@@ -67,7 +65,7 @@ public class EvaluateExpressionsTest {
     @Test
     public void passwordDoesNotEvaluate() {
         assertEquals(ExpressionLanguageScope.NONE, DefaultMarkLogicDatabaseClientService.PASSWORD.getExpressionLanguageScope());
-        variableRegistry.setVariable(new VariableDescriptor("myPassword"), "something");
+        environmentVariables.put("myPassword", "something");
         properties.put(DefaultMarkLogicDatabaseClientService.PASSWORD, "${myPassword}");
         assertEquals(
             "${myPassword}", service.buildDatabaseClientConfig(context).getPassword(),
@@ -77,7 +75,7 @@ public class EvaluateExpressionsTest {
     @Test
     public void evaluateDatabase() {
         verifyScope(DefaultMarkLogicDatabaseClientService.DATABASE);
-        variableRegistry.setVariable(new VariableDescriptor("myDatabase"), "somedb");
+        environmentVariables.put("myDatabase", "somedb");
         properties.put(DefaultMarkLogicDatabaseClientService.DATABASE, "${myDatabase}");
         assertEquals("somedb", service.buildDatabaseClientConfig(context).getDatabase());
     }
@@ -85,7 +83,7 @@ public class EvaluateExpressionsTest {
     @Test
     public void evaluateLoadBalancer() {
         verifyScope(DefaultMarkLogicDatabaseClientService.LOAD_BALANCER);
-        variableRegistry.setVariable(new VariableDescriptor("myType"), "true");
+        environmentVariables.put("myType", "true");
         properties.put(DefaultMarkLogicDatabaseClientService.LOAD_BALANCER, "${myType}");
         assertEquals(DatabaseClient.ConnectionType.GATEWAY, service.buildDatabaseClientConfig(context).getConnectionType());
     }
@@ -93,7 +91,7 @@ public class EvaluateExpressionsTest {
     @Test
     public void evaluateExternalName() {
         verifyScope(DefaultMarkLogicDatabaseClientService.EXTERNAL_NAME);
-        variableRegistry.setVariable(new VariableDescriptor("myName"), "somename");
+        environmentVariables.put("myName", "somename");
         properties.put(DefaultMarkLogicDatabaseClientService.EXTERNAL_NAME, "${myName}");
         assertEquals("somename", service.buildDatabaseClientConfig(context).getExternalName());
     }
@@ -101,12 +99,12 @@ public class EvaluateExpressionsTest {
     @Test
     public void evaluateClientAuth() {
         verifyScope(DefaultMarkLogicDatabaseClientService.CLIENT_AUTH);
-        variableRegistry.setVariable(new VariableDescriptor("myValue"), "WANT");
+        environmentVariables.put("myValue", "WANT");
         properties.put(DefaultMarkLogicDatabaseClientService.CLIENT_AUTH, "${myValue}");
         assertEquals(ClientAuth.WANT, service.determineClientAuth(context));
     }
 
     private void verifyScope(PropertyDescriptor descriptor) {
-        assertEquals(ExpressionLanguageScope.VARIABLE_REGISTRY, descriptor.getExpressionLanguageScope());
+        assertEquals(ExpressionLanguageScope.ENVIRONMENT, descriptor.getExpressionLanguageScope());
     }
 }

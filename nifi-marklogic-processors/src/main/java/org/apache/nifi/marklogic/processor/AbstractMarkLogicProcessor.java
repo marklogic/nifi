@@ -170,7 +170,7 @@ public abstract class AbstractMarkLogicProcessor extends AbstractSessionFactoryP
         String prefix = parts[0];
         String postfix = (parts.length > 1) ? parts[1] : "";
         String description;
-        ExpressionLanguageScope scope = ExpressionLanguageScope.VARIABLE_REGISTRY;
+        ExpressionLanguageScope scope = ExpressionLanguageScope.ENVIRONMENT;
 
         switch (prefix) {
             case "trans":
