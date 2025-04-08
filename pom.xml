@@ -39,6 +39,8 @@
     <nifi.version>2.3.0</nifi.version>
     <marklogicnar.version>2.0.0</marklogicnar.version>
     <marklogicclientapi.version>6.6.1</marklogicclientapi.version>
+    <sonar.host.url>http://localhost:9000</sonar.host.url>
+    <sonar.projectKey>nifi</sonar.projectKey>
   </properties>
 
   <modules>
@@ -50,4 +52,15 @@
     <module>nifi-marklogic-services-nar</module>
   </modules>
 
+  <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.sonarsource.scanner.maven</groupId>
+          <artifactId>sonar-maven-plugin</artifactId>
+          <version>5.1.0.4751</version>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+  </build>
 </project>
