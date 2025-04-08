@@ -59,7 +59,7 @@ import java.util.Set;
         value = "Name of a Data Hub property",
         description = "A Data Hub property and value used to connect to a Data Hub instance. For example, 'dhf:mlStagingDbName=some-other-name' " +
             "would configure the staging database name instead of the default of 'data-hub-STAGING'.",
-        expressionLanguageScope = ExpressionLanguageScope.VARIABLE_REGISTRY
+        expressionLanguageScope = ExpressionLanguageScope.ENVIRONMENT
     )
 })
 public class RunFlowMarkLogic extends AbstractMarkLogicProcessor {
