@@ -242,7 +242,7 @@ public class PutMarkLogicRecord extends PutMarkLogic {
         if (suffix != null) {
             uri += suffix;
         }
-        uri.replaceAll("//", "/");
+       uri = uri.replaceAll("//", "/");
 
         DocumentMetadataHandle metadata = buildMetadataHandle(context, flowFile, context.getProperty(COLLECTIONS), context.getProperty(PERMISSIONS));
         final String format = context.getProperty(FORMAT).getValue();
