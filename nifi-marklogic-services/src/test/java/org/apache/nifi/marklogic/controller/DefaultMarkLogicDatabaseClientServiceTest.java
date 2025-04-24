@@ -72,7 +72,7 @@ public class DefaultMarkLogicDatabaseClientServiceTest {
             runner.enableControllerService(service);
         } catch (AssertionFailedError ex) {
             assertTrue(ex.getMessage().contains("Unable to call token endpoint at https://localhost/token"),
-                "enableControllerService should fail because it tries to authenticate with MarkLogic Cloud, but the " +
+                "enableControllerService should fail because it tries to authenticate with Progress Data Cloud, but the " +
                     "inputs aren't valid. Which is good - the goal of this is to verify that it attempts to use " +
                     "cloud authentication. Actual error: " + ex.getMessage());
         }

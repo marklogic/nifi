@@ -14,7 +14,7 @@ The connector has the following system requirements:
 * MarkLogic 10 or higher, though processors that do not depend on any functionality in MarkLogic 10 or later will 
   run fine on MarkLogic 9.
 
-Please see the [Getting Started guide](getting-started/getting-started.md) to begin using the connector.
+Please see the [Getting Started guide](getting-started.md) to begin using the connector.
 
 For any issues, you can either [report an issue](https://github.com/marklogic/nifi/issues) or contact MarkLogic 
 Support if you are a MarkLogic customer.

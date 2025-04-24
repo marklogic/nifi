@@ -283,7 +283,7 @@ public class ExecuteScriptMarkLogic extends AbstractMarkLogicProcessor {
             } else if (resultsDest.equals("Attribute")) {
                 session.putAttribute(flowFile, MARKLOGIC_RESULT, resultStr);
             } else {
-                JsonElement jelement = new JsonParser().parse(resultStr);
+                JsonElement jelement = JsonParser.parseString(resultStr);
                 JsonObject obj = jelement.getAsJsonObject();
                 for (Entry<String, JsonElement> entry : obj.entrySet()) {
                     String property = entry.getKey();

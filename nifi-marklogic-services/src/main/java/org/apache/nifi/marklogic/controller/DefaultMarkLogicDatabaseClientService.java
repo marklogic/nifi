@@ -132,7 +132,7 @@ public class DefaultMarkLogicDatabaseClientService extends AbstractControllerSer
     public static final PropertyDescriptor CLOUD_API_KEY = new PropertyDescriptor.Builder()
         .name("Cloud API Key")
         .displayName("Cloud API Key")
-        .description("The API key for authenticating with a MarkLogic Cloud instance; typically requires setting 'Load Balancer' to 'true' as well.")
+        .description("The API key for authenticating with a Progress Data Cloud instance; typically requires setting 'Load Balancer' to 'true' as well.")
         .sensitive(true)
         .addValidator(Validator.VALID)
         .build();

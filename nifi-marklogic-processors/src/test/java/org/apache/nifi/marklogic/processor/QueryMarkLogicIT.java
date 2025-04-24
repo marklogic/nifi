@@ -21,7 +21,6 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.marklogic.client.datamovement.QueryBatcher;
 import com.marklogic.client.document.DocumentWriteSet;
 import com.marklogic.client.document.GenericDocumentManager;
-import com.marklogic.client.ext.util.DefaultDocumentPermissionsParser;
 import com.marklogic.client.io.DocumentMetadataHandle;
 import com.marklogic.client.io.JacksonHandle;
 import com.marklogic.client.io.StringHandle;
@@ -517,7 +516,7 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
 
             final String permissions = flowFile.getAttribute("marklogic-permissions");
             DocumentMetadataHandle metadata = new DocumentMetadataHandle();
-            new DefaultDocumentPermissionsParser().parsePermissions(permissions, metadata.getPermissions());
+            metadata.getPermissions().addFromDelimitedString(permissions);
             assertEquals(2, metadata.getPermissions().get("rest-reader").size());
             assertTrue(metadata.getPermissions().get("rest-reader").contains(DocumentMetadataHandle.Capability.READ));
             assertTrue(metadata.getPermissions().get("rest-reader").contains(DocumentMetadataHandle.Capability.UPDATE));
