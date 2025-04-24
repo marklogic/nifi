@@ -8,7 +8,7 @@ develop and test the connector, and then addresses how to submit a pull request.
 You'll first need to [download and install Apache Maven](https://maven.apache.org/) if you do not already have it
 installed.
 
-As of the 2.0.0 release, Java 21 must be used to run the Maven commands below. This is consistent
+As of the NiFi 2.0.0 release, Java 21 must be used to run the Maven commands below. This is consistent
 with the [NiFi system requirements](https://nifi.apache.org/docs/nifi-docs/html/administration-guide.html#system_requirements).
 
 Next, clone this repository (if you haven't already) and run the following command to build the two NAR files:
@@ -58,7 +58,7 @@ Before starting NiFi for the first time, you should set an admin password that w
 NiFi web interface. See [these NiFi docs](https://nifi.apache.org/docs/nifi-docs/html/getting-started.html#i-started-nifi-now-what) 
 for instructions on how to configure this password.
 
-You can then start NiFi using Java 11 via the following command:
+You can then start NiFi using Java 21 via the following command:
 
     $NIFI_HOME/bin/nifi start
 
@@ -152,7 +152,7 @@ You should see logging from all the Maven phases, including logging from tests, 
 like the one below:
 
 ```
-[INFO] Reactor Summary for nifi-marklogic-bundle 2.0.0:
+[INFO] Reactor Summary for nifi-marklogic-bundle 2.0-beta1:
 [INFO] 
 [INFO] nifi-marklogic-bundle .............................. SUCCESS [  1.179 s]
 [INFO] nifi-marklogic-services-api ........................ SUCCESS [  1.208 s]
