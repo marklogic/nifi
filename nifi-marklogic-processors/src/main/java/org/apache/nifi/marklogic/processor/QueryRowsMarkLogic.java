@@ -14,9 +14,10 @@ import org.apache.nifi.expression.ExpressionLanguageScope;
 import org.apache.nifi.flowfile.FlowFile;
 import org.apache.nifi.processor.*;
 import org.apache.nifi.processor.exception.ProcessException;
-import org.springframework.util.FileCopyUtils;
 
+import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.*;
 
 @Tags({"MarkLogic", "Query", "Read", "Rows"})
@@ -57,13 +58,15 @@ public class QueryRowsMarkLogic extends AbstractMarkLogicProcessor {
 
     @Override
     public void init(ProcessorInitializationContext context) {
-        List<PropertyDescriptor> list = new ArrayList<>();
+        super.init(context);
+
+        final List<PropertyDescriptor> list = new ArrayList<>();
         list.add(DATABASE_CLIENT_SERVICE);
         list.add(PLAN);
         list.add(MIMETYPE);
         properties = Collections.unmodifiableList(list);
 
-        Set<Relationship> set = new HashSet<>();
+        final Set<Relationship> set = new HashSet<>();
         set.add(FAILURE);
         set.add(SUCCESS);
         set.add(ORIGINAL);
@@ -77,7 +80,6 @@ public class QueryRowsMarkLogic extends AbstractMarkLogicProcessor {
         if (incomingFlowFile == null) {
             incomingFlowFile = session.create();
         }
-
         try {
             final String jsonPlan = determineJsonPlan(context, incomingFlowFile);
             final String mimeType = determineMimeType(context, incomingFlowFile);
@@ -93,7 +95,7 @@ public class QueryRowsMarkLogic extends AbstractMarkLogicProcessor {
                     if (inputStream != null) {
                         FlowFile resultFlowFile = session.write(
                             createFlowFileWithAttributes(session, incomingFlowFile.getAttributes()),
-                            out -> FileCopyUtils.copy(inputStream, out));
+                            out -> transferAndClose(inputStream, out));
                         session.transfer(resultFlowFile, SUCCESS);
                     }
                     transferAndCommit(session, incomingFlowFile, ORIGINAL);
@@ -113,4 +115,13 @@ public class QueryRowsMarkLogic extends AbstractMarkLogicProcessor {
         return context.getProperty(MIMETYPE).evaluateAttributeExpressions(flowFile).getValue();
     }
 
+    protected int transferAndClose(InputStream inputStream, OutputStream outputStream) throws IOException {
+        Objects.requireNonNull(inputStream, "InputStream should not be null");
+        Objects.requireNonNull(outputStream, "OutputStream should not be null");
+        try (inputStream; outputStream) {
+            int count = (int) inputStream.transferTo(outputStream);
+            outputStream.flush();
+            return count;
+        }
+    }
 }

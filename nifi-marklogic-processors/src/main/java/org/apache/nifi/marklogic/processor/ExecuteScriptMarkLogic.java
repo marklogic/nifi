@@ -210,7 +210,7 @@ public class ExecuteScriptMarkLogic extends AbstractMarkLogicProcessor {
             if (contentVariable != null && contentVariable.length() > 0) {
                 final ByteArrayOutputStream bytes = new ByteArrayOutputStream();
                 session.exportTo(incomingFlowFile, bytes);
-                final String content = bytes.toString();
+                final String content = bytes.toString(StandardCharsets.UTF_8);
 
                 call.addVariable(contentVariable, content);
             }

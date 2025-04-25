@@ -21,6 +21,7 @@ import org.apache.nifi.util.MockFlowFile;
 import org.apache.nifi.util.TestRunner;
 import org.junit.jupiter.api.Test;
 
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -62,7 +63,7 @@ public class ExtensionCallMarkLogicIT extends AbstractMarkLogicIT {
         List<MockFlowFile> results = runner.getFlowFilesForRelationship(ExtensionCallMarkLogic.SUCCESS);
 
         MockFlowFile result = results.get(1);
-        String resultValue = new String(runner.getContentAsByteArray(result));
+        String resultValue = new String(runner.getContentAsByteArray(result), StandardCharsets.UTF_8);
         assertEquals("dynamic Value", resultValue,
             "The test 'replay' extension is expected to return the value of the 'replay' parameter, " +
                 "which is sent via the replay:param property. That property then has an expression, " +
@@ -91,7 +92,7 @@ public class ExtensionCallMarkLogicIT extends AbstractMarkLogicIT {
         List<MockFlowFile> results = runner.getFlowFilesForRelationship(ExtensionCallMarkLogic.SUCCESS);
         assertEquals(1, results.size());
         MockFlowFile result = results.get(0);
-        String resultValue = new String(runner.getContentAsByteArray(result));
+        String resultValue = new String(runner.getContentAsByteArray(result), StandardCharsets.UTF_8);
 
         assertEquals(testString + testString, resultValue);
     }

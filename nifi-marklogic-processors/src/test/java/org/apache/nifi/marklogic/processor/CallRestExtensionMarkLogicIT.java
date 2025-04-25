@@ -5,6 +5,7 @@ import org.apache.nifi.util.MockFlowFile;
 import org.apache.nifi.util.TestRunner;
 import org.junit.jupiter.api.Test;
 
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -32,10 +33,10 @@ public class CallRestExtensionMarkLogicIT extends AbstractMarkLogicIT {
         List<MockFlowFile> results = runner.getFlowFilesForRelationship(CallRestExtensionMarkLogic.RESULTS);
         assertEquals(2, results.size());
 
-        XmlNode firstDoc = new XmlNode(new String(runner.getContentAsByteArray(results.get(0))));
+        XmlNode firstDoc = new XmlNode(new String(runner.getContentAsByteArray(results.get(0)), StandardCharsets.UTF_8));
         assertEquals("doc1", firstDoc.getElementValue("/first"));
 
-        XmlNode secondDoc = new XmlNode(new String(runner.getContentAsByteArray(results.get(1))));
+        XmlNode secondDoc = new XmlNode(new String(runner.getContentAsByteArray(results.get(1)), StandardCharsets.UTF_8));
         assertEquals("doc2", secondDoc.getElementValue("/second"));
     }
 

@@ -34,14 +34,8 @@ import org.apache.nifi.util.StringUtils;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.X509TrustManager;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.Set;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
 
 @Tags({"MarkLogic", "Data Hub Framework"})
 @InputRequirement(InputRequirement.Requirement.INPUT_ALLOWED)
@@ -136,7 +130,9 @@ public class RunFlowMarkLogic extends AbstractMarkLogicProcessor {
 
     @Override
     public void init(final ProcessorInitializationContext context) {
-        List<PropertyDescriptor> list = new ArrayList<>();
+        super.init(context);
+
+        final List<PropertyDescriptor> list = new ArrayList<>();
         list.add(DATABASE_CLIENT_SERVICE);
         list.add(FINAL_PORT);
         list.add(JOB_PORT);
@@ -146,7 +142,7 @@ public class RunFlowMarkLogic extends AbstractMarkLogicProcessor {
         list.add(OPTIONS_JSON);
         properties = Collections.unmodifiableList(list);
 
-        Set<Relationship> set = new HashSet<>();
+        final Set<Relationship> set = new HashSet<>();
         set.add(FINISHED);
         set.add(FAILURE);
         relationships = Collections.unmodifiableSet(set);
@@ -161,9 +157,10 @@ public class RunFlowMarkLogic extends AbstractMarkLogicProcessor {
      */
     @OnScheduled
     public void onScheduled(ProcessContext context) {
-        DatabaseClientConfig clientConfig = context.getProperty(DATABASE_CLIENT_SERVICE)
-            .asControllerService(MarkLogicDatabaseClientService.class)
-            .getDatabaseClientConfig();
+        var controllerService = context.getProperty(DATABASE_CLIENT_SERVICE)
+            .asControllerService(MarkLogicDatabaseClientService.class);
+        Objects.requireNonNull(controllerService, "MarkLogicDatabaseClientService should not be null");
+        DatabaseClientConfig clientConfig = controllerService.getDatabaseClientConfig();
         getLogger().info("Initializing HubConfig");
         this.hubConfig = initializeHubConfig(context, clientConfig);
         getLogger().info("Initialized HubConfig");
@@ -195,7 +192,7 @@ public class RunFlowMarkLogic extends AbstractMarkLogicProcessor {
                 getLogger().info(String.format("Finished running flow %s", inputs.getFlowName()));
             }
 
-            session.write(incomingFlowFile, out -> out.write(response.toJson().getBytes()));
+            session.write(incomingFlowFile, out -> out.write(response.toJson().getBytes(StandardCharsets.UTF_8)));
             transferAndCommit(session, incomingFlowFile, FINISHED);
         } catch (Throwable t) {
             logErrorAndTransfer(t, incomingFlowFile, session, FAILURE);
