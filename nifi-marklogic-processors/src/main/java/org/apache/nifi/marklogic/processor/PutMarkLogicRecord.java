@@ -146,8 +146,14 @@ public class PutMarkLogicRecord extends PutMarkLogic {
     public void initializeFactories(ProcessContext context) {
         recordReaderFactory = context.getProperty(RECORD_READER).asControllerService(RecordReaderFactory.class);
         recordSetWriterFactory = context.getProperty(RECORD_WRITER).asControllerService(RecordSetWriterFactory.class);
-        coerceTypes = context.getProperty(RECORD_COERCE_TYPES).asBoolean();
-        dropUnknownFields = context.getProperty(RECORD_DROP_UNKNOWN_FIELDS).asBoolean();
+        if (context.getProperty(RECORD_COERCE_TYPES) != null &&
+            context.getProperty(RECORD_COERCE_TYPES).asBoolean() != null) {
+            coerceTypes = context.getProperty(RECORD_COERCE_TYPES).asBoolean();
+        }
+        if (context.getProperty(RECORD_DROP_UNKNOWN_FIELDS) != null &&
+            context.getProperty(RECORD_DROP_UNKNOWN_FIELDS).asBoolean() != null) {
+            dropUnknownFields = context.getProperty(RECORD_DROP_UNKNOWN_FIELDS).asBoolean();
+        }
     }
 
     @Override

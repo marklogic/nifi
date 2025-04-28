@@ -26,6 +26,7 @@ import org.apache.nifi.util.*;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
@@ -87,7 +88,7 @@ public abstract class AbstractMarkLogicProcessorTest {
     }
 
     protected MockFlowFile addFlowFile(Map<String, String> attributes, String... contents) {
-        MockFlowFile flowFile = processSession.createFlowFile(String.join("\n", contents).getBytes(), attributes);
+        MockFlowFile flowFile = processSession.createFlowFile(String.join("\n", contents).getBytes(StandardCharsets.UTF_8), attributes);
         sharedSessionState.getFlowFileQueue().offer(flowFile);
         return flowFile;
     }

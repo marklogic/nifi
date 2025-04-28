@@ -31,6 +31,7 @@ import org.apache.nifi.util.MockFlowFile;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -64,7 +65,7 @@ public class PutMarkLogicTest extends AbstractMarkLogicProcessorTest {
 
         BytesHandle content = (BytesHandle) processor.writeEvent.getContent();
         assertEquals(Format.JSON, content.getFormat());
-        assertEquals("{\"hello\":\"nifi rocks\"}", new String(content.get()));
+        assertEquals("{\"hello\":\"nifi rocks\"}", new String(content.get(), StandardCharsets.UTF_8));
 
         DocumentMetadataHandle metadata = (DocumentMetadataHandle) processor.writeEvent.getMetadata();
         assertEquals(4, metadata.getCollections().size());
@@ -90,7 +91,7 @@ public class PutMarkLogicTest extends AbstractMarkLogicProcessorTest {
 
         BytesHandle content = (BytesHandle) processor.writeEvent.getContent();
         assertEquals(Format.JSON, content.getFormat());
-        assertEquals("{\"hello\":\"nifi rocks\"}", new String(content.get()));
+        assertEquals("{\"hello\":\"nifi rocks\"}", new String(content.get(), StandardCharsets.UTF_8));
 
         DocumentMetadataHandle metadata = (DocumentMetadataHandle) processor.writeEvent.getMetadata();
         assertEquals(0, metadata.getCollections().size());
@@ -112,7 +113,7 @@ public class PutMarkLogicTest extends AbstractMarkLogicProcessorTest {
 
         BytesHandle content = (BytesHandle) processor.writeEvent.getContent();
         assertEquals(Format.JSON, content.getFormat());
-        assertEquals("{\"hello\":\"nifi rocks\"}", new String(content.get()));
+        assertEquals("{\"hello\":\"nifi rocks\"}", new String(content.get(), StandardCharsets.UTF_8));
 
         DocumentMetadataHandle metadata = (DocumentMetadataHandle) processor.writeEvent.getMetadata();
         assertEquals(0, metadata.getCollections().size());
@@ -134,7 +135,7 @@ public class PutMarkLogicTest extends AbstractMarkLogicProcessorTest {
 
         BytesHandle content = (BytesHandle) processor.writeEvent.getContent();
         assertEquals(Format.JSON, content.getFormat());
-        assertEquals("{\"hello\":\"nifi rocks\"}", new String(content.get()));
+        assertEquals("{\"hello\":\"nifi rocks\"}", new String(content.get(), StandardCharsets.UTF_8));
 
         DocumentMetadataHandle metadata = (DocumentMetadataHandle) processor.writeEvent.getMetadata();
         assertEquals(0, metadata.getCollections().size());
@@ -162,7 +163,7 @@ public class PutMarkLogicTest extends AbstractMarkLogicProcessorTest {
 
         BytesHandle content = (BytesHandle) processor.writeEvent.getContent();
         assertEquals(Format.JSON, content.getFormat());
-        assertEquals("{\"hello\":\"nifi rocks\"}", new String(content.get()));
+        assertEquals("{\"hello\":\"nifi rocks\"}", new String(content.get(), StandardCharsets.UTF_8));
 
         DocumentMetadataHandle metadata = (DocumentMetadataHandle) processor.writeEvent.getMetadata();
         assertEquals(0, metadata.getCollections().size());
@@ -184,7 +185,7 @@ public class PutMarkLogicTest extends AbstractMarkLogicProcessorTest {
 
         BytesHandle content = (BytesHandle) processor.writeEvent.getContent();
         assertEquals(Format.JSON, content.getFormat());
-        assertEquals("{\"hello\":\"nifi rocks\"}", new String(content.get()));
+        assertEquals("{\"hello\":\"nifi rocks\"}", new String(content.get(), StandardCharsets.UTF_8));
 
         DocumentMetadataHandle metadata = (DocumentMetadataHandle) processor.writeEvent.getMetadata();
         assertEquals(2, metadata.getCollections().size());
@@ -295,7 +296,7 @@ public class PutMarkLogicTest extends AbstractMarkLogicProcessorTest {
 
         BytesHandle content = (BytesHandle) processor.writeEvent.getContent();
         assertEquals(Format.XML, content.getFormat());
-        assertEquals("<test/>", new String(content.get()));
+        assertEquals("<test/>", new String(content.get(), StandardCharsets.UTF_8));
     }
 
     @Test

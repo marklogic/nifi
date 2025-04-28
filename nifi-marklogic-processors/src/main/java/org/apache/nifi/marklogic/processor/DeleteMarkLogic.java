@@ -54,7 +54,8 @@ public class DeleteMarkLogic extends QueryMarkLogic {
     @Override
     public void init(ProcessorInitializationContext context) {
         super.init(context);
-        List<PropertyDescriptor> list = new ArrayList<>();
+
+        final List<PropertyDescriptor> list = new ArrayList<>();
         list.add(DATABASE_CLIENT_SERVICE);
         list.add(BATCH_SIZE);
         list.add(THREAD_COUNT);
@@ -64,7 +65,7 @@ public class DeleteMarkLogic extends QueryMarkLogic {
         list.add(STATE_INDEX_TYPE);
         properties = Collections.unmodifiableList(list);
 
-        Set<Relationship> set = new HashSet<>();
+        final Set<Relationship> set = new HashSet<>();
         set.add(SUCCESS);
         set.add(FAILURE);
         set.add(ORIGINAL);

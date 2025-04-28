@@ -39,6 +39,7 @@ import org.apache.nifi.processor.exception.ProcessException;
 import org.apache.nifi.processor.util.StandardValidators;
 import org.apache.nifi.stream.io.StreamUtils;
 
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.regex.Pattern;
 
@@ -209,7 +210,7 @@ public class ExtensionCallMarkLogic extends AbstractMarkLogicProcessor {
                 requestBody.set(content);
                 break;
             case PayloadSources.PAYLOAD_PROPERTY_STR:
-                requestBody.set(context.getProperty(PAYLOAD).evaluateAttributeExpressions(flowFile).getValue().getBytes());
+                requestBody.set(context.getProperty(PAYLOAD).evaluateAttributeExpressions(flowFile).getValue().getBytes(StandardCharsets.UTF_8));
                 break;
         }
 

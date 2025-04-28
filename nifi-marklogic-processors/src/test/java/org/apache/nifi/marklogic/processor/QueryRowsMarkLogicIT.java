@@ -8,6 +8,7 @@ import org.apache.nifi.util.TestRunner;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -47,7 +48,7 @@ public class QueryRowsMarkLogicIT extends AbstractMarkLogicIT {
         assertEquals(1, files.size(), "A single FlowFile with the TDE response should have been transferred");
 
         // Newline characters are making it difficult to assert on the entire response at once
-        final String response = new String(files.get(0).toByteArray());
+        final String response = new String(files.getFirst().toByteArray(),StandardCharsets.UTF_8);
         assertTrue(response.startsWith("Example.default.Id"));
         assertTrue(response.contains("0"));
         assertTrue(response.contains("1"));
@@ -153,10 +154,10 @@ public class QueryRowsMarkLogicIT extends AbstractMarkLogicIT {
 
         List<MockFlowFile> list = runner.getFlowFilesForRelationship(QueryRowsMarkLogic.ORIGINAL);
         assertEquals(Integer.valueOf(1), list.size(), "The new incoming FlowFile should go to Original");
-        assertEquals(serializedPlan, list.get(0).getAttribute("marklogic-optic-plan"), "The serialized plan should be" +
+        assertEquals(serializedPlan, list.getFirst().getAttribute("marklogic-optic-plan"), "The serialized plan should be" +
             " on the success FlowFile so that a user knows what was executed to produce the rows");
 
-        final String response = new String(list.get(0).toByteArray());
+        final String response = new String(list.getFirst().toByteArray(), StandardCharsets.UTF_8);
         assertEquals("", response, "The response should be empty since the 'where' clause resulted in no rows being " +
             "found; no error should be thrown either, as the serialized plan is valid; it just doesn't match anything");
 
