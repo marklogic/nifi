@@ -39,10 +39,10 @@ import java.util.*;
 
 @Tags({"MarkLogic", "Data Hub Framework"})
 @InputRequirement(InputRequirement.Requirement.INPUT_ALLOWED)
-@CapabilityDescription("Run a MarkLogic Data Hub 6.1.x flow via the Data Hub 6.1.1 Java API. This is expected to be run on non-ingestion steps, where data " +
+@CapabilityDescription("Run a MarkLogic Data Hub 6.2.x flow via the Data Hub 6.2.0 Java API. This is expected to be run on non-ingestion steps, where data " +
     "has already been ingested into MarkLogic. Ingestion steps depend on access to local files, which isn't a common " +
     "use case for NiFi in production. Note that a given version of the Data Hub Java API is not yet guaranteed to work " +
-    "with any other version of Data Hub. It is thus recommended to only use this against a Data Hub 6.1.0 or 6.1.1 installation, " +
+    "with any other version of Data Hub. It is thus recommended to only use this against a Data Hub 6.2.0 installation, " +
     "though it may work with other versions of Data Hub. Requires a MarkLogic user that is able to run the flow; " +
     "consult your Data Hub Framework documentation for guidelines on what Data Hub roles are required. As of the 1.27.1 " +
     "release, you can now specify any Data Hub property via a dynamic property starting with 'dhf:', followed by the name " +
@@ -153,7 +153,7 @@ public class RunFlowMarkLogic extends AbstractMarkLogicProcessor {
      * MarkLogicDatabaseClientService. The DatabaseClient from this service cannot be reused, as DHF instantiates its
      * own set of DatabaseClients.
      *
-     * @param context
+     * @param context the process context
      */
     @OnScheduled
     public void onScheduled(ProcessContext context) {
