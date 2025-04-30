@@ -10,4 +10,4 @@ documents that match a query. A new FlowFile is created for each deleted documen
 user with the `rest-reader` privilege to read documents and the `rest-writer` privilege to delete documents.
 
 For full details on each property and relationship for this processor, add an instance of it to the NiFi canvas,
-right-click on it, and select "View Usage".
+right-click on it, and select "View Documentation".

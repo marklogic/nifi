@@ -13,17 +13,15 @@ this controller service.
 An instance of the DatabaseClient controller service can be added and made available to processors via the
 following steps:
 
-1. Click anywhere on the NiFi canvas so that in the "Operate" panel on the left, a process group is shown as selected.
-2. Click on the cog icon in the "Operate" panel.
-3. Click on the "Controller Services" tab if it is not already selected.
-4. Click on the plus icon on the right side of the "Controller Services" tab.
-5. In the "Add Controller Service" dialog that appears, enter "MarkLogic".
-6. Select the "DefaultMarkLogicDatabaseClientService" item that appears and click "Add".
+1. Right-Click on the desired process group or anywhere on the canvas within the opened desired process group, right-click and select "Controller Services".
+2. Click on the plus icon on the right side of the "Controller Services" page.
+3. In the "Add Controller Service" dialog that appears, enter "MarkLogic".
+4. Select the "DefaultMarkLogicDatabaseClientService 2.0.0" item that appears and click "Add".
 
-A new, disabled controller service named "DefaultMarkLogicDatabaseClientService" will now be listed in the
-"Controller Services" tab. The service will need to be edited and then enabled in order for it to be used by any of the
-MarkLogic processors. The service can be edited by clicking on the cog icon and can be enabled by clicking on the 
-lightning icon.
+A new, disabled controller service named "DefaultMarkLogicDatabaseClientService 2.0.0" will now be listed in the
+"Controller Services" page. The service will need to be edited and then enabled in order for it to be used by any of the
+MarkLogic processors. The service can be edited by clicking on the vertical ellipses on the right and can be enabled by clicking on  
+"Enable" (lightening icon).
 
 As an example, for connecting to a MarkLogic REST API app server that uses digest authentication, the following
 properties would need to be set:
@@ -37,4 +35,4 @@ It is recommended to rename the service as well to give it a more self-documenti
 your MarkLogic app server is 8004, a more useful name might be "marklogic-8004".
 
 After setting the above properties, the controller service will now be in a valid state and can then be enabled by
-clicking on the lightning icon.
+clicking on "Enable" (lightening icon).
