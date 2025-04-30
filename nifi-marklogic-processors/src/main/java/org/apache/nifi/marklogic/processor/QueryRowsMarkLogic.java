@@ -108,10 +108,12 @@ public class QueryRowsMarkLogic extends AbstractMarkLogicProcessor {
     }
 
     protected String determineJsonPlan(ProcessContext context, FlowFile flowFile) {
+        Objects.requireNonNull(context.getProperty(PLAN), "PLAN property should not be null");
         return context.getProperty(PLAN).evaluateAttributeExpressions(flowFile).getValue();
     }
 
     protected String determineMimeType(ProcessContext context, FlowFile flowFile) {
+        Objects.requireNonNull(context.getProperty(MIMETYPE), "MIMETYPE property should not be null");
         return context.getProperty(MIMETYPE).evaluateAttributeExpressions(flowFile).getValue();
     }
 

@@ -309,7 +309,13 @@ public class PutMarkLogic extends AbstractMarkLogicProcessor {
             throw new ProcessException("Unable to connect to MarkLogic; cause: " + result.getErrorMessage());
         }
 
+        Objects.requireNonNull(context.getProperty(JOB_ID), "JOB_ID property should not be null");
+        Objects.requireNonNull(context.getProperty(JOB_NAME), "JOB_NAME property should not be null");
+        Objects.requireNonNull(context.getProperty(BATCH_SIZE), "BATCH_SIZE property should not be null");
+        Objects.requireNonNull(context.getProperty(TEMPORAL_COLLECTION), "TEMPORAL_COLLECTION property should not be null");
+        Objects.requireNonNull(context.getProperty(THREAD_COUNT), "THREAD_COUNT property should not be null");
         try {
+            Objects.requireNonNull(dataMovementManager.newWriteBatcher(), "new WriteBatcher should not be null");
             writeBatcher = dataMovementManager.newWriteBatcher()
                 .withJobId(context.getProperty(JOB_ID).getValue())
                 .withJobName(context.getProperty(JOB_NAME).getValue())
@@ -521,7 +527,9 @@ public class PutMarkLogic extends AbstractMarkLogicProcessor {
     }
 
     protected WriteEvent buildWriteEvent(ProcessContext context, ProcessSession session, FlowFile flowFile) {
+        Objects.requireNonNull(context.getProperty(URI_ATTRIBUTE_NAME), "URI_ATTRIBUTE_NAME property should not be null");
         String uri = flowFile.getAttribute(context.getProperty(URI_ATTRIBUTE_NAME).getValue());
+        Objects.requireNonNull(context.getProperty(URI_PREFIX), "URI_PREFIX property should not be null");
         final String prefix = context.getProperty(URI_PREFIX).evaluateAttributeExpressions(flowFile).getValue();
         if (prefix != null) {
             uri = prefix + uri;
@@ -575,6 +583,7 @@ public class PutMarkLogic extends AbstractMarkLogicProcessor {
             permissionsProperty.evaluateAttributeExpressions(flowFile).getValue() : null;
         final String[] tokens = getArrayFromCommaSeparatedString(permissionsValue);
 
+        Objects.requireNonNull(context.getProperty(QUALITY), "QUALITY property should not be null");
         Integer quality = context.getProperty(QUALITY).evaluateAttributeExpressions(flowFile).asInteger();
         if (quality != null) {
             metadata.withQuality(quality);

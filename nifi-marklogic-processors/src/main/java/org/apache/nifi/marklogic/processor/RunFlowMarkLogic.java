@@ -157,6 +157,7 @@ public class RunFlowMarkLogic extends AbstractMarkLogicProcessor {
      */
     @OnScheduled
     public void onScheduled(ProcessContext context) {
+        Objects.requireNonNull(context.getProperty(DATABASE_CLIENT_SERVICE), "MarkLogicDatabaseClientService should not be null");
         var controllerService = context.getProperty(DATABASE_CLIENT_SERVICE)
             .asControllerService(MarkLogicDatabaseClientService.class);
         Objects.requireNonNull(controllerService, "MarkLogicDatabaseClientService should not be null");
@@ -205,7 +206,10 @@ public class RunFlowMarkLogic extends AbstractMarkLogicProcessor {
         props.setProperty("mlStagingPort", clientConfig.getPort() + "");
         props.setProperty("mlUsername", clientConfig.getUsername());
         props.setProperty("mlPassword", clientConfig.getPassword());
+
+        Objects.requireNonNull(context.getProperty(FINAL_PORT), "Final port should not be null");
         props.setProperty("mlFinalPort", context.getProperty(FINAL_PORT).evaluateAttributeExpressions().getValue());
+        Objects.requireNonNull(context.getProperty(JOB_PORT), "Job port should not be null");
         props.setProperty("mlJobPort", context.getProperty(JOB_PORT).evaluateAttributeExpressions().getValue());
 
         props.setProperty("mlStagingAuth", clientConfig.getSecurityContextType().toString());
@@ -264,6 +268,7 @@ public class RunFlowMarkLogic extends AbstractMarkLogicProcessor {
     }
 
     protected FlowInputs buildFlowInputs(ProcessContext context, FlowFile flowFile) {
+        Objects.requireNonNull(context.getProperty(FLOW_NAME), "Flow name property should not be null");
         final String flowName = context.getProperty(FLOW_NAME).evaluateAttributeExpressions(flowFile).getValue();
         FlowInputs inputs = new FlowInputs(flowName);
 

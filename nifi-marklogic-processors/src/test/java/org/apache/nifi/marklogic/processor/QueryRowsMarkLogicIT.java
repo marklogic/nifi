@@ -20,6 +20,7 @@ public class QueryRowsMarkLogicIT extends AbstractMarkLogicIT {
 
     @BeforeEach
     public void setup() {
+        super.setup();
         JSONDocumentManager mgr = getDatabaseClient().newJSONDocumentManager();
         DocumentMetadataHandle metadata = new DocumentMetadataHandle()
             .withPermission("rest-reader", DocumentMetadataHandle.Capability.READ, DocumentMetadataHandle.Capability.UPDATE);

@@ -44,11 +44,7 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -664,8 +660,8 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
 
     private void assertBytesAreEqualXMLDocs(byte[] expectedByteArray, byte[] actualByteArray) {
 
-        assertNotNull(expectedByteArray, "The expectedByteArray is null");
-        assertNotNull(actualByteArray, "The actualByteArray is null");
+        Objects.requireNonNull(expectedByteArray, "The expectedByteArray should not be null");
+        Objects.requireNonNull(actualByteArray, "The actualByteArray should not be null");
         try {
             DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
             dbf.setNamespaceAware(true);

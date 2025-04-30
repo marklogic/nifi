@@ -261,15 +261,18 @@ public class ExecuteScriptMarkLogic extends AbstractMarkLogicProcessor {
 
     private ServerEvaluationCall buildCall(ProcessContext context, ProcessSession session, FlowFile originalFlowFile) {
         DatabaseClient client = getDatabaseClient(context);
+        Objects.requireNonNull(context.getProperty(EXECUTION_TYPE), "EXECUTION_TYPE property should not be null");
         final String executionType = context.getProperty(EXECUTION_TYPE).getValue();
         ServerEvaluationCall call = client.newServerEval();
 
         if (STR_MODULE_PATH.equals(executionType)) {
+            Objects.requireNonNull(context.getProperty(MODULE_PATH), "MODULE_PATH property should not be null");
             String modulePath = context.getProperty(MODULE_PATH).evaluateAttributeExpressions(originalFlowFile).getValue();
             session.putAttribute(originalFlowFile, "marklogic-module-path", modulePath);
             return call.modulePath(modulePath);
         }
 
+        Objects.requireNonNull(context.getProperty(SCRIPT_BODY), "SCRIPT_BODY property should not be null");
         final String scriptBody = context.getProperty(SCRIPT_BODY).evaluateAttributeExpressions(originalFlowFile).getValue();
         session.putAttribute(originalFlowFile, "marklogic-script-body", scriptBody);
         return STR_JAVASCRIPT.equals(executionType) ? call.javascript(scriptBody) : call.xquery(scriptBody);

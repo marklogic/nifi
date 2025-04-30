@@ -109,6 +109,7 @@ public class ApplyTransformMarkLogic extends QueryMarkLogic {
      */
     @Override
     protected QueryBatchListener buildQueryBatchListener(final ProcessContext context, final ProcessSession session, Map<String, String> incomingAttributes) {
+        Objects.requireNonNull(context.getProperty(APPLY_RESULT_TYPE), "APPLY_RESULT_TYPE should not be null");
         return new ApplyTransformListener()
             .withApplyResult(
                 ApplyResultTypes.INGORE_STR.equals(context.getProperty(APPLY_RESULT_TYPE).getValue()) ? ApplyResult.IGNORE : ApplyResult.REPLACE
