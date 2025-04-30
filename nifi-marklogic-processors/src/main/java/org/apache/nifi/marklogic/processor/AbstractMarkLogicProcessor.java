@@ -23,6 +23,7 @@ import com.marklogic.client.ResourceNotFoundException;
 import com.marklogic.client.UnauthorizedUserException;
 import com.marklogic.client.document.ServerTransform;
 import org.apache.nifi.components.PropertyDescriptor;
+import org.apache.nifi.components.PropertyValue;
 import org.apache.nifi.components.Validator;
 import org.apache.nifi.expression.ExpressionLanguageScope;
 import org.apache.nifi.flowfile.FlowFile;
@@ -35,12 +36,7 @@ import org.apache.nifi.processor.ProcessorInitializationContext;
 import org.apache.nifi.processor.Relationship;
 import org.apache.nifi.processor.util.StandardValidators;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.regex.Pattern;
@@ -145,9 +141,12 @@ public abstract class AbstractMarkLogicProcessor extends AbstractSessionFactoryP
     }
 
     protected DatabaseClient getDatabaseClient(ProcessContext context) {
-        return context.getProperty(DATABASE_CLIENT_SERVICE)
-            .asControllerService(MarkLogicDatabaseClientService.class)
-            .getDatabaseClient();
+
+        PropertyValue mlSvcPropValue = context.getProperty(DATABASE_CLIENT_SERVICE);
+        Objects.requireNonNull(mlSvcPropValue, "DATABASE_CLIENT_SERVICE property should not be null");
+        MarkLogicDatabaseClientService mlSvc = mlSvcPropValue.asControllerService(MarkLogicDatabaseClientService.class);
+        Objects.requireNonNull(mlSvc, "MarkLogicDatabaseClientService should not be null");
+        return mlSvc.getDatabaseClient();
     }
 
     protected String[] getArrayFromCommaSeparatedString(String stringValue) {
@@ -204,6 +203,7 @@ public abstract class AbstractMarkLogicProcessor extends AbstractSessionFactoryP
 
     protected ServerTransform buildServerTransform(ProcessContext context) {
         ServerTransform serverTransform = null;
+        Objects.requireNonNull(context.getProperty(TRANSFORM), "TRANSFORM property should not be null");
         final String transform = context.getProperty(TRANSFORM).getValue();
         if (transform != null) {
             serverTransform = new ServerTransform(transform);
@@ -227,6 +227,9 @@ public abstract class AbstractMarkLogicProcessor extends AbstractSessionFactoryP
             // which seems erroneous as the descriptor is not evaluated against a FlowFile here.
             // To allow for this to work in a test, a try/catch is used on this exception with the catch block
             // simply not evaluating any expressions.
+            Objects.requireNonNull(descriptor, "descriptor should not be null");
+            Objects.requireNonNull(context.getProperty(descriptor),
+                "property for descriptor " + descriptor.getName() + " should not be null");
             return context.getProperty(descriptor).evaluateAttributeExpressions(context.getAllProperties()).getValue();
         } catch (IllegalStateException ex) {
             getLogger().debug("Unexpected error while getting transform param value: descriptor: " + descriptor + "; error: " + ex.getMessage());

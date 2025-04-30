@@ -42,10 +42,7 @@ import java.io.FileInputStream;
 import java.io.InputStream;
 import java.security.KeyStore;
 import java.security.ProviderException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 @Tags({"MarkLogic"})
 @CapabilityDescription("Provides a MarkLogic DatabaseClient instance for use by other processors")
@@ -206,6 +203,7 @@ public class DefaultMarkLogicDatabaseClientService extends AbstractControllerSer
     protected DatabaseClientConfig buildDatabaseClientConfig(ConfigurationContext context) {
         DatabaseClientConfig config = new DatabaseClientConfig();
         config.setHost(context.getProperty(HOST).evaluateAttributeExpressions().getValue());
+        Objects.requireNonNull(context.getProperty(PORT), "PORT property should not be null");
         config.setPort(context.getProperty(PORT).evaluateAttributeExpressions().asInteger());
         config.setBasePath(context.getProperty(BASE_PATH).evaluateAttributeExpressions().getValue());
         config.setSecurityContextType(SecurityContextType.valueOf(
@@ -216,7 +214,9 @@ public class DefaultMarkLogicDatabaseClientService extends AbstractControllerSer
         config.setCloudApiKey(context.getProperty(CLOUD_API_KEY).getValue());
         config.setDatabase(context.getProperty(DATABASE).evaluateAttributeExpressions().getValue());
 
-        if (context.getProperty(LOAD_BALANCER) != null && context.getProperty(LOAD_BALANCER).evaluateAttributeExpressions().asBoolean()) {
+        if (context.getProperty(LOAD_BALANCER) != null &&
+            context.getProperty(LOAD_BALANCER).evaluateAttributeExpressions().asBoolean() != null &&
+            context.getProperty(LOAD_BALANCER).evaluateAttributeExpressions().asBoolean()) {
             config.setConnectionType(DatabaseClient.ConnectionType.GATEWAY);
         }
 

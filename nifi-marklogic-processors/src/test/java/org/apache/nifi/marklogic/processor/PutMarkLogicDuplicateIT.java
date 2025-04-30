@@ -32,6 +32,7 @@ public class PutMarkLogicDuplicateIT extends AbstractMarkLogicIT {
 
     @BeforeEach
     public void setup() {
+        super.setup();
         numDocs = 1200;
         documents = new ArrayList<>(numDocs);
         dataMovementManager = getDatabaseClient().newDataMovementManager();

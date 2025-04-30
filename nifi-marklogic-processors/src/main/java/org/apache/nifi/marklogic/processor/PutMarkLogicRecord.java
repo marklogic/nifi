@@ -144,7 +144,9 @@ public class PutMarkLogicRecord extends PutMarkLogic {
 
     @OnScheduled
     public void initializeFactories(ProcessContext context) {
+        Objects.requireNonNull(context.getProperty(RECORD_READER), "RECORD_READER should not be null");
         recordReaderFactory = context.getProperty(RECORD_READER).asControllerService(RecordReaderFactory.class);
+        Objects.requireNonNull(context.getProperty(RECORD_WRITER), "RECORD_WRITER should not be null");
         recordSetWriterFactory = context.getProperty(RECORD_WRITER).asControllerService(RecordSetWriterFactory.class);
         if (context.getProperty(RECORD_COERCE_TYPES) != null &&
             context.getProperty(RECORD_COERCE_TYPES).asBoolean() != null) {
@@ -164,6 +166,7 @@ public class PutMarkLogicRecord extends PutMarkLogic {
             return;
         }
 
+        Objects.requireNonNull(context.getProperty(URI_FIELD_NAME), "URI_FIELD_NAME should not be null");
         final String uriFieldName = context.getProperty(URI_FIELD_NAME).evaluateAttributeExpressions(flowFile).getValue();
 
         int added = 0;
@@ -240,10 +243,12 @@ public class PutMarkLogicRecord extends PutMarkLogic {
         String uri,
         final BytesHandle contentHandle
     ) {
+        Objects.requireNonNull(context.getProperty(URI_PREFIX), "URI_PREFIX property should not be null");
         final String prefix = context.getProperty(URI_PREFIX).evaluateAttributeExpressions(flowFile).getValue();
         if (prefix != null) {
             uri = prefix + uri;
         }
+        Objects.requireNonNull(context.getProperty(URI_SUFFIX), "URI_SUFFIX property should not be null");
         final String suffix = context.getProperty(URI_SUFFIX).evaluateAttributeExpressions(flowFile).getValue();
         if (suffix != null) {
             uri += suffix;
@@ -251,6 +256,7 @@ public class PutMarkLogicRecord extends PutMarkLogic {
         uri = uri.replaceAll("//", "/");
 
         DocumentMetadataHandle metadata = buildMetadataHandle(context, flowFile, context.getProperty(COLLECTIONS), context.getProperty(PERMISSIONS));
+        Objects.requireNonNull(context.getProperty(FORMAT), "FORMAT property should not be null");
         final String format = context.getProperty(FORMAT).getValue();
         if (format != null) {
             contentHandle.withFormat(Format.valueOf(format));
@@ -258,6 +264,7 @@ public class PutMarkLogicRecord extends PutMarkLogic {
             addFormat(uri, contentHandle);
         }
 
+        Objects.requireNonNull(context.getProperty(MIMETYPE), "MIMETYPE property should not be null");
         final String mimetype = context.getProperty(MIMETYPE).getValue();
         if (mimetype != null) {
             contentHandle.withMimetype(mimetype);
