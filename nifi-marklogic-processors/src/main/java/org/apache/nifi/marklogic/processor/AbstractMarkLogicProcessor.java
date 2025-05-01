@@ -142,11 +142,13 @@ public abstract class AbstractMarkLogicProcessor extends AbstractSessionFactoryP
 
     protected DatabaseClient getDatabaseClient(ProcessContext context) {
 
-        PropertyValue mlSvcPropValue = context.getProperty(DATABASE_CLIENT_SERVICE);
-        Objects.requireNonNull(mlSvcPropValue, "DATABASE_CLIENT_SERVICE property should not be null");
-        MarkLogicDatabaseClientService mlSvc = mlSvcPropValue.asControllerService(MarkLogicDatabaseClientService.class);
-        Objects.requireNonNull(mlSvc, "MarkLogicDatabaseClientService should not be null");
-        return mlSvc.getDatabaseClient();
+        PropertyValue databaseClientServiceProp = context.getProperty(DATABASE_CLIENT_SERVICE);
+        Objects.requireNonNull(databaseClientServiceProp);
+
+        MarkLogicDatabaseClientService markLogicDatabaseClientService = databaseClientServiceProp.asControllerService(MarkLogicDatabaseClientService.class);
+        Objects.requireNonNull(markLogicDatabaseClientService);
+
+        return markLogicDatabaseClientService.getDatabaseClient();
     }
 
     protected String[] getArrayFromCommaSeparatedString(String stringValue) {
@@ -203,8 +205,9 @@ public abstract class AbstractMarkLogicProcessor extends AbstractSessionFactoryP
 
     protected ServerTransform buildServerTransform(ProcessContext context) {
         ServerTransform serverTransform = null;
-        Objects.requireNonNull(context.getProperty(TRANSFORM), "TRANSFORM property should not be null");
-        final String transform = context.getProperty(TRANSFORM).getValue();
+        PropertyValue transformProperty = context.getProperty(TRANSFORM);
+        Objects.requireNonNull(transformProperty);
+        final String transform = transformProperty.getValue();
         if (transform != null) {
             serverTransform = new ServerTransform(transform);
             final String transformPrefix = "trans";
@@ -220,6 +223,7 @@ public abstract class AbstractMarkLogicProcessor extends AbstractSessionFactoryP
     }
 
     private String getTransformParamValue(ProcessContext context, PropertyDescriptor descriptor) {
+        Objects.requireNonNull(descriptor);
         try {
             // During 1.16.3.3 development, found that while this works fine when run in NiFi 1.18 through 1.22, it
             // fails within a NiFi test runner - which perhaps is a bug in NiFi's test runner?
@@ -227,13 +231,14 @@ public abstract class AbstractMarkLogicProcessor extends AbstractSessionFactoryP
             // which seems erroneous as the descriptor is not evaluated against a FlowFile here.
             // To allow for this to work in a test, a try/catch is used on this exception with the catch block
             // simply not evaluating any expressions.
-            Objects.requireNonNull(descriptor, "descriptor should not be null");
-            Objects.requireNonNull(context.getProperty(descriptor),
-                "property for descriptor " + descriptor.getName() + " should not be null");
-            return context.getProperty(descriptor).evaluateAttributeExpressions(context.getAllProperties()).getValue();
+            PropertyValue descriptorProperty = context.getProperty(descriptor);
+            Objects.requireNonNull(descriptorProperty);
+            return descriptorProperty.evaluateAttributeExpressions(context.getAllProperties()).getValue();
         } catch (IllegalStateException ex) {
             getLogger().debug("Unexpected error while getting transform param value: descriptor: " + descriptor + "; error: " + ex.getMessage());
-            return context.getProperty(descriptor).getValue();
+            PropertyValue descriptorProperty = context.getProperty(descriptor);
+            Objects.requireNonNull(descriptorProperty);
+            return descriptorProperty.getValue();
         }
     }
 

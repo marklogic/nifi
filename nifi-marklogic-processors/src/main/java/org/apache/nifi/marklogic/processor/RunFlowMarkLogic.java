@@ -18,6 +18,7 @@ import org.apache.nifi.annotation.documentation.CapabilityDescription;
 import org.apache.nifi.annotation.documentation.Tags;
 import org.apache.nifi.annotation.lifecycle.OnScheduled;
 import org.apache.nifi.components.PropertyDescriptor;
+import org.apache.nifi.components.PropertyValue;
 import org.apache.nifi.components.Validator;
 import org.apache.nifi.expression.ExpressionLanguageScope;
 import org.apache.nifi.flowfile.FlowFile;
@@ -157,10 +158,10 @@ public class RunFlowMarkLogic extends AbstractMarkLogicProcessor {
      */
     @OnScheduled
     public void onScheduled(ProcessContext context) {
-        Objects.requireNonNull(context.getProperty(DATABASE_CLIENT_SERVICE), "MarkLogicDatabaseClientService should not be null");
-        var controllerService = context.getProperty(DATABASE_CLIENT_SERVICE)
-            .asControllerService(MarkLogicDatabaseClientService.class);
-        Objects.requireNonNull(controllerService, "MarkLogicDatabaseClientService should not be null");
+        PropertyValue databaseClientServiceProp = context.getProperty(DATABASE_CLIENT_SERVICE);
+        Objects.requireNonNull(databaseClientServiceProp);
+        var controllerService = databaseClientServiceProp.asControllerService(MarkLogicDatabaseClientService.class);
+        Objects.requireNonNull(controllerService);
         DatabaseClientConfig clientConfig = controllerService.getDatabaseClientConfig();
         getLogger().info("Initializing HubConfig");
         this.hubConfig = initializeHubConfig(context, clientConfig);
@@ -207,10 +208,13 @@ public class RunFlowMarkLogic extends AbstractMarkLogicProcessor {
         props.setProperty("mlUsername", clientConfig.getUsername());
         props.setProperty("mlPassword", clientConfig.getPassword());
 
-        Objects.requireNonNull(context.getProperty(FINAL_PORT), "Final port should not be null");
-        props.setProperty("mlFinalPort", context.getProperty(FINAL_PORT).evaluateAttributeExpressions().getValue());
-        Objects.requireNonNull(context.getProperty(JOB_PORT), "Job port should not be null");
-        props.setProperty("mlJobPort", context.getProperty(JOB_PORT).evaluateAttributeExpressions().getValue());
+        PropertyValue finalPortProp = context.getProperty(FINAL_PORT);
+        Objects.requireNonNull(finalPortProp);
+        props.setProperty("mlFinalPort", finalPortProp.evaluateAttributeExpressions().getValue());
+
+        PropertyValue jobPortProp = context.getProperty(JOB_PORT);
+        Objects.requireNonNull(jobPortProp);
+        props.setProperty("mlJobPort", jobPortProp.evaluateAttributeExpressions().getValue());
 
         props.setProperty("mlStagingAuth", clientConfig.getSecurityContextType().toString());
         props.setProperty("mlFinalAuth", clientConfig.getSecurityContextType().toString());
@@ -221,7 +225,9 @@ public class RunFlowMarkLogic extends AbstractMarkLogicProcessor {
         if (dhfProperties != null) {
             for (final PropertyDescriptor propertyDesc : dhfProperties) {
                 String propertyName = propertyDesc.getName().substring(dhfPrefix.length() + 1);
-                String propertyValue = context.getProperty(propertyDesc).evaluateAttributeExpressions().getValue();
+                PropertyValue prop = context.getProperty(propertyDesc);
+                Objects.requireNonNull(prop);
+                String propertyValue = prop.evaluateAttributeExpressions().getValue();
 
                 props.setProperty(propertyName, propertyValue);
             }
@@ -268,8 +274,9 @@ public class RunFlowMarkLogic extends AbstractMarkLogicProcessor {
     }
 
     protected FlowInputs buildFlowInputs(ProcessContext context, FlowFile flowFile) {
-        Objects.requireNonNull(context.getProperty(FLOW_NAME), "Flow name property should not be null");
-        final String flowName = context.getProperty(FLOW_NAME).evaluateAttributeExpressions(flowFile).getValue();
+        PropertyValue flowNameProp = context.getProperty(FLOW_NAME);
+        Objects.requireNonNull(flowNameProp);
+        final String flowName = flowNameProp.evaluateAttributeExpressions(flowFile).getValue();
         FlowInputs inputs = new FlowInputs(flowName);
 
         if (context.getProperty(STEPS) != null) {

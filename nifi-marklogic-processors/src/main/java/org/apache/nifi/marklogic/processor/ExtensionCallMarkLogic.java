@@ -144,8 +144,9 @@ public class ExtensionCallMarkLogic extends AbstractMarkLogicProcessor {
     public void onScheduled(ProcessContext context) {
         super.populatePropertiesByPrefix(context);
         DatabaseClient client = getDatabaseClient(context);
-        Objects.requireNonNull(context.getProperty(EXTENSION_NAME), "EXTENSION_NAME property should not be null");
-        String extensionName = context.getProperty(EXTENSION_NAME).evaluateAttributeExpressions(context.getAllProperties()).getValue();
+        PropertyValue extensionNameProp = context.getProperty(EXTENSION_NAME);
+        Objects.requireNonNull(extensionNameProp);
+        String extensionName = extensionNameProp.evaluateAttributeExpressions(context.getAllProperties()).getValue();
         getLogger().info("Creating ResourceManager for REST extension: " + extensionName);
         resourceManager = new ExtensionResourceManager(client, extensionName);
     }
@@ -197,15 +198,17 @@ public class ExtensionCallMarkLogic extends AbstractMarkLogicProcessor {
     private ServiceResultIterator callExtension(ProcessContext context, ProcessSession session, FlowFile originalFlowFile) {
         BytesHandle requestBody = buildRequestBody(context, session, originalFlowFile);
         RequestParameters requestParams = buildRequestParameters(context, originalFlowFile);
-        Objects.requireNonNull(context.getProperty(METHOD_TYPE), "METHOD_TYPE property should not be null");
-        String method = context.getProperty(METHOD_TYPE).getValue();
+        PropertyValue methodTypeProp = context.getProperty(METHOD_TYPE);
+        Objects.requireNonNull(methodTypeProp);
+        String method = methodTypeProp.getValue();
         return resourceManager.callService(method, requestBody, requestParams);
     }
 
     private BytesHandle buildRequestBody(ProcessContext context, ProcessSession session, FlowFile flowFile) {
         BytesHandle requestBody = new BytesHandle();
-        Objects.requireNonNull(context.getProperty(PAYLOAD_SOURCE), "PAYLOAD_SOURCE property should not be null");
-        String payloadType = context.getProperty(PAYLOAD_SOURCE).getValue();
+        PropertyValue payloadSourceProp = context.getProperty(PAYLOAD_SOURCE);
+        Objects.requireNonNull(payloadSourceProp);
+        String payloadType = payloadSourceProp.getValue();
         switch (payloadType) {
             case PayloadSources.FLOWFILE_CONTENT_STR:
                 final byte[] content = new byte[(int) flowFile.getSize()];
@@ -213,12 +216,15 @@ public class ExtensionCallMarkLogic extends AbstractMarkLogicProcessor {
                 requestBody.set(content);
                 break;
             case PayloadSources.PAYLOAD_PROPERTY_STR:
-                Objects.requireNonNull(context.getProperty(PAYLOAD), "PAYLOAD property should not be null");
-                requestBody.set(context.getProperty(PAYLOAD).evaluateAttributeExpressions(flowFile).getValue().getBytes(StandardCharsets.UTF_8));
+                PropertyValue payloadProp = context.getProperty(PAYLOAD);
+                Objects.requireNonNull(payloadProp);
+                requestBody.set(payloadProp.evaluateAttributeExpressions(flowFile).getValue().getBytes(StandardCharsets.UTF_8));
                 break;
         }
 
-        final String format = context.getProperty(PAYLOAD_FORMAT).getValue();
+        PropertyValue payloadFormatProp = context.getProperty(PAYLOAD_FORMAT);
+        Objects.requireNonNull(payloadFormatProp);
+        final String format = payloadFormatProp.getValue();
         if (format != null) {
             requestBody.withFormat(Format.valueOf(format));
         }
@@ -241,8 +247,9 @@ public class ExtensionCallMarkLogic extends AbstractMarkLogicProcessor {
         if (parameterProperties != null) {
             for (final PropertyDescriptor propertyDesc : parameterProperties) {
                 String paramName = propertyDesc.getName().substring(paramPrefix.length() + 1);
-                Objects.requireNonNull(context.getProperty(propertyDesc), "Property " + propertyDesc.getName() + " should not be null");
-                String paramValue = context.getProperty(propertyDesc).evaluateAttributeExpressions(flowFile).getValue();
+                PropertyValue prop = context.getProperty(propertyDesc);
+                Objects.requireNonNull(prop);
+                String paramValue = prop.evaluateAttributeExpressions(flowFile).getValue();
                 PropertyValue separatorProperty = context.getProperty("separator:" + propertyDesc.getName());
                 if (separatorProperty != null && separatorProperty.getValue() != null && !separatorProperty.getValue().isEmpty()) {
                     String separator = Pattern.quote(separatorProperty.evaluateAttributeExpressions(flowFile).getValue());

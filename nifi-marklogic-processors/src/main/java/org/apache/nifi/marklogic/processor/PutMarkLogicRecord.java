@@ -27,6 +27,7 @@ import org.apache.nifi.annotation.documentation.CapabilityDescription;
 import org.apache.nifi.annotation.documentation.Tags;
 import org.apache.nifi.annotation.lifecycle.OnScheduled;
 import org.apache.nifi.components.PropertyDescriptor;
+import org.apache.nifi.components.PropertyValue;
 import org.apache.nifi.components.Validator;
 import org.apache.nifi.expression.ExpressionLanguageScope;
 import org.apache.nifi.flowfile.FlowFile;
@@ -144,10 +145,14 @@ public class PutMarkLogicRecord extends PutMarkLogic {
 
     @OnScheduled
     public void initializeFactories(ProcessContext context) {
-        Objects.requireNonNull(context.getProperty(RECORD_READER), "RECORD_READER should not be null");
-        recordReaderFactory = context.getProperty(RECORD_READER).asControllerService(RecordReaderFactory.class);
-        Objects.requireNonNull(context.getProperty(RECORD_WRITER), "RECORD_WRITER should not be null");
-        recordSetWriterFactory = context.getProperty(RECORD_WRITER).asControllerService(RecordSetWriterFactory.class);
+        PropertyValue recordReaderProp = context.getProperty(RECORD_READER);
+        Objects.requireNonNull(recordReaderProp);
+        recordReaderFactory = recordReaderProp.asControllerService(RecordReaderFactory.class);
+
+        PropertyValue recordWriterProp = context.getProperty(RECORD_WRITER);
+        Objects.requireNonNull(recordWriterProp);
+        recordSetWriterFactory = recordWriterProp.asControllerService(RecordSetWriterFactory.class);
+
         if (context.getProperty(RECORD_COERCE_TYPES) != null &&
             context.getProperty(RECORD_COERCE_TYPES).asBoolean() != null) {
             coerceTypes = context.getProperty(RECORD_COERCE_TYPES).asBoolean();
@@ -166,8 +171,9 @@ public class PutMarkLogicRecord extends PutMarkLogic {
             return;
         }
 
-        Objects.requireNonNull(context.getProperty(URI_FIELD_NAME), "URI_FIELD_NAME should not be null");
-        final String uriFieldName = context.getProperty(URI_FIELD_NAME).evaluateAttributeExpressions(flowFile).getValue();
+        PropertyValue uriFieldNameProp = context.getProperty(URI_FIELD_NAME);
+        Objects.requireNonNull(uriFieldNameProp);
+        final String uriFieldName = uriFieldNameProp.evaluateAttributeExpressions(flowFile).getValue();
 
         int added = 0;
         boolean error = false;
@@ -243,29 +249,40 @@ public class PutMarkLogicRecord extends PutMarkLogic {
         String uri,
         final BytesHandle contentHandle
     ) {
-        Objects.requireNonNull(context.getProperty(URI_PREFIX), "URI_PREFIX property should not be null");
-        final String prefix = context.getProperty(URI_PREFIX).evaluateAttributeExpressions(flowFile).getValue();
+
+        PropertyValue uriPrefixProp = context.getProperty(URI_PREFIX);
+        Objects.requireNonNull(uriPrefixProp);
+        final String prefix = uriPrefixProp.evaluateAttributeExpressions(flowFile).getValue();
         if (prefix != null) {
             uri = prefix + uri;
         }
-        Objects.requireNonNull(context.getProperty(URI_SUFFIX), "URI_SUFFIX property should not be null");
-        final String suffix = context.getProperty(URI_SUFFIX).evaluateAttributeExpressions(flowFile).getValue();
+
+        PropertyValue uriSuffixProp = context.getProperty(URI_SUFFIX);
+        Objects.requireNonNull(uriSuffixProp);
+        final String suffix = uriSuffixProp.evaluateAttributeExpressions(flowFile).getValue();
         if (suffix != null) {
             uri += suffix;
         }
         uri = uri.replaceAll("//", "/");
 
-        DocumentMetadataHandle metadata = buildMetadataHandle(context, flowFile, context.getProperty(COLLECTIONS), context.getProperty(PERMISSIONS));
-        Objects.requireNonNull(context.getProperty(FORMAT), "FORMAT property should not be null");
-        final String format = context.getProperty(FORMAT).getValue();
+        PropertyValue collectionsProp = context.getProperty(COLLECTIONS);
+        Objects.requireNonNull(collectionsProp);
+        PropertyValue permissionsProp = context.getProperty(PERMISSIONS);
+        Objects.requireNonNull(permissionsProp);
+        DocumentMetadataHandle metadata = buildMetadataHandle(context, flowFile, collectionsProp, permissionsProp);
+
+        PropertyValue formatProp = context.getProperty(FORMAT);
+        Objects.requireNonNull(formatProp);
+        final String format = formatProp.getValue();
         if (format != null) {
             contentHandle.withFormat(Format.valueOf(format));
         } else {
             addFormat(uri, contentHandle);
         }
 
-        Objects.requireNonNull(context.getProperty(MIMETYPE), "MIMETYPE property should not be null");
-        final String mimetype = context.getProperty(MIMETYPE).getValue();
+        PropertyValue mimeTypeProp = context.getProperty(MIMETYPE);
+        Objects.requireNonNull(mimeTypeProp);
+        final String mimetype = mimeTypeProp.getValue();
         if (mimetype != null) {
             contentHandle.withMimetype(mimetype);
         }

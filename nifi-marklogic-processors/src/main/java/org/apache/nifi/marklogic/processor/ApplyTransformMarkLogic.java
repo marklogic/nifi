@@ -25,6 +25,7 @@ import org.apache.nifi.annotation.documentation.CapabilityDescription;
 import org.apache.nifi.annotation.documentation.Tags;
 import org.apache.nifi.components.AllowableValue;
 import org.apache.nifi.components.PropertyDescriptor;
+import org.apache.nifi.components.PropertyValue;
 import org.apache.nifi.components.Validator;
 import org.apache.nifi.components.state.Scope;
 import org.apache.nifi.expression.ExpressionLanguageScope;
@@ -109,10 +110,11 @@ public class ApplyTransformMarkLogic extends QueryMarkLogic {
      */
     @Override
     protected QueryBatchListener buildQueryBatchListener(final ProcessContext context, final ProcessSession session, Map<String, String> incomingAttributes) {
-        Objects.requireNonNull(context.getProperty(APPLY_RESULT_TYPE), "APPLY_RESULT_TYPE should not be null");
+        PropertyValue applyResultTypeProp = context.getProperty(APPLY_RESULT_TYPE);
+        Objects.requireNonNull(applyResultTypeProp);
         return new ApplyTransformListener()
             .withApplyResult(
-                ApplyResultTypes.INGORE_STR.equals(context.getProperty(APPLY_RESULT_TYPE).getValue()) ? ApplyResult.IGNORE : ApplyResult.REPLACE
+                ApplyResultTypes.INGORE_STR.equals(applyResultTypeProp.getValue()) ? ApplyResult.IGNORE : ApplyResult.REPLACE
             )
             .withTransform(this.buildServerTransform(context))
             .onSuccess(batch -> transferBatch(session, incomingAttributes, batch, SUCCESS, null))
