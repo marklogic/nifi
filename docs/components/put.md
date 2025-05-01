@@ -17,7 +17,7 @@ partial batches.
 An example of this processor in action can be found in the [Getting Started guide](../getting-started.md).
 
 For full details on each property and relationship for this processor, add an instance of it to the NiFi canvas,
-right-click on it, and select "View Usage".
+right-click on it, and select "View Documentation".
 
 ## Restart support
 

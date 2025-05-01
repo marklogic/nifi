@@ -9,8 +9,8 @@ export data to and from MarkLogic, along with running batch processes on data al
 
 The connector has the following system requirements:
 
-* Apache NiFi 1.16.x or higher; the connector  may run successfully on earlier versions of NiFi but it is only 
-  actively tested on NiFi 1.16.x and higher.
+* Apache NiFi 2.0 or higher; the connector may run successfully on earlier versions of NiFi but it is only 
+  actively tested on NiFi 2.3.0 and higher.
 * MarkLogic 10 or higher, though processors that do not depend on any functionality in MarkLogic 10 or later will 
   run fine on MarkLogic 9.
 
