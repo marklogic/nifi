@@ -26,6 +26,7 @@ import org.apache.nifi.annotation.documentation.Tags;
 import org.apache.nifi.annotation.lifecycle.OnDisabled;
 import org.apache.nifi.annotation.lifecycle.OnEnabled;
 import org.apache.nifi.components.PropertyDescriptor;
+import org.apache.nifi.components.PropertyValue;
 import org.apache.nifi.components.Validator;
 import org.apache.nifi.controller.AbstractControllerService;
 import org.apache.nifi.controller.ConfigurationContext;
@@ -202,17 +203,44 @@ public class DefaultMarkLogicDatabaseClientService extends AbstractControllerSer
 
     protected DatabaseClientConfig buildDatabaseClientConfig(ConfigurationContext context) {
         DatabaseClientConfig config = new DatabaseClientConfig();
-        config.setHost(context.getProperty(HOST).evaluateAttributeExpressions().getValue());
-        Objects.requireNonNull(context.getProperty(PORT), "PORT property should not be null");
-        config.setPort(context.getProperty(PORT).evaluateAttributeExpressions().asInteger());
-        config.setBasePath(context.getProperty(BASE_PATH).evaluateAttributeExpressions().getValue());
+
+        PropertyValue hostProp = context.getProperty(HOST);
+        Objects.requireNonNull(hostProp);
+        config.setHost(hostProp.evaluateAttributeExpressions().getValue());
+
+        PropertyValue portProp = context.getProperty(PORT);
+        Objects.requireNonNull(portProp);
+        PropertyValue evalPortProp = portProp.evaluateAttributeExpressions();
+        Objects.requireNonNull(evalPortProp);
+        Integer evalPortInteger = evalPortProp.asInteger();
+        Objects.requireNonNull(evalPortInteger);
+        config.setPort(evalPortInteger);
+
+        PropertyValue basePathProp = context.getProperty(BASE_PATH);
+        Objects.requireNonNull(basePathProp);
+        config.setBasePath(basePathProp.evaluateAttributeExpressions().getValue());
+
+        PropertyValue securityContextTypeProp = context.getProperty(SECURITY_CONTEXT_TYPE);
+        Objects.requireNonNull(securityContextTypeProp);
         config.setSecurityContextType(SecurityContextType.valueOf(
-            context.getProperty(SECURITY_CONTEXT_TYPE).evaluateAttributeExpressions().getValue())
+            securityContextTypeProp.evaluateAttributeExpressions().getValue())
         );
-        config.setUsername(context.getProperty(USERNAME).evaluateAttributeExpressions().getValue());
-        config.setPassword(context.getProperty(PASSWORD).getValue());
-        config.setCloudApiKey(context.getProperty(CLOUD_API_KEY).getValue());
-        config.setDatabase(context.getProperty(DATABASE).evaluateAttributeExpressions().getValue());
+
+        PropertyValue usernameProp = context.getProperty(USERNAME);
+        Objects.requireNonNull(usernameProp);
+        config.setUsername(usernameProp.evaluateAttributeExpressions().getValue());
+
+        PropertyValue passwordProp = context.getProperty(PASSWORD);
+        Objects.requireNonNull(passwordProp);
+        config.setPassword(passwordProp.getValue());
+
+        PropertyValue cloudApiKeyProp = context.getProperty(CLOUD_API_KEY);
+        Objects.requireNonNull(cloudApiKeyProp);
+        config.setCloudApiKey(cloudApiKeyProp.getValue());
+
+        PropertyValue databaseProp = context.getProperty(DATABASE);
+        Objects.requireNonNull(databaseProp);
+        config.setDatabase(databaseProp.evaluateAttributeExpressions().getValue());
 
         if (context.getProperty(LOAD_BALANCER) != null &&
             context.getProperty(LOAD_BALANCER).evaluateAttributeExpressions().asBoolean() != null &&
@@ -224,7 +252,9 @@ public class DefaultMarkLogicDatabaseClientService extends AbstractControllerSer
             config.setExternalName(context.getProperty(EXTERNAL_NAME).evaluateAttributeExpressions().getValue());
         }
 
-        final SSLContextService sslService = context.getProperty(SSL_CONTEXT_SERVICE).asControllerService(SSLContextService.class);
+        PropertyValue sslContextServiceProp = context.getProperty(SSL_CONTEXT_SERVICE);
+        Objects.requireNonNull(sslContextServiceProp);
+        final SSLContextService sslService = sslContextServiceProp.asControllerService(SSLContextService.class);
         if (sslService != null) {
             final ClientAuth clientAuth = determineClientAuth(context);
             getLogger().info("Configuring SSL connection; client authentication: " + clientAuth);
@@ -253,8 +283,10 @@ public class DefaultMarkLogicDatabaseClientService extends AbstractControllerSer
 
     protected ClientAuth determineClientAuth(ConfigurationContext context) {
         try {
-            return context.getProperty(CLIENT_AUTH).evaluateAttributeExpressions().getValue() == null ? ClientAuth.REQUIRED :
-                ClientAuth.valueOf(context.getProperty(CLIENT_AUTH).evaluateAttributeExpressions().getValue());
+            PropertyValue clientAuthProp = context.getProperty(CLIENT_AUTH);
+            Objects.requireNonNull(clientAuthProp);
+            return clientAuthProp.evaluateAttributeExpressions().getValue() == null ? ClientAuth.REQUIRED :
+                ClientAuth.valueOf(clientAuthProp.evaluateAttributeExpressions().getValue());
         } catch (IllegalArgumentException exception) {
             throw new ProviderException("Client Authentication should be one of the following values : "
                 + Arrays.toString(ClientAuth.values()));

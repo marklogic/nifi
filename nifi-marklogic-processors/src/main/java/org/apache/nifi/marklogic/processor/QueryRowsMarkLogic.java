@@ -9,6 +9,7 @@ import org.apache.nifi.annotation.behavior.InputRequirement;
 import org.apache.nifi.annotation.documentation.CapabilityDescription;
 import org.apache.nifi.annotation.documentation.Tags;
 import org.apache.nifi.components.PropertyDescriptor;
+import org.apache.nifi.components.PropertyValue;
 import org.apache.nifi.components.Validator;
 import org.apache.nifi.expression.ExpressionLanguageScope;
 import org.apache.nifi.flowfile.FlowFile;
@@ -108,18 +109,20 @@ public class QueryRowsMarkLogic extends AbstractMarkLogicProcessor {
     }
 
     protected String determineJsonPlan(ProcessContext context, FlowFile flowFile) {
-        Objects.requireNonNull(context.getProperty(PLAN), "PLAN property should not be null");
-        return context.getProperty(PLAN).evaluateAttributeExpressions(flowFile).getValue();
+        PropertyValue planProp = context.getProperty(PLAN);
+        Objects.requireNonNull(planProp);
+        return planProp.evaluateAttributeExpressions(flowFile).getValue();
     }
 
     protected String determineMimeType(ProcessContext context, FlowFile flowFile) {
-        Objects.requireNonNull(context.getProperty(MIMETYPE), "MIMETYPE property should not be null");
-        return context.getProperty(MIMETYPE).evaluateAttributeExpressions(flowFile).getValue();
+        PropertyValue mimeTypeProp = context.getProperty(MIMETYPE);
+        Objects.requireNonNull(mimeTypeProp);
+        return mimeTypeProp.evaluateAttributeExpressions(flowFile).getValue();
     }
 
     protected int transferAndClose(InputStream inputStream, OutputStream outputStream) throws IOException {
-        Objects.requireNonNull(inputStream, "InputStream should not be null");
-        Objects.requireNonNull(outputStream, "OutputStream should not be null");
+        Objects.requireNonNull(inputStream);
+        Objects.requireNonNull(outputStream);
         try (inputStream; outputStream) {
             int count = (int) inputStream.transferTo(outputStream);
             outputStream.flush();

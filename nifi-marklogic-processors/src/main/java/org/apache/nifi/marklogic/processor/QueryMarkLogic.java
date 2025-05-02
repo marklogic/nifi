@@ -199,10 +199,14 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
     @Override
     protected Collection<ValidationResult> customValidate(final ValidationContext validationContext) {
         Set<ValidationResult> validationResultSet = new HashSet<>();
-        Objects.requireNonNull(validationContext.getProperty(COLLECTIONS), "COLLECTIONS property should not be null");
-        String collections = validationContext.getProperty(COLLECTIONS).getValue();
-        Objects.requireNonNull(validationContext.getProperty(QUERY), "QUERY property should not be null");
-        String query = validationContext.getProperty(QUERY).getValue();
+        PropertyValue collectionsProp = validationContext.getProperty(COLLECTIONS);
+        Objects.requireNonNull(collectionsProp);
+        String collections = collectionsProp.getValue();
+
+        PropertyValue queryProp = validationContext.getProperty(QUERY);
+        Objects.requireNonNull(queryProp);
+        String query = queryProp.getValue();
+
         if (collections == null && query == null) {
             validationResultSet.add(new ValidationResult.Builder().subject("Query").valid(false)
                 .explanation("The Query value must be set. "
@@ -272,16 +276,21 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
      */
     private QueryBatcherBuilder.QueryTypeAndValue determineQueryTypeAndValue(ProcessContext context, FlowFile incomingFlowFile) {
         // Migrate deprecated "Collections" property to the preferred "Collection" query type
-        Objects.requireNonNull(context.getProperty(COLLECTIONS), "COLLECTIONS property should not be null");
-        final String collectionsValue = context.getProperty(COLLECTIONS).getValue();
+
+        PropertyValue collectionsProp = context.getProperty(COLLECTIONS);
+        Objects.requireNonNull(collectionsProp);
+        final String collectionsValue = collectionsProp.getValue();
         if (StringUtils.isNotBlank(collectionsValue)) {
             return new QueryBatcherBuilder.QueryTypeAndValue(QueryTypes.COLLECTION.getValue(), collectionsValue);
         }
-        Objects.requireNonNull(context.getProperty(QUERY_TYPE), "QUERY_TYPE property should not be null");
-        Objects.requireNonNull(context.getProperty(QUERY), "QUERY property should not be null");
+
+        PropertyValue queryTypeProp = context.getProperty(QUERY_TYPE);
+        Objects.requireNonNull(queryTypeProp);
+        PropertyValue queryProp = context.getProperty(QUERY);
+        Objects.requireNonNull(queryProp);
         return new QueryBatcherBuilder.QueryTypeAndValue(
-            context.getProperty(QUERY_TYPE).getValue(),
-            context.getProperty(QUERY).evaluateAttributeExpressions(incomingFlowFile).getValue()
+            queryTypeProp.getValue(),
+            queryProp.evaluateAttributeExpressions(incomingFlowFile).getValue()
         );
     }
 
@@ -294,13 +303,16 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
      * @param queryBatcher
      */
     private void configureQueryBatcher(ProcessContext context, ProcessSession session, FlowFile incomingFlowFile, QueryBatcher queryBatcher) {
-        Objects.requireNonNull(context.getProperty(BATCH_SIZE), "BATCH_SIZE property should not be null");
-        if (context.getProperty(BATCH_SIZE).asInteger() != null) {
-            queryBatcher.withBatchSize(context.getProperty(BATCH_SIZE).asInteger());
+        PropertyValue batchSizeProp = context.getProperty(BATCH_SIZE);
+        Objects.requireNonNull(batchSizeProp);
+        if (batchSizeProp.asInteger() != null) {
+            queryBatcher.withBatchSize(batchSizeProp.asInteger());
         }
-        Objects.requireNonNull(context.getProperty(THREAD_COUNT), "THREAD_COUNT property should not be null");
-        if (context.getProperty(THREAD_COUNT).asInteger() != null) {
-            queryBatcher.withThreadCount(context.getProperty(THREAD_COUNT).asInteger());
+
+        PropertyValue threadCountProp = context.getProperty(THREAD_COUNT);
+        Objects.requireNonNull(threadCountProp);
+        if (threadCountProp.asInteger() != null) {
+            queryBatcher.withThreadCount(threadCountProp.asInteger());
         }
 
         Map<String, String> attributesToCopy = getAttributesToCopy(incomingFlowFile);
@@ -332,10 +344,11 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
      * @return
      */
     protected QueryBatchListener buildQueryBatchListener(ProcessContext context, ProcessSession session, Map<String, String> incomingAttributes) {
-        Objects.requireNonNull(context.getProperty(RETURN_TYPE), "RETURN_TYPE property should not be null");
+        PropertyValue returnTypeProp = context.getProperty(RETURN_TYPE);
+        Objects.requireNonNull(returnTypeProp);
         final boolean retrieveFullDocument =
-            ReturnTypes.DOCUMENTS_STR.equals(context.getProperty(RETURN_TYPE).getValue()) ||
-                ReturnTypes.DOCUMENTS_AND_META_STR.equals(context.getProperty(RETURN_TYPE).getValue());
+            ReturnTypes.DOCUMENTS_STR.equals(returnTypeProp.getValue()) ||
+                ReturnTypes.DOCUMENTS_AND_META_STR.equals(returnTypeProp.getValue());
 
         return retrieveFullDocument ?
             buildFullDocumentExporter(context, session, incomingAttributes) :
@@ -394,8 +407,10 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
         if (retrieveMetadata) {
             exportListener.withMetadataCategory(Metadata.ALL);
         }
-        Objects.requireNonNull(context.getProperty(CONSISTENT_SNAPSHOT), "CONSISTENT_SNAPSHOT property should not be null");
-        if (Boolean.TRUE.equals(context.getProperty(CONSISTENT_SNAPSHOT).asBoolean())) {
+
+        PropertyValue consistentSnapshotProp = context.getProperty(CONSISTENT_SNAPSHOT);
+        Objects.requireNonNull(consistentSnapshotProp);
+        if (Boolean.TRUE.equals(consistentSnapshotProp.asBoolean())) {
             exportListener.withConsistentSnapshot();
         }
         ServerTransform transform = this.buildServerTransform(context);
@@ -430,8 +445,9 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
      * @return
      */
     private QueryBatchListener buildNoDocumentExporter(ProcessContext context, ProcessSession session, Map<String, String> incomingAttributes) {
-        Objects.requireNonNull(context.getProperty(CONSISTENT_SNAPSHOT), "CONSISTENT_SNAPSHOT property should not be null");
-        final boolean consistentSnapshot = Boolean.TRUE.equals(context.getProperty(CONSISTENT_SNAPSHOT).asBoolean());
+        PropertyValue consistentSnapshotProp = context.getProperty(CONSISTENT_SNAPSHOT);
+        Objects.requireNonNull(consistentSnapshotProp);
+        final boolean consistentSnapshot = Boolean.TRUE.equals(consistentSnapshotProp.asBoolean());
         return batch -> {
             synchronized (session) {
                 Arrays.stream(batch.getItems()).forEach(uri -> {
@@ -465,8 +481,9 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
     }
 
     private boolean shouldRetrieveMetadata(ProcessContext context) {
-        Objects.requireNonNull(context.getProperty(RETURN_TYPE), "RETURN_TYPE property should not be null");
-        String returnType = context.getProperty(RETURN_TYPE).getValue();
+        PropertyValue returnTypeProp = context.getProperty(RETURN_TYPE);
+        Objects.requireNonNull(returnTypeProp);
+        String returnType = returnTypeProp.getValue();
         return ReturnTypes.META.getValue().equals(returnType) || ReturnTypes.DOCUMENTS_AND_META.getValue().equals(returnType);
     }
 
@@ -492,8 +509,9 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
             session.putAttribute(flowFile, "meta:" + metaKey, metaValue);
         });
 
-        Objects.requireNonNull(context.getProperty(INCLUDE_DOCUMENT_PROPERTIES), "INCLUDE_DOCUMENT_PROPERTIES property should not be null");
-        final boolean includeProperties = Boolean.TRUE.equals(context.getProperty(INCLUDE_DOCUMENT_PROPERTIES).asBoolean());
+        PropertyValue includeDocumentPropertiesProp = context.getProperty(INCLUDE_DOCUMENT_PROPERTIES);
+        Objects.requireNonNull(includeDocumentPropertiesProp);
+        final boolean includeProperties = Boolean.TRUE.equals(includeDocumentPropertiesProp.asBoolean());
         if (includeProperties) {
             metadata.getProperties().forEach((qname, propertyValue) -> {
                 session.putAttribute(flowFile, "property:" + qname.toString(), propertyValue.toString());
@@ -527,8 +545,9 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
      * @return
      */
     private RangeIndexQuery buildStateQuery(DatabaseClient client, ProcessContext context, FlowFile incomingFlowFile) {
-        Objects.requireNonNull(context.getProperty(STATE_INDEX), "STATE_INDEX property should not be null");
-        if (!context.getProperty(STATE_INDEX).isSet()) {
+        PropertyValue stateIndexProp = context.getProperty(STATE_INDEX);
+        Objects.requireNonNull(stateIndexProp);
+        if (!stateIndexProp.isSet()) {
             return null;
         }
 
@@ -537,8 +556,11 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
             return null;
         }
 
-        String stateIndexValue = context.getProperty(STATE_INDEX).evaluateAttributeExpressions(incomingFlowFile).getValue();
-        String stateIndexTypeValue = context.getProperty(STATE_INDEX_TYPE).getValue();
+        String stateIndexValue = stateIndexProp.evaluateAttributeExpressions(incomingFlowFile).getValue();
+
+        PropertyValue stateIndexTypeProp = context.getProperty(STATE_INDEX_TYPE);
+        Objects.requireNonNull(stateIndexTypeProp);
+        String stateIndexTypeValue = stateIndexTypeProp.getValue();
 
         EditableNamespaceContext namespaces = buildNamespacesForRangeIndexQuery(context, incomingFlowFile);
         StructuredQueryBuilder queryBuilder = client.newQueryManager().newStructuredQueryBuilder();
@@ -582,9 +604,10 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
         EditableNamespaceContext namespaces = new EditableNamespaceContext();
         if (namespaceProperties != null) {
             for (PropertyDescriptor propertyDesc : namespaceProperties) {
-                Objects.requireNonNull(context.getProperty(propertyDesc), "The " + propertyDesc.getName() + " context property should not be null");
+                PropertyValue prop = context.getProperty(propertyDesc);
+                Objects.requireNonNull(prop);
                 namespaces.put(propertyDesc.getName().substring(3),
-                    context.getProperty(propertyDesc).evaluateAttributeExpressions(incomingFlowFile).getValue());
+                    prop.evaluateAttributeExpressions(incomingFlowFile).getValue());
             }
         }
         return namespaces;
@@ -610,13 +633,15 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
                     + "] [Failure Count=" + report.getFailureEventsCount() + "]");
             }
 
-            Objects.requireNonNull(context.getProperty(STATE_INDEX), "STATE_INDEX property should not be null");
-            boolean stateValueShouldBeUpdated = report.getFailureBatchesCount() == 0 &&
-                context.getProperty(STATE_INDEX).isSet();
+            PropertyValue stateIndexProp = context.getProperty(STATE_INDEX);
+            Objects.requireNonNull(stateIndexProp);
+            boolean stateValueShouldBeUpdated = report.getFailureBatchesCount() == 0 && stateIndexProp.isSet();
 
             if (stateValueShouldBeUpdated) {
-                Objects.requireNonNull(batcher.getPrimaryClient(), "batcher.getPrimaryClient variable should not be null");
-                QueryManager queryMgr = batcher.getPrimaryClient().newQueryManager();
+                DatabaseClient dbClient = batcher.getPrimaryClient();
+                Objects.requireNonNull(dbClient);
+                QueryManager queryMgr = dbClient.newQueryManager();
+                Objects.requireNonNull(queryMgr);
                 ValuesDefinition valuesDef = queryMgr.newValuesDefinition("state");
                 RawCombinedQueryDefinition qDef = queryMgr.newRawCombinedQueryDefinition(
                     new StringHandle(buildStateConstraintOptions(context, incomingFlowFile)).withFormat(Format.JSON));
@@ -660,17 +685,21 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
         JsonObject rangeObject = new JsonObject();
         constraintObject.add("range", rangeObject);
         rangeObject.addProperty("type", "xs:dateTime");
-        Objects.requireNonNull(context.getProperty(STATE_INDEX_TYPE), "STATE_INDEX_TYPE property should not be null");
-        String stateIndexTypeValue = context.getProperty(STATE_INDEX_TYPE).getValue();
-        Objects.requireNonNull(context.getProperty(STATE_INDEX), "STATE_INDEX property should not be null");
-        String stateIndexValue = context.getProperty(STATE_INDEX).evaluateAttributeExpressions(flowFile).getValue();
+        PropertyValue stateIndexTypeProp = context.getProperty(STATE_INDEX_TYPE);
+        Objects.requireNonNull(stateIndexTypeProp);
+        String stateIndexTypeValue = stateIndexTypeProp.getValue();
+        PropertyValue stateIndexProp = context.getProperty(STATE_INDEX);
+        Objects.requireNonNull(stateIndexProp);
+        String stateIndexValue = stateIndexProp.evaluateAttributeExpressions(flowFile).getValue();
         switch (stateIndexTypeValue) {
             case IndexTypes.ELEMENT_STR:
                 JsonObject elementObject = new JsonObject();
                 boolean hasNamespace = stateIndexValue.contains(":");
                 String[] parts = stateIndexValue.split(":", 2);
                 String name = (hasNamespace) ? parts[1] : stateIndexValue;
-                String ns = (hasNamespace) ? context.getProperty("ns:" + parts[0]).evaluateAttributeExpressions(flowFile).getValue() : "";
+                PropertyValue partProp = context.getProperty("ns:" + parts[0]);
+                Objects.requireNonNull(partProp);
+                String ns = (hasNamespace) ? partProp.evaluateAttributeExpressions(flowFile).getValue() : "";
                 elementObject.addProperty("name", name);
                 elementObject.addProperty("ns", ns);
                 rangeObject.add("element", elementObject);
@@ -683,8 +712,10 @@ public class QueryMarkLogic extends AbstractMarkLogicProcessor {
                 pathObject.addProperty("text", stateIndexValue);
                 JsonObject namespacesObject = new JsonObject();
                 for (PropertyDescriptor propertyDesc : propertiesByPrefix.get("ns")) {
+                    PropertyValue prop = context.getProperty(propertyDesc);
+                    Objects.requireNonNull(prop);
                     namespacesObject.addProperty(propertyDesc.getName().substring(3),
-                        context.getProperty(propertyDesc).evaluateAttributeExpressions(flowFile).getValue());
+                        prop.evaluateAttributeExpressions(flowFile).getValue());
                 }
                 pathObject.add("namespaces", namespacesObject);
                 rangeObject.add("path-index", pathObject);
