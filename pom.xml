@@ -25,7 +25,7 @@
     <version>2.3.0</version>
   </parent>
 
-  <version>2.0-beta1</version>
+  <version>2.0.0</version>
 
   <artifactId>nifi-marklogic-bundle</artifactId>
   <packaging>pom</packaging>
@@ -34,7 +34,7 @@
     <!-- Nifi 2 requires Java 21 -->
     <maven.compiler.release>21</maven.compiler.release>
     <nifi.version>2.3.0</nifi.version>
-    <marklogicnar.version>2.0-beta1</marklogicnar.version>
+    <marklogicnar.version>2.0.0</marklogicnar.version>
     <marklogicclientapi.version>7.1.0</marklogicclientapi.version>
     <sonar.host.url>http://localhost:9000</sonar.host.url>
     <sonar.projectKey>nifi</sonar.projectKey>
