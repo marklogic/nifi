@@ -152,7 +152,7 @@ You should see logging from all the Maven phases, including logging from tests, 
 like the one below:
 
 ```
-[INFO] Reactor Summary for nifi-marklogic-bundle 2.0-beta1:
+[INFO] Reactor Summary for nifi-marklogic-bundle 2.0.0:
 [INFO] 
 [INFO] nifi-marklogic-bundle .............................. SUCCESS [  1.179 s]
 [INFO] nifi-marklogic-services-api ........................ SUCCESS [  1.208 s]
