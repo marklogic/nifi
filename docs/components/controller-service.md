@@ -21,7 +21,7 @@ following steps:
 A new, disabled controller service named "DefaultMarkLogicDatabaseClientService 2.0.0" will now be listed in the
 "Controller Services" page. The service will need to be edited and then enabled in order for it to be used by any of the
 MarkLogic processors. The service can be edited by clicking on the vertical ellipses on the right and can be enabled by clicking on  
-"Enable" (lightening icon).
+"Enable" (lightning icon).
 
 As an example, for connecting to a MarkLogic REST API app server that uses digest authentication, the following
 properties would need to be set:
@@ -35,4 +35,4 @@ It is recommended to rename the service as well to give it a more self-documenti
 your MarkLogic app server is 8004, a more useful name might be "marklogic-8004".
 
 After setting the above properties, the controller service will now be in a valid state and can then be enabled by
-clicking on "Enable" (lightening icon).
+clicking on "Enable" (lightning icon).
