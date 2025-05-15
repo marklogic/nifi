@@ -23,6 +23,7 @@ import com.marklogic.client.ResourceNotFoundException;
 import com.marklogic.client.UnauthorizedUserException;
 import com.marklogic.client.document.ServerTransform;
 import org.apache.nifi.components.PropertyDescriptor;
+import org.apache.nifi.components.PropertyValue;
 import org.apache.nifi.components.Validator;
 import org.apache.nifi.expression.ExpressionLanguageScope;
 import org.apache.nifi.flowfile.FlowFile;
@@ -35,12 +36,7 @@ import org.apache.nifi.processor.ProcessorInitializationContext;
 import org.apache.nifi.processor.Relationship;
 import org.apache.nifi.processor.util.StandardValidators;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.regex.Pattern;
@@ -145,9 +141,14 @@ public abstract class AbstractMarkLogicProcessor extends AbstractSessionFactoryP
     }
 
     protected DatabaseClient getDatabaseClient(ProcessContext context) {
-        return context.getProperty(DATABASE_CLIENT_SERVICE)
-            .asControllerService(MarkLogicDatabaseClientService.class)
-            .getDatabaseClient();
+
+        PropertyValue databaseClientServiceProp = context.getProperty(DATABASE_CLIENT_SERVICE);
+        Objects.requireNonNull(databaseClientServiceProp);
+
+        MarkLogicDatabaseClientService markLogicDatabaseClientService = databaseClientServiceProp.asControllerService(MarkLogicDatabaseClientService.class);
+        Objects.requireNonNull(markLogicDatabaseClientService);
+
+        return markLogicDatabaseClientService.getDatabaseClient();
     }
 
     protected String[] getArrayFromCommaSeparatedString(String stringValue) {
@@ -170,7 +171,7 @@ public abstract class AbstractMarkLogicProcessor extends AbstractSessionFactoryP
         String prefix = parts[0];
         String postfix = (parts.length > 1) ? parts[1] : "";
         String description;
-        ExpressionLanguageScope scope = ExpressionLanguageScope.VARIABLE_REGISTRY;
+        ExpressionLanguageScope scope = ExpressionLanguageScope.ENVIRONMENT;
 
         switch (prefix) {
             case "trans":
@@ -204,7 +205,9 @@ public abstract class AbstractMarkLogicProcessor extends AbstractSessionFactoryP
 
     protected ServerTransform buildServerTransform(ProcessContext context) {
         ServerTransform serverTransform = null;
-        final String transform = context.getProperty(TRANSFORM).getValue();
+        PropertyValue transformProperty = context.getProperty(TRANSFORM);
+        Objects.requireNonNull(transformProperty);
+        final String transform = transformProperty.getValue();
         if (transform != null) {
             serverTransform = new ServerTransform(transform);
             final String transformPrefix = "trans";
@@ -220,6 +223,7 @@ public abstract class AbstractMarkLogicProcessor extends AbstractSessionFactoryP
     }
 
     private String getTransformParamValue(ProcessContext context, PropertyDescriptor descriptor) {
+        Objects.requireNonNull(descriptor);
         try {
             // During 1.16.3.3 development, found that while this works fine when run in NiFi 1.18 through 1.22, it
             // fails within a NiFi test runner - which perhaps is a bug in NiFi's test runner?
@@ -227,10 +231,14 @@ public abstract class AbstractMarkLogicProcessor extends AbstractSessionFactoryP
             // which seems erroneous as the descriptor is not evaluated against a FlowFile here.
             // To allow for this to work in a test, a try/catch is used on this exception with the catch block
             // simply not evaluating any expressions.
-            return context.getProperty(descriptor).evaluateAttributeExpressions(context.getAllProperties()).getValue();
+            PropertyValue descriptorProperty = context.getProperty(descriptor);
+            Objects.requireNonNull(descriptorProperty);
+            return descriptorProperty.evaluateAttributeExpressions(context.getAllProperties()).getValue();
         } catch (IllegalStateException ex) {
             getLogger().debug("Unexpected error while getting transform param value: descriptor: " + descriptor + "; error: " + ex.getMessage());
-            return context.getProperty(descriptor).getValue();
+            PropertyValue descriptorProperty = context.getProperty(descriptor);
+            Objects.requireNonNull(descriptorProperty);
+            return descriptorProperty.getValue();
         }
     }
 

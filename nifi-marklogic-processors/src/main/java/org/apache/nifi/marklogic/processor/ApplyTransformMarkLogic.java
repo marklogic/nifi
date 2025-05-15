@@ -18,7 +18,6 @@ package org.apache.nifi.marklogic.processor;
 
 import com.marklogic.client.datamovement.ApplyTransformListener;
 import com.marklogic.client.datamovement.ApplyTransformListener.ApplyResult;
-import com.marklogic.client.datamovement.QueryBatch;
 import com.marklogic.client.datamovement.QueryBatchListener;
 import org.apache.nifi.annotation.behavior.*;
 import org.apache.nifi.annotation.behavior.InputRequirement.Requirement;
@@ -26,11 +25,10 @@ import org.apache.nifi.annotation.documentation.CapabilityDescription;
 import org.apache.nifi.annotation.documentation.Tags;
 import org.apache.nifi.components.AllowableValue;
 import org.apache.nifi.components.PropertyDescriptor;
+import org.apache.nifi.components.PropertyValue;
 import org.apache.nifi.components.Validator;
 import org.apache.nifi.components.state.Scope;
 import org.apache.nifi.expression.ExpressionLanguageScope;
-import org.apache.nifi.flowfile.FlowFile;
-import org.apache.nifi.flowfile.attributes.CoreAttributes;
 import org.apache.nifi.processor.ProcessContext;
 import org.apache.nifi.processor.ProcessSession;
 import org.apache.nifi.processor.ProcessorInitializationContext;
@@ -57,7 +55,7 @@ import java.util.*;
         value = "The value of a parameter to be passed to a REST server transform",
         description = "A transform parameter with name equal to that of '{name}' will be passed to the REST server " +
             "transform identified by the optional 'Server Transform' property",
-        expressionLanguageScope = ExpressionLanguageScope.VARIABLE_REGISTRY
+        expressionLanguageScope = ExpressionLanguageScope.ENVIRONMENT
     )
 })
 @Stateful(description = "Can keep state of a range index value to restrict future queries.", scopes = {Scope.CLUSTER})
@@ -112,9 +110,11 @@ public class ApplyTransformMarkLogic extends QueryMarkLogic {
      */
     @Override
     protected QueryBatchListener buildQueryBatchListener(final ProcessContext context, final ProcessSession session, Map<String, String> incomingAttributes) {
+        PropertyValue applyResultTypeProp = context.getProperty(APPLY_RESULT_TYPE);
+        Objects.requireNonNull(applyResultTypeProp);
         return new ApplyTransformListener()
             .withApplyResult(
-                ApplyResultTypes.INGORE_STR.equals(context.getProperty(APPLY_RESULT_TYPE).getValue()) ? ApplyResult.IGNORE : ApplyResult.REPLACE
+                ApplyResultTypes.INGORE_STR.equals(applyResultTypeProp.getValue()) ? ApplyResult.IGNORE : ApplyResult.REPLACE
             )
             .withTransform(this.buildServerTransform(context))
             .onSuccess(batch -> transferBatch(session, incomingAttributes, batch, SUCCESS, null))

@@ -21,7 +21,6 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.marklogic.client.datamovement.QueryBatcher;
 import com.marklogic.client.document.DocumentWriteSet;
 import com.marklogic.client.document.GenericDocumentManager;
-import com.marklogic.client.ext.util.DefaultDocumentPermissionsParser;
 import com.marklogic.client.io.DocumentMetadataHandle;
 import com.marklogic.client.io.JacksonHandle;
 import com.marklogic.client.io.StringHandle;
@@ -44,18 +43,10 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
 
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class QueryMarkLogicIT extends AbstractMarkLogicIT {
 
@@ -149,7 +140,7 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
                 break;
             }
         }
-        byte[] expectedByteArray = documents.get(jsonMod).getContent().getBytes();
+        byte[] expectedByteArray = documents.get(jsonMod).getContent().getBytes(StandardCharsets.UTF_8);
         assertEquals(expectedByteArray.length, actualByteArray.length);
         assertArrayEquals(expectedByteArray, actualByteArray);
     }
@@ -191,7 +182,7 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
                 break;
             }
         }
-        byte[] expectedByteArray = documents.get(jsonMod).getContent().getBytes();
+        byte[] expectedByteArray = documents.get(jsonMod).getContent().getBytes(StandardCharsets.UTF_8);
         assertEquals(expectedByteArray.length, actualByteArray.length);
         assertArrayEquals(expectedByteArray, actualByteArray);
     }
@@ -397,7 +388,7 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
                 break;
             }
         }
-        byte[] expectedByteArray = documents.get(jsonMod).getContent().getBytes();
+        byte[] expectedByteArray = documents.get(jsonMod).getContent().getBytes(StandardCharsets.UTF_8);
         assertEquals(expectedByteArray.length, actualByteArray.length);
         assertArrayEquals(expectedByteArray, actualByteArray);
         runner.shutdown();
@@ -408,7 +399,7 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
         TestRunner runner = getNewTestRunner(QueryMarkLogic.class);
         Map<String, String> attributes = new HashMap<>();
         attributes.put("word", "xmlcontent");
-        runner.enqueue("".getBytes(), attributes);
+        runner.enqueue("".getBytes(StandardCharsets.UTF_8), attributes);
         runner.setProperty(QueryMarkLogic.QUERY, "<query xmlns=\"http://marklogic.com/appservices/search\">\n" +
             "  <word-query>\n" +
             "    <element name=\"sample\" ns=\"\" />\n" +
@@ -436,7 +427,7 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
                 break;
             }
         }
-        byte[] expectedByteArray = documents.get(xmlMod).getContent().getBytes();
+        byte[] expectedByteArray = documents.get(xmlMod).getContent().getBytes(StandardCharsets.UTF_8);
 
         assertBytesAreEqualXMLDocs(expectedByteArray, actualByteArray);
         runner.shutdown();
@@ -460,7 +451,7 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
                 break;
             }
         }
-        byte[] expectedByteArray = documents.get(xmlMod).getContent().getBytes();
+        byte[] expectedByteArray = documents.get(xmlMod).getContent().getBytes(StandardCharsets.UTF_8);
 
         assertBytesAreEqualXMLDocs(expectedByteArray, actualByteArray);
         runner.shutdown();
@@ -517,7 +508,7 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
 
             final String permissions = flowFile.getAttribute("marklogic-permissions");
             DocumentMetadataHandle metadata = new DocumentMetadataHandle();
-            new DefaultDocumentPermissionsParser().parsePermissions(permissions, metadata.getPermissions());
+            metadata.getPermissions().addFromDelimitedString(permissions);
             assertEquals(2, metadata.getPermissions().get("rest-reader").size());
             assertTrue(metadata.getPermissions().get("rest-reader").contains(DocumentMetadataHandle.Capability.READ));
             assertTrue(metadata.getPermissions().get("rest-reader").contains(DocumentMetadataHandle.Capability.UPDATE));
@@ -668,6 +659,9 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
     }
 
     private void assertBytesAreEqualXMLDocs(byte[] expectedByteArray, byte[] actualByteArray) {
+
+        Objects.requireNonNull(expectedByteArray, "The expectedByteArray should not be null");
+        Objects.requireNonNull(actualByteArray, "The actualByteArray should not be null");
         try {
             DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
             dbf.setNamespaceAware(true);
@@ -744,7 +738,7 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
                 break;
             }
         }
-        byte[] expectedByteArray = documents.get(xmlMod).getContent().getBytes();
+        byte[] expectedByteArray = documents.get(xmlMod).getContent().getBytes(StandardCharsets.UTF_8);
 
         assertBytesAreEqualXMLDocs(expectedByteArray, actualByteArray);
         runner.shutdown();
@@ -770,7 +764,7 @@ public class QueryMarkLogicIT extends AbstractMarkLogicIT {
                 break;
             }
         }
-        byte[] expectedByteArray = documents.get(jsonMod).getContent().getBytes();
+        byte[] expectedByteArray = documents.get(jsonMod).getContent().getBytes(StandardCharsets.UTF_8);
         assertEquals(expectedByteArray.length, actualByteArray.length);
         assertArrayEquals(expectedByteArray, actualByteArray);
         runner.shutdown();

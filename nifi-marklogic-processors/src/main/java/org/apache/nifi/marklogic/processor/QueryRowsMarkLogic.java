@@ -9,14 +9,16 @@ import org.apache.nifi.annotation.behavior.InputRequirement;
 import org.apache.nifi.annotation.documentation.CapabilityDescription;
 import org.apache.nifi.annotation.documentation.Tags;
 import org.apache.nifi.components.PropertyDescriptor;
+import org.apache.nifi.components.PropertyValue;
 import org.apache.nifi.components.Validator;
 import org.apache.nifi.expression.ExpressionLanguageScope;
 import org.apache.nifi.flowfile.FlowFile;
 import org.apache.nifi.processor.*;
 import org.apache.nifi.processor.exception.ProcessException;
-import org.springframework.util.FileCopyUtils;
 
+import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.*;
 
 @Tags({"MarkLogic", "Query", "Read", "Rows"})
@@ -57,13 +59,15 @@ public class QueryRowsMarkLogic extends AbstractMarkLogicProcessor {
 
     @Override
     public void init(ProcessorInitializationContext context) {
-        List<PropertyDescriptor> list = new ArrayList<>();
+        super.init(context);
+
+        final List<PropertyDescriptor> list = new ArrayList<>();
         list.add(DATABASE_CLIENT_SERVICE);
         list.add(PLAN);
         list.add(MIMETYPE);
         properties = Collections.unmodifiableList(list);
 
-        Set<Relationship> set = new HashSet<>();
+        final Set<Relationship> set = new HashSet<>();
         set.add(FAILURE);
         set.add(SUCCESS);
         set.add(ORIGINAL);
@@ -77,7 +81,6 @@ public class QueryRowsMarkLogic extends AbstractMarkLogicProcessor {
         if (incomingFlowFile == null) {
             incomingFlowFile = session.create();
         }
-
         try {
             final String jsonPlan = determineJsonPlan(context, incomingFlowFile);
             final String mimeType = determineMimeType(context, incomingFlowFile);
@@ -93,7 +96,7 @@ public class QueryRowsMarkLogic extends AbstractMarkLogicProcessor {
                     if (inputStream != null) {
                         FlowFile resultFlowFile = session.write(
                             createFlowFileWithAttributes(session, incomingFlowFile.getAttributes()),
-                            out -> FileCopyUtils.copy(inputStream, out));
+                            out -> transferAndClose(inputStream, out));
                         session.transfer(resultFlowFile, SUCCESS);
                     }
                     transferAndCommit(session, incomingFlowFile, ORIGINAL);
@@ -106,11 +109,24 @@ public class QueryRowsMarkLogic extends AbstractMarkLogicProcessor {
     }
 
     protected String determineJsonPlan(ProcessContext context, FlowFile flowFile) {
-        return context.getProperty(PLAN).evaluateAttributeExpressions(flowFile).getValue();
+        PropertyValue planProp = context.getProperty(PLAN);
+        Objects.requireNonNull(planProp);
+        return planProp.evaluateAttributeExpressions(flowFile).getValue();
     }
 
     protected String determineMimeType(ProcessContext context, FlowFile flowFile) {
-        return context.getProperty(MIMETYPE).evaluateAttributeExpressions(flowFile).getValue();
+        PropertyValue mimeTypeProp = context.getProperty(MIMETYPE);
+        Objects.requireNonNull(mimeTypeProp);
+        return mimeTypeProp.evaluateAttributeExpressions(flowFile).getValue();
     }
 
+    protected int transferAndClose(InputStream inputStream, OutputStream outputStream) throws IOException {
+        Objects.requireNonNull(inputStream);
+        Objects.requireNonNull(outputStream);
+        try (inputStream; outputStream) {
+            int count = (int) inputStream.transferTo(outputStream);
+            outputStream.flush();
+            return count;
+        }
+    }
 }

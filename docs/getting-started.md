@@ -48,7 +48,7 @@ the text field. This will open a file dialog; select the `marklogic-nifi_example
 downloaded from your web browser or have available via a clone of this repository. NiFi will display the file that 
 you chose:
 
-![add-process-group.png](add-process-group.png)
+![create-process-group.png](create-process-group.png)
 
 Click "Add" to add the new process group containing the configuration in the `marklogic-nifi_examples.json` file. 
 

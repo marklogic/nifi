@@ -8,9 +8,7 @@ develop and test the connector, and then addresses how to submit a pull request.
 You'll first need to [download and install Apache Maven](https://maven.apache.org/) if you do not already have it
 installed.
 
-As of the 1.15.3.2 release, Java 11 should be used to run the Maven commands below. The Maven pom.xml file now ensures
-that the NAR files constructed by Maven will run on Java 8, but it does so via a compiler switch introduced in Java 9.
-Thus, Java 8 cannot be used to run Maven, but the NAR files will run on both Java 8 and Java 11. This is consistent
+As of the NiFi 2.0.0 release, Java 21 must be used to run the Maven commands below. This is consistent
 with the [NiFi system requirements](https://nifi.apache.org/docs/nifi-docs/html/administration-guide.html#system_requirements).
 
 Next, clone this repository (if you haven't already) and run the following command to build the two NAR files:
@@ -35,7 +33,8 @@ described above):
 
 This will create a "marklogic_nifi" service with "marklogic" and "nifi" containers. You can then go to 
 https://localhost:8443/nifi and login as admin/password1234. The nar files that you built above will be mapped to NiFi's
-"lib" directory so you don't need to do anything further to start using the connector in NiFi.
+"lib" directory so you don't need to do anything further to start using the connector in NiFi. The nar version is defined 
+in the .env file at the root of the project. Make sure that value matches your build version in the POM.
 
 The NiFi log files are mapped to `./docker/nifi/logs`. You can run the following to tail the NiFi log files:
 
@@ -59,7 +58,7 @@ Before starting NiFi for the first time, you should set an admin password that w
 NiFi web interface. See [these NiFi docs](https://nifi.apache.org/docs/nifi-docs/html/getting-started.html#i-started-nifi-now-what) 
 for instructions on how to configure this password.
 
-You can then start NiFi using Java 11 via the following command:
+You can then start NiFi using Java 21 via the following command:
 
     $NIFI_HOME/bin/nifi start
 
@@ -88,11 +87,10 @@ onto the canvas.
 2. Click on the "Browse" icon in the "Process Group Name" selector.
 3. Select the `flows-for-manual-testing.json` file.
 4. Open the "flows-for-manual-testing" process group that is now on the NiFi canvas.
-5. Click on the "Configuration" cog icon in the "Operate" panel on the left.
-6. Click on the "Controller Services" tab.
-7. Click on the "Configure" cog icon for the "test-marklogic-nifi-8006" controller service.
-8. Enter "admin" for the "Password" field.
-9. Click on the "Enable" icon for the controller service.
+5. Right-click on the "flows-for-manual-testing" process group and select "Controller Services."
+6. Click on the ellipsis on the right-hand side of the "test-marklogic-nifi-8006" controller service and select "Edit."
+7. Enter "admin" for the "Password" field.
+8. Click on the "Enable" icon for the controller service.
 
 You can now try each of the flows in the process group. Each flow has a note in it to help with testing.
 
@@ -154,7 +152,7 @@ You should see logging from all the Maven phases, including logging from tests, 
 like the one below:
 
 ```
-[INFO] Reactor Summary for nifi-marklogic-bundle 1.16.3.1:
+[INFO] Reactor Summary for nifi-marklogic-bundle 2.0.0:
 [INFO] 
 [INFO] nifi-marklogic-bundle .............................. SUCCESS [  1.179 s]
 [INFO] nifi-marklogic-services-api ........................ SUCCESS [  1.208 s]

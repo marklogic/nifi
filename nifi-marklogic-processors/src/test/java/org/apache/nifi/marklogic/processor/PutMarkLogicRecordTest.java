@@ -115,17 +115,19 @@ public class PutMarkLogicRecordTest extends AbstractMarkLogicProcessorTest {
         runner.setProperty(PutMarkLogicRecord.URI_SUFFIX, "/suffix.txt");
         String[] expectedUris = new String[]{
             "/prefix/123/suffix.txt",
-            "/prefix/456/suffix.txt"
+            "/prefix/456/suffix.txt",
+            "/prefix/789/suffix.txt",
         };
 
         recordReader.addRecord("123");
         recordReader.addRecord("456");
+        recordReader.addRecord("789/");
 
         runner.enqueue(new byte[0]);
 
         runner.run();
 
-        assertEquals(processor.writeEvents.size(), 2);
+        assertEquals(processor.writeEvents.size(), 3);
         for (String expectedUri : expectedUris) {
             Stream<WriteEvent> writeEventStream = processor.writeEvents.parallelStream();
             assertTrue(writeEventStream.anyMatch(writeEvent -> writeEvent.getTargetUri().equals(expectedUri)));
@@ -136,11 +138,11 @@ public class PutMarkLogicRecordTest extends AbstractMarkLogicProcessorTest {
         runner.assertTransferCount("batch_success", 1);
         runner.assertTransferCount("original", 1);
         runner.assertTransferCount("failure", 0);
-        runner.assertTransferCount("success", 2);
+        runner.assertTransferCount("success", 3);
 
         MockFlowFile mockFile = runner.getFlowFilesForRelationship("batch_success").get(0);
         assertEquals(
-            "/prefix/123/suffix.txt,/prefix/456/suffix.txt", mockFile.getAttribute("URIs"),
+            "/prefix/123/suffix.txt,/prefix/456/suffix.txt,/prefix/789/suffix.txt", mockFile.getAttribute("URIs"),
             "The FF sent to batch_success is expected to contain each of the URIs in that batch");
     }
 

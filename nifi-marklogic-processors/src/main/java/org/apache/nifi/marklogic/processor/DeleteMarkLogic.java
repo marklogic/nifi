@@ -22,10 +22,7 @@ import org.apache.nifi.annotation.behavior.InputRequirement.Requirement;
 import org.apache.nifi.annotation.documentation.CapabilityDescription;
 import org.apache.nifi.annotation.documentation.Tags;
 import org.apache.nifi.components.PropertyDescriptor;
-import org.apache.nifi.components.state.Scope;
 import org.apache.nifi.expression.ExpressionLanguageScope;
-import org.apache.nifi.flowfile.FlowFile;
-import org.apache.nifi.flowfile.attributes.CoreAttributes;
 import org.apache.nifi.processor.ProcessContext;
 import org.apache.nifi.processor.ProcessSession;
 import org.apache.nifi.processor.ProcessorInitializationContext;
@@ -57,7 +54,8 @@ public class DeleteMarkLogic extends QueryMarkLogic {
     @Override
     public void init(ProcessorInitializationContext context) {
         super.init(context);
-        List<PropertyDescriptor> list = new ArrayList<>();
+
+        final List<PropertyDescriptor> list = new ArrayList<>();
         list.add(DATABASE_CLIENT_SERVICE);
         list.add(BATCH_SIZE);
         list.add(THREAD_COUNT);
@@ -67,7 +65,7 @@ public class DeleteMarkLogic extends QueryMarkLogic {
         list.add(STATE_INDEX_TYPE);
         properties = Collections.unmodifiableList(list);
 
-        Set<Relationship> set = new HashSet<>();
+        final Set<Relationship> set = new HashSet<>();
         set.add(SUCCESS);
         set.add(FAILURE);
         set.add(ORIGINAL);

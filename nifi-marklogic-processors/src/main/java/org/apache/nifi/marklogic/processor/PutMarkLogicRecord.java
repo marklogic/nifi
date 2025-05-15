@@ -27,6 +27,7 @@ import org.apache.nifi.annotation.documentation.CapabilityDescription;
 import org.apache.nifi.annotation.documentation.Tags;
 import org.apache.nifi.annotation.lifecycle.OnScheduled;
 import org.apache.nifi.components.PropertyDescriptor;
+import org.apache.nifi.components.PropertyValue;
 import org.apache.nifi.components.Validator;
 import org.apache.nifi.expression.ExpressionLanguageScope;
 import org.apache.nifi.flowfile.FlowFile;
@@ -46,7 +47,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.*;
 
-@EventDriven
 @Tags({"MarkLogic", "Put", "Bulk", "Insert"})
 @InputRequirement(InputRequirement.Requirement.INPUT_REQUIRED)
 @CapabilityDescription("Breaks down FlowFiles into batches of Records and inserts documents to a MarkLogic server using the " +
@@ -145,10 +145,22 @@ public class PutMarkLogicRecord extends PutMarkLogic {
 
     @OnScheduled
     public void initializeFactories(ProcessContext context) {
-        recordReaderFactory = context.getProperty(RECORD_READER).asControllerService(RecordReaderFactory.class);
-        recordSetWriterFactory = context.getProperty(RECORD_WRITER).asControllerService(RecordSetWriterFactory.class);
-        coerceTypes = context.getProperty(RECORD_COERCE_TYPES).asBoolean();
-        dropUnknownFields = context.getProperty(RECORD_DROP_UNKNOWN_FIELDS).asBoolean();
+        PropertyValue recordReaderProp = context.getProperty(RECORD_READER);
+        Objects.requireNonNull(recordReaderProp);
+        recordReaderFactory = recordReaderProp.asControllerService(RecordReaderFactory.class);
+
+        PropertyValue recordWriterProp = context.getProperty(RECORD_WRITER);
+        Objects.requireNonNull(recordWriterProp);
+        recordSetWriterFactory = recordWriterProp.asControllerService(RecordSetWriterFactory.class);
+
+        if (context.getProperty(RECORD_COERCE_TYPES) != null &&
+            context.getProperty(RECORD_COERCE_TYPES).asBoolean() != null) {
+            coerceTypes = context.getProperty(RECORD_COERCE_TYPES).asBoolean();
+        }
+        if (context.getProperty(RECORD_DROP_UNKNOWN_FIELDS) != null &&
+            context.getProperty(RECORD_DROP_UNKNOWN_FIELDS).asBoolean() != null) {
+            dropUnknownFields = context.getProperty(RECORD_DROP_UNKNOWN_FIELDS).asBoolean();
+        }
     }
 
     @Override
@@ -159,7 +171,9 @@ public class PutMarkLogicRecord extends PutMarkLogic {
             return;
         }
 
-        final String uriFieldName = context.getProperty(URI_FIELD_NAME).evaluateAttributeExpressions(flowFile).getValue();
+        PropertyValue uriFieldNameProp = context.getProperty(URI_FIELD_NAME);
+        Objects.requireNonNull(uriFieldNameProp);
+        final String uriFieldName = uriFieldNameProp.evaluateAttributeExpressions(flowFile).getValue();
 
         int added = 0;
         boolean error = false;
@@ -179,7 +193,7 @@ public class PutMarkLogicRecord extends PutMarkLogic {
 
             while ((record = reader.nextRecord(coerceTypes, dropUnknownFields)) != null) {
                 baos.reset();
-                try (final RecordSetWriter writer = recordSetWriterFactory.createWriter(getLogger(), schema, baos)) {
+                try (final RecordSetWriter writer = recordSetWriterFactory.createWriter(getLogger(), schema, baos, flowFile)) {
                     writer.write(record);
                     writer.flush();
                     BytesHandle bytesHandle = new BytesHandle().with(baos.toByteArray());
@@ -235,25 +249,40 @@ public class PutMarkLogicRecord extends PutMarkLogic {
         String uri,
         final BytesHandle contentHandle
     ) {
-        final String prefix = context.getProperty(URI_PREFIX).evaluateAttributeExpressions(flowFile).getValue();
+
+        PropertyValue uriPrefixProp = context.getProperty(URI_PREFIX);
+        Objects.requireNonNull(uriPrefixProp);
+        final String prefix = uriPrefixProp.evaluateAttributeExpressions(flowFile).getValue();
         if (prefix != null) {
             uri = prefix + uri;
         }
-        final String suffix = context.getProperty(URI_SUFFIX).evaluateAttributeExpressions(flowFile).getValue();
+
+        PropertyValue uriSuffixProp = context.getProperty(URI_SUFFIX);
+        Objects.requireNonNull(uriSuffixProp);
+        final String suffix = uriSuffixProp.evaluateAttributeExpressions(flowFile).getValue();
         if (suffix != null) {
             uri += suffix;
         }
-        uri.replaceAll("//", "/");
+        uri = uri.replaceAll("//", "/");
 
-        DocumentMetadataHandle metadata = buildMetadataHandle(context, flowFile, context.getProperty(COLLECTIONS), context.getProperty(PERMISSIONS));
-        final String format = context.getProperty(FORMAT).getValue();
+        PropertyValue collectionsProp = context.getProperty(COLLECTIONS);
+        Objects.requireNonNull(collectionsProp);
+        PropertyValue permissionsProp = context.getProperty(PERMISSIONS);
+        Objects.requireNonNull(permissionsProp);
+        DocumentMetadataHandle metadata = buildMetadataHandle(context, flowFile, collectionsProp, permissionsProp);
+
+        PropertyValue formatProp = context.getProperty(FORMAT);
+        Objects.requireNonNull(formatProp);
+        final String format = formatProp.getValue();
         if (format != null) {
             contentHandle.withFormat(Format.valueOf(format));
         } else {
             addFormat(uri, contentHandle);
         }
 
-        final String mimetype = context.getProperty(MIMETYPE).getValue();
+        PropertyValue mimeTypeProp = context.getProperty(MIMETYPE);
+        Objects.requireNonNull(mimeTypeProp);
+        final String mimetype = mimeTypeProp.getValue();
         if (mimetype != null) {
             contentHandle.withMimetype(mimetype);
         }

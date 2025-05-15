@@ -39,6 +39,7 @@ import org.apache.nifi.processor.exception.ProcessException;
 import org.apache.nifi.processor.util.StandardValidators;
 import org.apache.nifi.stream.io.StreamUtils;
 
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.regex.Pattern;
 
@@ -69,7 +70,7 @@ public class ExtensionCallMarkLogic extends AbstractMarkLogicProcessor {
         .displayName("Extension Name")
         .required(true)
         .description("Name of MarkLogic REST extension")
-        .expressionLanguageSupported(ExpressionLanguageScope.VARIABLE_REGISTRY)
+        .expressionLanguageSupported(ExpressionLanguageScope.ENVIRONMENT)
         .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
         .build();
     public static final PropertyDescriptor PAYLOAD_SOURCE = new PropertyDescriptor.Builder()
@@ -143,7 +144,9 @@ public class ExtensionCallMarkLogic extends AbstractMarkLogicProcessor {
     public void onScheduled(ProcessContext context) {
         super.populatePropertiesByPrefix(context);
         DatabaseClient client = getDatabaseClient(context);
-        String extensionName = context.getProperty(EXTENSION_NAME).evaluateAttributeExpressions(context.getAllProperties()).getValue();
+        PropertyValue extensionNameProp = context.getProperty(EXTENSION_NAME);
+        Objects.requireNonNull(extensionNameProp);
+        String extensionName = extensionNameProp.evaluateAttributeExpressions(context.getAllProperties()).getValue();
         getLogger().info("Creating ResourceManager for REST extension: " + extensionName);
         resourceManager = new ExtensionResourceManager(client, extensionName);
     }
@@ -195,13 +198,17 @@ public class ExtensionCallMarkLogic extends AbstractMarkLogicProcessor {
     private ServiceResultIterator callExtension(ProcessContext context, ProcessSession session, FlowFile originalFlowFile) {
         BytesHandle requestBody = buildRequestBody(context, session, originalFlowFile);
         RequestParameters requestParams = buildRequestParameters(context, originalFlowFile);
-        String method = context.getProperty(METHOD_TYPE).getValue();
+        PropertyValue methodTypeProp = context.getProperty(METHOD_TYPE);
+        Objects.requireNonNull(methodTypeProp);
+        String method = methodTypeProp.getValue();
         return resourceManager.callService(method, requestBody, requestParams);
     }
 
     private BytesHandle buildRequestBody(ProcessContext context, ProcessSession session, FlowFile flowFile) {
         BytesHandle requestBody = new BytesHandle();
-        String payloadType = context.getProperty(PAYLOAD_SOURCE).getValue();
+        PropertyValue payloadSourceProp = context.getProperty(PAYLOAD_SOURCE);
+        Objects.requireNonNull(payloadSourceProp);
+        String payloadType = payloadSourceProp.getValue();
         switch (payloadType) {
             case PayloadSources.FLOWFILE_CONTENT_STR:
                 final byte[] content = new byte[(int) flowFile.getSize()];
@@ -209,11 +216,15 @@ public class ExtensionCallMarkLogic extends AbstractMarkLogicProcessor {
                 requestBody.set(content);
                 break;
             case PayloadSources.PAYLOAD_PROPERTY_STR:
-                requestBody.set(context.getProperty(PAYLOAD).evaluateAttributeExpressions(flowFile).getValue().getBytes());
+                PropertyValue payloadProp = context.getProperty(PAYLOAD);
+                Objects.requireNonNull(payloadProp);
+                requestBody.set(payloadProp.evaluateAttributeExpressions(flowFile).getValue().getBytes(StandardCharsets.UTF_8));
                 break;
         }
 
-        final String format = context.getProperty(PAYLOAD_FORMAT).getValue();
+        PropertyValue payloadFormatProp = context.getProperty(PAYLOAD_FORMAT);
+        Objects.requireNonNull(payloadFormatProp);
+        final String format = payloadFormatProp.getValue();
         if (format != null) {
             requestBody.withFormat(Format.valueOf(format));
         }
@@ -236,7 +247,9 @@ public class ExtensionCallMarkLogic extends AbstractMarkLogicProcessor {
         if (parameterProperties != null) {
             for (final PropertyDescriptor propertyDesc : parameterProperties) {
                 String paramName = propertyDesc.getName().substring(paramPrefix.length() + 1);
-                String paramValue = context.getProperty(propertyDesc).evaluateAttributeExpressions(flowFile).getValue();
+                PropertyValue prop = context.getProperty(propertyDesc);
+                Objects.requireNonNull(prop);
+                String paramValue = prop.evaluateAttributeExpressions(flowFile).getValue();
                 PropertyValue separatorProperty = context.getProperty("separator:" + propertyDesc.getName());
                 if (separatorProperty != null && separatorProperty.getValue() != null && !separatorProperty.getValue().isEmpty()) {
                     String separator = Pattern.quote(separatorProperty.evaluateAttributeExpressions(flowFile).getValue());

@@ -21,6 +21,7 @@ import org.apache.nifi.util.TestRunner;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -61,7 +62,7 @@ public class ExecuteScriptMarkLogicIT extends AbstractMarkLogicIT {
         List<MockFlowFile> results = runner.getFlowFilesForRelationship(ExecuteScriptMarkLogic.RESULTS);
         assertEquals(1, results.size());
         runner.assertAllFlowFiles(ExecuteScriptMarkLogic.RESULTS, flowFile -> {
-            String resultValue = new String(runner.getContentAsByteArray((MockFlowFile) flowFile));
+            String resultValue = new String(runner.getContentAsByteArray((MockFlowFile) flowFile), StandardCharsets.UTF_8);
             assertEquals("2", resultValue, "The script is expected to return the value 2");
         });
     }
@@ -84,7 +85,7 @@ public class ExecuteScriptMarkLogicIT extends AbstractMarkLogicIT {
 
         assertEquals(1, runner.getFlowFilesForRelationship(ExecuteScriptMarkLogic.RESULTS).size());
         runner.assertAllFlowFiles(ExecuteScriptMarkLogic.RESULTS, flowFile -> {
-            String resultValue = new String(runner.getContentAsByteArray((MockFlowFile) flowFile));
+            String resultValue = new String(runner.getContentAsByteArray((MockFlowFile) flowFile), StandardCharsets.UTF_8);
             assertEquals("Hello world", resultValue);
         });
     }

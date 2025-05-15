@@ -69,7 +69,7 @@ import java.util.stream.Stream;
         value = "The value of a parameter to be passed to a REST server transform",
         description = "A transform parameter with name equal to that of '{name}' will be passed to the REST server " +
             "transform identified by the optional 'Server Transform' property",
-        expressionLanguageScope = ExpressionLanguageScope.VARIABLE_REGISTRY
+        expressionLanguageScope = ExpressionLanguageScope.ENVIRONMENT
     ),
     @DynamicProperty(
         name = "property:{name}",
@@ -309,18 +309,35 @@ public class PutMarkLogic extends AbstractMarkLogicProcessor {
             throw new ProcessException("Unable to connect to MarkLogic; cause: " + result.getErrorMessage());
         }
 
+        PropertyValue jobIdProp = context.getProperty(JOB_ID);
+        Objects.requireNonNull(jobIdProp);
+
+        PropertyValue jobNameProp = context.getProperty(JOB_NAME);
+        Objects.requireNonNull(jobNameProp);
+
+        PropertyValue batchSizeProp = context.getProperty(BATCH_SIZE);
+        Objects.requireNonNull(batchSizeProp);
+
+        PropertyValue temporalCollectionsProp = context.getProperty(TEMPORAL_COLLECTION);
+        Objects.requireNonNull(temporalCollectionsProp);
+
+        PropertyValue threadCountProp = context.getProperty(THREAD_COUNT);
+        Objects.requireNonNull(threadCountProp);
+
         try {
-            writeBatcher = dataMovementManager.newWriteBatcher()
-                .withJobId(context.getProperty(JOB_ID).getValue())
-                .withJobName(context.getProperty(JOB_NAME).getValue())
-                .withBatchSize(context.getProperty(BATCH_SIZE).asInteger())
-                .withTemporalCollection(context.getProperty(TEMPORAL_COLLECTION).getValue());
+            this.writeBatcher = dataMovementManager.newWriteBatcher();
+            Objects.requireNonNull(this.writeBatcher);
+            this.writeBatcher
+                .withJobId(jobIdProp.getValue())
+                .withJobName(jobNameProp.getValue())
+                .withBatchSize(batchSizeProp.asInteger())
+                .withTemporalCollection(temporalCollectionsProp.getValue());
 
             ServerTransform serverTransform = buildServerTransform(context);
             if (serverTransform != null) {
                 writeBatcher.withTransform(serverTransform);
             }
-            Integer threadCount = context.getProperty(THREAD_COUNT).asInteger();
+            Integer threadCount = threadCountProp.asInteger();
             if (threadCount != null) {
                 writeBatcher.withThreadCount(threadCount);
             }
@@ -431,7 +448,9 @@ public class PutMarkLogic extends AbstractMarkLogicProcessor {
         }
 
         if (this.writeBatcher != null && this.writeBatcher.isStopped()) {
-            if ("true".equals(context.getProperty(RESTART_FAILED_BATCHER).getValue())) {
+            PropertyValue restartFailedBatcherProp = context.getProperty(RESTART_FAILED_BATCHER);
+            Objects.requireNonNull(restartFailedBatcherProp);
+            if ("true".equals(restartFailedBatcherProp.getValue())) {
                 // Ensure that if the process has multiple tasks assigned to it, only one triggers this block.
                 synchronized (this.dataMovementManager) {
                     if (this.writeBatcher.isStopped()) {
@@ -454,7 +473,10 @@ public class PutMarkLogic extends AbstractMarkLogicProcessor {
         }
 
         try {
-            String duplicateHandler = context.getProperty(DUPLICATE_URI_HANDLING).getValue();
+            PropertyValue duplicateUriHandlingProp = context.getProperty(DUPLICATE_URI_HANDLING);
+            Objects.requireNonNull(duplicateUriHandlingProp);
+            String duplicateHandler = duplicateUriHandlingProp.getValue();
+
             WriteEvent writeEvent = buildWriteEvent(context, session, flowFile);
 
             String currentUrl = writeEvent.getTargetUri();
@@ -521,30 +543,46 @@ public class PutMarkLogic extends AbstractMarkLogicProcessor {
     }
 
     protected WriteEvent buildWriteEvent(ProcessContext context, ProcessSession session, FlowFile flowFile) {
-        String uri = flowFile.getAttribute(context.getProperty(URI_ATTRIBUTE_NAME).getValue());
-        final String prefix = context.getProperty(URI_PREFIX).evaluateAttributeExpressions(flowFile).getValue();
+        PropertyValue uriAttributeNameProp = context.getProperty(URI_ATTRIBUTE_NAME);
+        Objects.requireNonNull(uriAttributeNameProp);
+        String uri = flowFile.getAttribute(uriAttributeNameProp.getValue());
+
+        PropertyValue uriPrefixProp = context.getProperty(URI_PREFIX);
+        Objects.requireNonNull(uriPrefixProp);
+        final String prefix = uriPrefixProp.evaluateAttributeExpressions(flowFile).getValue();
         if (prefix != null) {
             uri = prefix + uri;
         }
-        final String suffix = context.getProperty(URI_SUFFIX).evaluateAttributeExpressions(flowFile).getValue();
+
+        PropertyValue uriSuffixProp = context.getProperty(URI_SUFFIX);
+        Objects.requireNonNull(uriSuffixProp);
+        final String suffix = uriSuffixProp.evaluateAttributeExpressions(flowFile).getValue();
         if (suffix != null) {
             uri += suffix;
         }
 
-        DocumentMetadataHandle metadata = buildMetadataHandle(context, flowFile, context.getProperty(COLLECTIONS), context.getProperty(PERMISSIONS));
+        PropertyValue collectionsProp = context.getProperty(COLLECTIONS);
+        Objects.requireNonNull(collectionsProp);
+        PropertyValue permissionsProp = context.getProperty(PERMISSIONS);
+        Objects.requireNonNull(permissionsProp);
+        DocumentMetadataHandle metadata = buildMetadataHandle(context, flowFile, collectionsProp, permissionsProp);
         final byte[] content = new byte[(int) flowFile.getSize()];
         session.read(flowFile, inputStream -> StreamUtils.fillBuffer(inputStream, content));
 
         BytesHandle handle = new BytesHandle(content);
 
-        final String format = context.getProperty(FORMAT).getValue();
+        PropertyValue formatProp = context.getProperty(FORMAT);
+        Objects.requireNonNull(formatProp);
+        final String format = formatProp.getValue();
         if (format != null) {
             handle.withFormat(Format.valueOf(format));
         } else {
             addFormat(uri, handle);
         }
 
-        final String mimetype = context.getProperty(MIMETYPE).getValue();
+        PropertyValue mimeTypeProp = context.getProperty(MIMETYPE);
+        Objects.requireNonNull(mimeTypeProp);
+        final String mimetype = mimeTypeProp.getValue();
         if (mimetype != null) {
             handle.withMimetype(mimetype);
         }
@@ -575,7 +613,9 @@ public class PutMarkLogic extends AbstractMarkLogicProcessor {
             permissionsProperty.evaluateAttributeExpressions(flowFile).getValue() : null;
         final String[] tokens = getArrayFromCommaSeparatedString(permissionsValue);
 
-        Integer quality = context.getProperty(QUALITY).evaluateAttributeExpressions(flowFile).asInteger();
+        PropertyValue qualityProp = context.getProperty(QUALITY);
+        Objects.requireNonNull(qualityProp);
+        Integer quality = qualityProp.evaluateAttributeExpressions(flowFile).asInteger();
         if (quality != null) {
             metadata.withQuality(quality);
         }
@@ -602,7 +642,10 @@ public class PutMarkLogic extends AbstractMarkLogicProcessor {
         List<PropertyDescriptor> metaProperties = propertiesByPrefix.get(metaPrefix);
         if (metaProperties != null) {
             for (final PropertyDescriptor propertyDesc : metaProperties) {
-                metadata.withMetadataValue(propertyDesc.getName().substring(metaPrefix.length() + 1), context.getProperty(propertyDesc).evaluateAttributeExpressions(flowFile).getValue());
+                PropertyValue prop = context.getProperty(propertyDesc);
+                Objects.requireNonNull(prop);
+                metadata.withMetadataValue(propertyDesc.getName().substring(metaPrefix.length() + 1),
+                    prop.evaluateAttributeExpressions(flowFile).getValue());
             }
         }
         // Set dynamic properties
@@ -610,7 +653,10 @@ public class PutMarkLogic extends AbstractMarkLogicProcessor {
         List<PropertyDescriptor> propertyProperties = propertiesByPrefix.get(propertyPrefix);
         if (propertyProperties != null) {
             for (final PropertyDescriptor propertyDesc : propertiesByPrefix.get(propertyPrefix)) {
-                metadata.withProperty(propertyDesc.getName().substring(propertyPrefix.length() + 1), context.getProperty(propertyDesc).evaluateAttributeExpressions(flowFile).getValue());
+                PropertyValue prop = context.getProperty(propertyDesc);
+                Objects.requireNonNull(prop);
+                metadata.withProperty(propertyDesc.getName().substring(propertyPrefix.length() + 1),
+                    prop.evaluateAttributeExpressions(flowFile).getValue());
             }
         }
 

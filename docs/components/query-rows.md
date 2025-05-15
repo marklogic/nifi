@@ -13,4 +13,4 @@ The primary use case for this processor is when data should be retrieved as rows
 [`QueryMarkLogic`](query.md) is a more suitable choice.
 
 For full details on each property and relationship for this processor, add an instance of it to the NiFi canvas,
-right-click on it, and select "View Usage".
+right-click on it, and select "View Documentation".

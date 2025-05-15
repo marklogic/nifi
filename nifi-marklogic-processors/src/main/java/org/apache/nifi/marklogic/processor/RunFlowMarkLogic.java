@@ -11,11 +11,14 @@ import com.marklogic.hub.flow.FlowRunner;
 import com.marklogic.hub.flow.RunFlowResponse;
 import com.marklogic.hub.flow.impl.FlowRunnerImpl;
 import com.marklogic.hub.impl.HubConfigImpl;
+import org.apache.nifi.annotation.behavior.DynamicProperties;
+import org.apache.nifi.annotation.behavior.DynamicProperty;
 import org.apache.nifi.annotation.behavior.InputRequirement;
 import org.apache.nifi.annotation.documentation.CapabilityDescription;
 import org.apache.nifi.annotation.documentation.Tags;
 import org.apache.nifi.annotation.lifecycle.OnScheduled;
 import org.apache.nifi.components.PropertyDescriptor;
+import org.apache.nifi.components.PropertyValue;
 import org.apache.nifi.components.Validator;
 import org.apache.nifi.expression.ExpressionLanguageScope;
 import org.apache.nifi.flowfile.FlowFile;
@@ -32,23 +35,28 @@ import org.apache.nifi.util.StringUtils;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.X509TrustManager;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.Set;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
 
 @Tags({"MarkLogic", "Data Hub Framework"})
 @InputRequirement(InputRequirement.Requirement.INPUT_ALLOWED)
-@CapabilityDescription("Run a MarkLogic Data Hub 6.1.x flow via the Data Hub 6.1.1 Java API. This is expected to be run on non-ingestion steps, where data " +
+@CapabilityDescription("Run a MarkLogic Data Hub 6.2.x flow via the Data Hub 6.2.0 Java API. This is expected to be run on non-ingestion steps, where data " +
     "has already been ingested into MarkLogic. Ingestion steps depend on access to local files, which isn't a common " +
     "use case for NiFi in production. Note that a given version of the Data Hub Java API is not yet guaranteed to work " +
-    "with any other version of Data Hub. It is thus recommended to only use this against a Data Hub 6.1.0 or 6.1.1 installation, " +
+    "with any other version of Data Hub. It is thus recommended to only use this against a Data Hub 6.2.0 installation, " +
     "though it may work with other versions of Data Hub. Requires a MarkLogic user that is able to run the flow; " +
-    "consult your Data Hub Framework documentation for guidelines on what Data Hub roles are required.")
+    "consult your Data Hub Framework documentation for guidelines on what Data Hub roles are required. As of the 1.27.1 " +
+    "release, you can now specify any Data Hub property via a dynamic property starting with 'dhf:', followed by the name " +
+    "of the Data Hub property you wish to set. ")
+@DynamicProperties({
+    @DynamicProperty(
+        name = "dhf:{name}",
+        value = "Name of a Data Hub property",
+        description = "A Data Hub property and value used to connect to a Data Hub instance. For example, 'dhf:mlStagingDbName=some-other-name' " +
+            "would configure the staging database name instead of the default of 'data-hub-STAGING'.",
+        expressionLanguageScope = ExpressionLanguageScope.ENVIRONMENT
+    )
+})
 public class RunFlowMarkLogic extends AbstractMarkLogicProcessor {
 
     public static final PropertyDescriptor FINAL_PORT = new PropertyDescriptor.Builder()
@@ -58,7 +66,7 @@ public class RunFlowMarkLogic extends AbstractMarkLogicProcessor {
         .defaultValue("8011")
         .description("The port on which the Final REST server is hosted")
         .addValidator(StandardValidators.PORT_VALIDATOR)
-        .expressionLanguageSupported(ExpressionLanguageScope.VARIABLE_REGISTRY)
+        .expressionLanguageSupported(ExpressionLanguageScope.ENVIRONMENT)
         .build();
 
     public static final PropertyDescriptor JOB_PORT = new PropertyDescriptor.Builder()
@@ -68,7 +76,7 @@ public class RunFlowMarkLogic extends AbstractMarkLogicProcessor {
         .defaultValue("8013")
         .description("The port on which the Job REST server is hosted")
         .addValidator(StandardValidators.PORT_VALIDATOR)
-        .expressionLanguageSupported(ExpressionLanguageScope.VARIABLE_REGISTRY)
+        .expressionLanguageSupported(ExpressionLanguageScope.ENVIRONMENT)
         .build();
 
     public static final PropertyDescriptor FLOW_NAME = new PropertyDescriptor.Builder()
@@ -123,7 +131,9 @@ public class RunFlowMarkLogic extends AbstractMarkLogicProcessor {
 
     @Override
     public void init(final ProcessorInitializationContext context) {
-        List<PropertyDescriptor> list = new ArrayList<>();
+        super.init(context);
+
+        final List<PropertyDescriptor> list = new ArrayList<>();
         list.add(DATABASE_CLIENT_SERVICE);
         list.add(FINAL_PORT);
         list.add(JOB_PORT);
@@ -133,7 +143,7 @@ public class RunFlowMarkLogic extends AbstractMarkLogicProcessor {
         list.add(OPTIONS_JSON);
         properties = Collections.unmodifiableList(list);
 
-        Set<Relationship> set = new HashSet<>();
+        final Set<Relationship> set = new HashSet<>();
         set.add(FINISHED);
         set.add(FAILURE);
         relationships = Collections.unmodifiableSet(set);
@@ -144,13 +154,15 @@ public class RunFlowMarkLogic extends AbstractMarkLogicProcessor {
      * MarkLogicDatabaseClientService. The DatabaseClient from this service cannot be reused, as DHF instantiates its
      * own set of DatabaseClients.
      *
-     * @param context
+     * @param context the process context
      */
     @OnScheduled
     public void onScheduled(ProcessContext context) {
-        DatabaseClientConfig clientConfig = context.getProperty(DATABASE_CLIENT_SERVICE)
-            .asControllerService(MarkLogicDatabaseClientService.class)
-            .getDatabaseClientConfig();
+        PropertyValue databaseClientServiceProp = context.getProperty(DATABASE_CLIENT_SERVICE);
+        Objects.requireNonNull(databaseClientServiceProp);
+        var controllerService = databaseClientServiceProp.asControllerService(MarkLogicDatabaseClientService.class);
+        Objects.requireNonNull(controllerService);
+        DatabaseClientConfig clientConfig = controllerService.getDatabaseClientConfig();
         getLogger().info("Initializing HubConfig");
         this.hubConfig = initializeHubConfig(context, clientConfig);
         getLogger().info("Initialized HubConfig");
@@ -182,26 +194,51 @@ public class RunFlowMarkLogic extends AbstractMarkLogicProcessor {
                 getLogger().info(String.format("Finished running flow %s", inputs.getFlowName()));
             }
 
-            session.write(incomingFlowFile, out -> out.write(response.toJson().getBytes()));
+            session.write(incomingFlowFile, out -> out.write(response.toJson().getBytes(StandardCharsets.UTF_8)));
             transferAndCommit(session, incomingFlowFile, FINISHED);
         } catch (Throwable t) {
             logErrorAndTransfer(t, incomingFlowFile, session, FAILURE);
         }
     }
 
-    protected HubConfigImpl initializeHubConfig(ProcessContext context, DatabaseClientConfig clientConfig) {
+    private Properties buildDhfProperties(ProcessContext context, DatabaseClientConfig clientConfig) {
         Properties props = new Properties();
         props.setProperty("mlHost", clientConfig.getHost());
         props.setProperty("mlStagingPort", clientConfig.getPort() + "");
         props.setProperty("mlUsername", clientConfig.getUsername());
         props.setProperty("mlPassword", clientConfig.getPassword());
-        props.setProperty("mlFinalPort", context.getProperty(FINAL_PORT).evaluateAttributeExpressions().getValue());
-        props.setProperty("mlJobPort", context.getProperty(JOB_PORT).evaluateAttributeExpressions().getValue());
+
+        PropertyValue finalPortProp = context.getProperty(FINAL_PORT);
+        Objects.requireNonNull(finalPortProp);
+        props.setProperty("mlFinalPort", finalPortProp.evaluateAttributeExpressions().getValue());
+
+        PropertyValue jobPortProp = context.getProperty(JOB_PORT);
+        Objects.requireNonNull(jobPortProp);
+        props.setProperty("mlJobPort", jobPortProp.evaluateAttributeExpressions().getValue());
 
         props.setProperty("mlStagingAuth", clientConfig.getSecurityContextType().toString());
         props.setProperty("mlFinalAuth", clientConfig.getSecurityContextType().toString());
         props.setProperty("mlJobAuth", clientConfig.getSecurityContextType().toString());
 
+        final String dhfPrefix = "dhf";
+        List<PropertyDescriptor> dhfProperties = propertiesByPrefix.get(dhfPrefix);
+        if (dhfProperties != null) {
+            for (final PropertyDescriptor propertyDesc : dhfProperties) {
+                String propertyName = propertyDesc.getName().substring(dhfPrefix.length() + 1);
+                PropertyValue prop = context.getProperty(propertyDesc);
+                Objects.requireNonNull(prop);
+                String propertyValue = prop.evaluateAttributeExpressions().getValue();
+
+                props.setProperty(propertyName, propertyValue);
+            }
+        }
+
+        return props;
+    }
+
+    protected HubConfigImpl initializeHubConfig(ProcessContext context, DatabaseClientConfig clientConfig) {
+        super.populatePropertiesByPrefix(context);
+        Properties props = buildDhfProperties(context, clientConfig);
         HubConfigImpl hubConfig = HubConfigImpl.withProperties(props);
 
         SSLContext sslContext = clientConfig.getSslContext();
@@ -237,7 +274,9 @@ public class RunFlowMarkLogic extends AbstractMarkLogicProcessor {
     }
 
     protected FlowInputs buildFlowInputs(ProcessContext context, FlowFile flowFile) {
-        final String flowName = context.getProperty(FLOW_NAME).evaluateAttributeExpressions(flowFile).getValue();
+        PropertyValue flowNameProp = context.getProperty(FLOW_NAME);
+        Objects.requireNonNull(flowNameProp);
+        final String flowName = flowNameProp.evaluateAttributeExpressions(flowFile).getValue();
         FlowInputs inputs = new FlowInputs(flowName);
 
         if (context.getProperty(STEPS) != null) {

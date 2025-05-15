@@ -86,7 +86,6 @@ class TestQueryBatcher implements QueryBatcher {
     public void retry(QueryEvent queryEvent) {
     }
 
-    @Override
     @Deprecated
     public QueryBatchListener[] getQuerySuccessListeners() {
         return null;

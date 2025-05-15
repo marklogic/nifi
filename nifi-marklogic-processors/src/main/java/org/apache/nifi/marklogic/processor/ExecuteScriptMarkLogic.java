@@ -58,8 +58,12 @@ public class ExecuteScriptMarkLogic extends AbstractMarkLogicProcessor {
     protected static Validator PATH_SCRIPT_VALIDATOR = new Validator() {
         @Override
         public ValidationResult validate(String subject, String input, ValidationContext context) {
-            String scriptBody = context.getProperty(SCRIPT_BODY).getValue();
-            String modulePath = context.getProperty(MODULE_PATH).getValue();
+            PropertyValue scriptBodyProp = context.getProperty(SCRIPT_BODY);
+            Objects.requireNonNull(scriptBodyProp);
+            String scriptBody = scriptBodyProp.getValue();
+            PropertyValue modulePathProp = context.getProperty(MODULE_PATH);
+            Objects.requireNonNull(modulePathProp);
+            String modulePath = modulePathProp.getValue();
             if (StringUtils.isEmpty(scriptBody) == StringUtils.isEmpty(modulePath)) {
                 return new ValidationResult.Builder().valid(false)
                     .explanation("Exactly one of Module Path or Script Body must be set").build();
@@ -200,9 +204,17 @@ public class ExecuteScriptMarkLogic extends AbstractMarkLogicProcessor {
                 incomingFlowFile = session.create();
             }
 
-            final String resultsDest = context.getProperty(RESULTS_DESTINATION).getValue();
-            final String contentVariable = context.getProperty(CONTENT_VARIABLE).evaluateAttributeExpressions(incomingFlowFile).getValue();
-            final boolean skipFirst = context.getProperty(SKIP_FIRST).getValue().equals("true");
+            PropertyValue resultsDestinationProp = context.getProperty(RESULTS_DESTINATION);
+            Objects.requireNonNull(resultsDestinationProp);
+            final String resultsDest = resultsDestinationProp.getValue();
+
+            PropertyValue contentVariableProp = context.getProperty(CONTENT_VARIABLE);
+            Objects.requireNonNull(contentVariableProp);
+            final String contentVariable = contentVariableProp.evaluateAttributeExpressions(incomingFlowFile).getValue();
+
+            PropertyValue skipFirstProp = context.getProperty(SKIP_FIRST);
+            Objects.requireNonNull(skipFirstProp);
+            final boolean skipFirst = skipFirstProp.getValue().equals("true");
 
             ServerEvaluationCall call = buildCall(context, session, incomingFlowFile);
 
@@ -210,7 +222,7 @@ public class ExecuteScriptMarkLogic extends AbstractMarkLogicProcessor {
             if (contentVariable != null && contentVariable.length() > 0) {
                 final ByteArrayOutputStream bytes = new ByteArrayOutputStream();
                 session.exportTo(incomingFlowFile, bytes);
-                final String content = bytes.toString();
+                final String content = bytes.toString(StandardCharsets.UTF_8);
 
                 call.addVariable(contentVariable, content);
             }
@@ -261,16 +273,22 @@ public class ExecuteScriptMarkLogic extends AbstractMarkLogicProcessor {
 
     private ServerEvaluationCall buildCall(ProcessContext context, ProcessSession session, FlowFile originalFlowFile) {
         DatabaseClient client = getDatabaseClient(context);
-        final String executionType = context.getProperty(EXECUTION_TYPE).getValue();
+        PropertyValue executionTypeProp = context.getProperty(EXECUTION_TYPE);
+        Objects.requireNonNull(executionTypeProp);
+        final String executionType = executionTypeProp.getValue();
         ServerEvaluationCall call = client.newServerEval();
 
         if (STR_MODULE_PATH.equals(executionType)) {
-            String modulePath = context.getProperty(MODULE_PATH).evaluateAttributeExpressions(originalFlowFile).getValue();
+            PropertyValue modulePathProp = context.getProperty(MODULE_PATH);
+            Objects.requireNonNull(modulePathProp);
+            String modulePath = modulePathProp.evaluateAttributeExpressions(originalFlowFile).getValue();
             session.putAttribute(originalFlowFile, "marklogic-module-path", modulePath);
             return call.modulePath(modulePath);
         }
 
-        final String scriptBody = context.getProperty(SCRIPT_BODY).evaluateAttributeExpressions(originalFlowFile).getValue();
+        PropertyValue scriptBodyProp = context.getProperty(SCRIPT_BODY);
+        Objects.requireNonNull(scriptBodyProp);
+        final String scriptBody = scriptBodyProp.evaluateAttributeExpressions(originalFlowFile).getValue();
         session.putAttribute(originalFlowFile, "marklogic-script-body", scriptBody);
         return STR_JAVASCRIPT.equals(executionType) ? call.javascript(scriptBody) : call.xquery(scriptBody);
     }
@@ -283,7 +301,7 @@ public class ExecuteScriptMarkLogic extends AbstractMarkLogicProcessor {
             } else if (resultsDest.equals("Attribute")) {
                 session.putAttribute(flowFile, MARKLOGIC_RESULT, resultStr);
             } else {
-                JsonElement jelement = new JsonParser().parse(resultStr);
+                JsonElement jelement = JsonParser.parseString(resultStr);
                 JsonObject obj = jelement.getAsJsonObject();
                 for (Entry<String, JsonElement> entry : obj.entrySet()) {
                     String property = entry.getKey();
