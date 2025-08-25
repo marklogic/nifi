@@ -6,6 +6,10 @@ services:
     image: "marklogicdb/marklogic-db:latest-11"
     container_name: "marklogic"
     platform: linux/amd64
+    # The NET_RAW capability allows a process to create raw sockets. Polaris does not like that.
+    # This setting removes the NET_RAW capability from the container.
+    cap_drop:
+      - NET_RAW
     environment:
       - MARKLOGIC_INIT=true
       - MARKLOGIC_ADMIN_USERNAME=admin
@@ -20,6 +24,8 @@ services:
     container_name: nifi
     ports:
       - "8443:8443/tcp"
+    cap_drop:
+      - NET_RAW
     volumes:
       - "./nifi-marklogic-nar/target/nifi-marklogic-nar-${VERSION}.nar:/opt/nifi/nifi-current/lib/nifi-marklogic-nar-${VERSION}.nar"
       - "./nifi-marklogic-services-api-nar/target/nifi-marklogic-services-api-nar-${VERSION}.nar:/opt/nifi/nifi-current/lib/nifi-marklogic-services-api-nar-${VERSION}.nar"
