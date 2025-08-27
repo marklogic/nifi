@@ -1,5 +1,4 @@
-name: 🏷️ JIRA ID Validator
-
+name: PR Workflow
 on:
   # Using pull_request_target instead of pull_request to handle PRs from forks
   pull_request_target:
@@ -14,3 +13,10 @@ jobs:
     with:
       # Pass the PR title from the event context
       pr-title: ${{ github.event.pull_request.title }}
+  copyright-validation:
+    name: © Validate Copyright Headers
+    uses: marklogic/pr-workflows/.github/workflows/copyright-check.yml@main
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
