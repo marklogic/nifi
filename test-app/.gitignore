@@ -11,3 +11,6 @@ src/main/ml-config/databases/final-triggers-database.json
 src/main/ml-config/databases/modules-database.json
 src/main/ml-config/servers/final-server.json
 src/main/entity-config
+gradle
+gradlew
+gradlew.bat
