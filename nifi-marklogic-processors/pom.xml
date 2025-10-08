@@ -48,7 +48,7 @@
     <dependency>
       <groupId>com.marklogic</groupId>
       <artifactId>marklogic-data-hub</artifactId>
-      <version>6.2.0</version>
+      <version>6.2.1</version>
     </dependency>
     <dependency>
       <groupId>org.apache.nifi</groupId>
@@ -118,7 +118,30 @@
     <dependency>
       <groupId>com.marklogic</groupId>
       <artifactId>marklogic-junit5</artifactId>
-      <version>1.4.0</version>
+      <version>1.5.0</version>
+      <scope>test</scope>
+      <!-- Use latest Spring dependencies and ml-javaclient-util from DHF -->
+      <exclusions>
+        <exclusion>
+          <groupId>com.marklogic</groupId>
+          <artifactId>ml-javaclient-util</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.springframework</groupId>
+          <artifactId>spring-context</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework</groupId>
+      <artifactId>spring-context</artifactId>
+      <version>${spring.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework</groupId>
+      <artifactId>spring-test</artifactId>
+      <version>${spring.version}</version>
       <scope>test</scope>
     </dependency>
 

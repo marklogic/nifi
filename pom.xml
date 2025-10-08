@@ -22,7 +22,7 @@
   <parent>
     <groupId>org.apache.nifi</groupId>
     <artifactId>nifi-extension-bundles</artifactId>
-    <version>2.3.0</version>
+    <version>2.5.0</version>
   </parent>
 
   <version>2.0.0</version>
@@ -33,12 +33,26 @@
   <properties>
     <!-- Nifi 2 requires Java 21 -->
     <maven.compiler.release>21</maven.compiler.release>
-    <nifi.version>2.3.0</nifi.version>
+    <nifi.version>2.5.0</nifi.version>
     <marklogicnar.version>2.0.0</marklogicnar.version>
-    <marklogicclientapi.version>7.1.0</marklogicclientapi.version>
+    <marklogicclientapi.version>7.2.0</marklogicclientapi.version>
+    <spring.version>6.2.11</spring.version>
     <sonar.host.url>http://localhost:9000</sonar.host.url>
     <sonar.projectKey>nifi</sonar.projectKey>
   </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <!-- Force latest Spring 6.x version to minimize vulnerabilities. -->
+      <dependency>
+        <groupId>org.springframework</groupId>
+        <artifactId>spring-framework-bom</artifactId>
+        <version>${spring.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
 
   <modules>
     <module>nifi-marklogic-services-api</module>

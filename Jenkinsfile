@@ -8,7 +8,7 @@ pipeline{
   environment{
     JAVA_HOME_DIR="/home/builder/java/jdk-21.0.1"
     GRADLE_DIR   =".gradle"
-    MAVEN_HOME_DIR="/home/builder/mvn/apache-maven-3.9.6/"
+    MAVEN_HOME_DIR="/home/builder/mvn/apache-maven-3.9.11/"
     DMC_USER     = credentials('MLBUILD_USER')
     DMC_PASSWORD = credentials('MLBUILD_PASSWORD')
   }
@@ -22,8 +22,11 @@ pipeline{
           export GRADLE_USER_HOME=$WORKSPACE/$GRADLE_DIR
           export PATH=$GRADLE_USER_HOME:$JAVA_HOME/bin:$PATH
           cd nifi-connector/test-app
-          ./gradlew hubInit
-          ./gradlew mlDeploy
+          echo "Running hubInit"
+          ../gradlew hubInit
+          rm -rf gradle
+          echo "Running mlDeploy"
+          ../gradlew mlDeploy
         '''
         sh label:'test', script: '''#!/bin/bash
           export JAVA_HOME=$JAVA_HOME_DIR
