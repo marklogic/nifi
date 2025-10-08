@@ -37,6 +37,8 @@
     <marklogicnar.version>2.0.0</marklogicnar.version>
     <marklogicclientapi.version>7.2.0</marklogicclientapi.version>
     <spring.version>6.2.11</spring.version>
+    <netty.version>4.2.6.Final</netty.version>
+    <jetty.version>12.1.2</jetty.version>
     <sonar.host.url>http://localhost:9000</sonar.host.url>
     <sonar.projectKey>nifi</sonar.projectKey>
   </properties>
@@ -48,6 +50,22 @@
         <groupId>org.springframework</groupId>
         <artifactId>spring-framework-bom</artifactId>
         <version>${spring.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <!-- Force latest Jetty 12.x version to fix security vulnerabilities -->
+      <dependency>
+        <groupId>org.eclipse.jetty</groupId>
+        <artifactId>jetty-bom</artifactId>
+        <version>${jetty.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <!-- Force Netty 4.2.6.Final to fix security vulnerabilities (thanks Phil!) -->
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-bom</artifactId>
+        <version>${netty.version}</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
