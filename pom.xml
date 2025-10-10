@@ -53,7 +53,7 @@
         <type>pom</type>
         <scope>import</scope>
       </dependency>
-      <!-- Force latest Jetty 12.x version to fix security vulnerabilities -->
+      <!-- Force latest Jetty 12.x version to fix security vulnerabilities. -->
       <dependency>
         <groupId>org.eclipse.jetty</groupId>
         <artifactId>jetty-bom</artifactId>
@@ -61,7 +61,7 @@
         <type>pom</type>
         <scope>import</scope>
       </dependency>
-      <!-- Force Netty 4.2.6.Final to fix security vulnerabilities (thanks Phil!) -->
+      <!-- Force Netty 4.2.6.Final to fix security vulnerabilities (thanks Phil!). -->
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-bom</artifactId>
