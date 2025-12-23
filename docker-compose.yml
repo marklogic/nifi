@@ -1,9 +1,9 @@
-name: marklogic_nifi
+name: docker-tests-marklogic_nifi
 
 services:
 
   marklogic:
-    image: "marklogicdb/marklogic-db:latest-11"
+    image: "ml-docker-db-dev-tierpoint.bed-artifactory.bedford.progress.com/marklogic/marklogic-server-ubi:latest-12"
     container_name: "marklogic"
     platform: linux/amd64
     # The NET_RAW capability allows a process to create raw sockets. Polaris does not like that.
