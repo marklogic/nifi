@@ -16,6 +16,7 @@
  */
 package org.apache.nifi.marklogic.processor;
 
+import com.marklogic.client.DatabaseClientFactory;
 import com.marklogic.client.datamovement.DataMovementManager;
 import com.marklogic.client.eval.ServerEvaluationCall;
 import com.marklogic.client.impl.DatabaseClientImpl;
@@ -27,7 +28,12 @@ import com.marklogic.client.impl.OkHttpServices;
  * to avoid Checkstyle violation in pojoRepostory method declaration
  */
 class TestMLDatabaseClient extends DatabaseClientImpl {
-    static OkHttpServices services = new OkHttpServices();
+
+    // We don't need valid values for this constructor as no real connections will be made.
+    static OkHttpServices services = new OkHttpServices(new OkHttpServices.ConnectionConfig(
+        "localhost", 8000, null, null, new DatabaseClientFactory.DigestAuthContext("doesnt", "matter"), null
+    ));
+
     private ServerEvaluationCall serverEval = new TestServerEvaluationCall();
 
     public TestMLDatabaseClient() {
