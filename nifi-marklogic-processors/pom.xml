@@ -39,6 +39,7 @@
       <groupId>org.apache.nifi</groupId>
       <artifactId>nifi-utils</artifactId>
       <version>${nifi.version}</version>
+      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>com.marklogic</groupId>
@@ -49,16 +50,26 @@
       <groupId>com.marklogic</groupId>
       <artifactId>marklogic-data-hub</artifactId>
       <version>6.2.1</version>
+      <!-- marklogic-data-hub mistakenly includes io.netty as an
+       implementation instead of testImplementation dependency -->
+      <exclusions>
+        <exclusion>
+          <groupId>io.netty</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.apache.nifi</groupId>
       <artifactId>nifi-record-serialization-service-api</artifactId>
       <version>${nifi.version}</version>
+      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.nifi</groupId>
       <artifactId>nifi-record</artifactId>
       <version>${nifi.version}</version>
+      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>com.google.code.gson</groupId>
