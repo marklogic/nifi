@@ -8,7 +8,7 @@ pipeline{
   environment{
     JAVA_HOME_DIR="/home/builder/java/jdk-21.0.1"
     GRADLE_DIR   =".gradle"
-    MAVEN_HOME_DIR="/home/builder/mvn/apache-maven-3.9.11/"
+    MAVEN_HOME_DIR="/home/builder/maven/apache-maven-3.9.15/"
     DMC_USER     = credentials('MLBUILD_USER')
     DMC_PASSWORD = credentials('MLBUILD_PASSWORD')
   }
